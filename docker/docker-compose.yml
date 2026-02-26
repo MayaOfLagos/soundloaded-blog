@@ -1,0 +1,86 @@
+name: soundloadedblog
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: soundloadedblog-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-soundloadedblog}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-soundloadedblog_dev}
+      POSTGRES_DB: ${POSTGRES_DB:-soundloadedblog}
+    ports:
+      - "5433:5432"
+    volumes:
+      - soundloadedblog_postgres:/var/lib/postgresql/data
+    networks:
+      - soundloadedblog-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-soundloadedblog}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    container_name: soundloadedblog-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --requirepass "${REDIS_PASSWORD:-soundloadedblog_redis}"
+    ports:
+      - "6380:6379"
+    volumes:
+      - soundloadedblog_redis:/data
+    networks:
+      - soundloadedblog-net
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "redis-cli",
+          "--no-auth-warning",
+          "-a",
+          "${REDIS_PASSWORD:-soundloadedblog_redis}",
+          "ping",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  meilisearch:
+    image: getmeili/meilisearch:v1.6
+    container_name: soundloadedblog-search
+    restart: unless-stopped
+    environment:
+      MEILI_MASTER_KEY: ${MEILI_MASTER_KEY:-soundloadedblog_search_key}
+      MEILI_ENV: development
+    ports:
+      - "7700:7700"
+    volumes:
+      - soundloadedblog_meili:/meili_data
+    networks:
+      - soundloadedblog-net
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "--no-verbose",
+          "--spider",
+          "http://localhost:7700/health",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  soundloadedblog_postgres:
+    name: soundloadedblog_postgres
+  soundloadedblog_redis:
+    name: soundloadedblog_redis
+  soundloadedblog_meili:
+    name: soundloadedblog_meili
+
+networks:
+  soundloadedblog-net:
+    name: soundloadedblog-net
+    driver: bridge

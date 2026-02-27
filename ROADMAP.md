@@ -459,27 +459,27 @@ soundloaded-blog/
 
 ## 7. Phase Roadmap
 
-### Phase 0 — Prerequisites & Environment Setup
+### Phase 0 — Prerequisites & Environment Setup ✅ COMPLETE (Feb 2026)
 
 **Goal:** Everything installed, configured, running locally in Docker.
 
-- [ ] Install all prerequisites (Node.js, pnpm, Docker, Git)
-- [ ] Initialize Git repository + GitHub repo
-- [ ] Initialize Next.js 15 project with TypeScript
-- [ ] Setup Docker (PostgreSQL + Redis + Meilisearch locally)
-- [ ] Setup `.env` files
-- [ ] Install all dependencies (see Section 8)
-- [ ] Initialize Prisma + run first migration
-- [ ] Configure Tailwind CSS v4
-- [ ] Initialize shadcn/ui
-- [ ] Setup uselayouts.com components
-- [ ] Configure ESLint, Prettier, Husky
-- [ ] Connect Cloudflare R2 bucket
-- [ ] Connect Neon PostgreSQL (production)
-- [ ] Connect Upstash Redis
-- [ ] Initial Vercel project setup
+- [x] Install all prerequisites (Node.js, pnpm, Docker, Git)
+- [x] Initialize Git repository + GitHub repo (first commit: e6c04f4)
+- [x] Initialize Next.js 16 project with TypeScript (App Router, Turbopack)
+- [x] Setup Docker (PostgreSQL:5433 + Redis:6380 + Meilisearch:7700 — no conflicts with soundloaded-\*)
+- [x] Setup `.env` files (.env.example committed, .env in .gitignore)
+- [x] Install all dependencies (production + dev — 78 files committed)
+- [x] Initialize Prisma v5 + run first migration (20260226060224_init)
+- [x] Configure Tailwind CSS v4
+- [x] Initialize shadcn/ui (34 components installed; src/components/ui/\*\* excluded from ESLint)
+- [ ] Setup uselayouts.com components (copy from site when building pages)
+- [x] Configure ESLint, Prettier, Husky (commitlint body max 100 chars)
+- [ ] Connect Cloudflare R2 bucket (needs real credentials in .env)
+- [ ] Connect Neon PostgreSQL (needs production DATABASE_URL)
+- [ ] Connect Upstash Redis (needs UPSTASH_REDIS_REST_URL)
+- [ ] Initial Vercel project setup (pending GitHub repo push)
 
-**Deliverable:** Local dev server running at `localhost:3000`, all services connected.
+**Deliverable:** ✅ Local dev server running at `localhost:3000`, Docker services up, first commit made.
 
 ---
 

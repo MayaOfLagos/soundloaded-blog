@@ -4,6 +4,14 @@ import { lexicalEditor } from "@payloadcms/richtext-lexical";
 import { s3Storage } from "@payloadcms/storage-s3";
 import path from "path";
 import { fileURLToPath } from "url";
+import { Users } from "./collections/Users";
+import { Media } from "./collections/Media";
+import { Categories } from "./collections/Categories";
+import { Tags } from "./collections/Tags";
+import { Posts } from "./collections/Posts";
+import { Artists } from "./collections/Artists";
+import { Albums } from "./collections/Albums";
+import { MusicCollection } from "./collections/Music";
 
 const filename = fileURLToPath(import.meta.url);
 const dirname = path.dirname(filename);
@@ -15,10 +23,7 @@ export default buildConfig({
       titleSuffix: "— Soundloaded Blog CMS",
     },
   },
-  collections: [
-    // Collections will be imported here as they are built
-    // e.g. Posts, Music, Artists, Albums, Media, Users
-  ],
+  collections: [Users, Media, Categories, Tags, Posts, Artists, Albums, MusicCollection],
   editor: lexicalEditor({}),
   secret: process.env.PAYLOAD_SECRET ?? "",
   typescript: {
@@ -32,9 +37,7 @@ export default buildConfig({
   plugins: [
     s3Storage({
       collections: {
-        media: {
-          prefix: "media",
-        },
+        media: { prefix: "media" },
       },
       bucket: process.env.R2_MEDIA_BUCKET ?? "soundloadedblog-media",
       config: {
@@ -47,4 +50,7 @@ export default buildConfig({
       },
     }),
   ],
+  cors: [process.env.NEXT_PUBLIC_APP_URL ?? "https://soundloadedblog.ng"],
+  csrf: [process.env.NEXT_PUBLIC_APP_URL ?? "https://soundloadedblog.ng"],
+  globals: [],
 });

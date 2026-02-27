@@ -1,65 +1,82 @@
-import Image from "next/image";
+import { Suspense } from "react";
+import Link from "next/link";
+import type { Metadata } from "next";
+import { CategoryTabs } from "@/components/blog/CategoryTabs";
+import { FeaturedPost } from "@/components/blog/FeaturedPost";
+import { LatestPostsGrid } from "@/components/blog/LatestPostsGrid";
+import { TrendingSidebar } from "@/components/blog/TrendingSidebar";
+import { PopularMusicSidebar } from "@/components/music/PopularMusicSidebar";
+import { PostCardSkeleton } from "@/components/blog/PostCardSkeleton";
 
-export default function Home() {
+export const metadata: Metadata = {
+  title: "Soundloaded Blog — Nigeria's #1 Music Blog",
+  alternates: { canonical: "/" },
+};
+
+export default function HomePage() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between bg-white px-16 py-32 sm:items-start dark:bg-black">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl leading-10 font-semibold tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+    <>
+      <CategoryTabs />
+
+      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
+        {/* Featured post — hero */}
+        <section className="mb-8">
+          <Suspense fallback={<PostCardSkeleton variant="featured" className="aspect-[16/8]" />}>
+            <FeaturedPost />
+          </Suspense>
+        </section>
+
+        {/* Main content + sidebar */}
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_320px]">
+          {/* Latest posts */}
+          <section>
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-foreground text-lg font-bold">Latest</h2>
+              <Link href="/news" className="text-brand text-sm font-medium hover:underline">
+                View all
+              </Link>
+            </div>
+            <Suspense
+              fallback={
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  {Array.from({ length: 6 }).map((_, i) => (
+                    <PostCardSkeleton key={i} />
+                  ))}
+                </div>
+              }
             >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
+              <LatestPostsGrid />
+            </Suspense>
+          </section>
+
+          {/* Sidebar */}
+          <aside className="space-y-6">
+            <Suspense fallback={<TrendingSidebarSkeleton />}>
+              <TrendingSidebar />
+            </Suspense>
+            <Suspense fallback={<TrendingSidebarSkeleton />}>
+              <PopularMusicSidebar />
+            </Suspense>
+          </aside>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="bg-foreground text-background flex h-12 w-full items-center justify-center gap-2 rounded-full px-5 transition-colors hover:bg-[#383838] md:w-[158px] dark:hover:bg-[#ccc]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] md:w-[158px] dark:border-white/[.145] dark:hover:bg-[#1a1a1a]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+      </div>
+    </>
+  );
+}
+
+function TrendingSidebarSkeleton() {
+  return (
+    <div className="border-border bg-card space-y-3 rounded-xl border p-4">
+      <div className="bg-muted h-4 w-24 animate-pulse rounded" />
+      {Array.from({ length: 5 }).map((_, i) => (
+        <div key={i} className="flex gap-3 py-2">
+          <div className="bg-muted h-12 w-16 flex-shrink-0 animate-pulse rounded-lg" />
+          <div className="flex-1 space-y-2">
+            <div className="bg-muted h-3 animate-pulse rounded" />
+            <div className="bg-muted h-3 w-2/3 animate-pulse rounded" />
+          </div>
         </div>
-      </main>
+      ))}
     </div>
   );
 }

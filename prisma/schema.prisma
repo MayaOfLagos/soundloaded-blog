@@ -99,6 +99,8 @@ model Music {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
+  trackNumber Int?
+
   postId    String     @unique
   post      Post       @relation(fields: [postId], references: [id])
   artistId  String

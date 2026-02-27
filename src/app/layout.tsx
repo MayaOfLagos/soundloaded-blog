@@ -4,6 +4,8 @@ import { ThemeProvider } from "next-themes";
 import { Toaster } from "react-hot-toast";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import { QueryProvider } from "@/components/common/QueryProvider";
+import { ConditionalNavigation } from "@/components/layout/ConditionalNavigation";
 import "./globals.css";
 
 const inter = Inter({
@@ -62,17 +64,19 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" suppressHydrationWarning>
       <body className={`${inter.variable} font-sans antialiased`}>
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
-          {children}
+          <QueryProvider>
+            <ConditionalNavigation>{children}</ConditionalNavigation>
+          </QueryProvider>
           <Toaster
             position="bottom-center"
             gutter={8}
-            containerStyle={{ bottom: 80 }}
+            containerStyle={{ bottom: 88 }}
             toastOptions={{
               duration: 3000,
               style: {
-                background: "#1a1a2e",
-                color: "#fff",
-                border: "1px solid #16213e",
+                background: "#1a1a1a",
+                color: "#ededed",
+                border: "1px solid #262626",
                 borderRadius: "8px",
                 fontSize: "14px",
                 fontFamily: "var(--font-inter)",

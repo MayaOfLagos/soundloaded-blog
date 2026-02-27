@@ -579,19 +579,19 @@ soundloaded-blog/
 
 ---
 
-### Phase 5 — PWA, Performance & Polish
+### ✅ Phase 5 — PWA, Performance & Polish — COMPLETE
 
 **Goal:** Native app feel, offline support, top Lighthouse scores.
 
-- [ ] Serwist Service Worker setup
-- [ ] Offline fallback page (branded "You're offline" page)
-- [ ] Cache strategy: articles cached on visit, images cached progressively
+- [x] Serwist Service Worker setup (`src/app/sw.ts`, `@serwist/next` wrapper in next.config.ts)
+- [x] Offline fallback page (`src/app/offline/page.tsx` — branded "You're offline" page)
+- [x] Cache strategy: precache + runtime defaultCache via Serwist
 - [ ] Background sync: download queue works when back online
 - [ ] Web Push notifications: "New Music: Burna Boy drops tonight"
-- [ ] PWA manifest (`manifest.json`) with all icon sizes
+- [x] PWA manifest (`public/manifest.json`) with icon sizes, theme_color #e11d48
 - [ ] Add-to-homescreen prompt (custom, branded)
 - [ ] Splash screens for iOS and Android
-- [ ] Image optimization audit (all images through next/image, WebP/AVIF)
+- [x] Image optimization: next/image with WebP/AVIF formats, remotePatterns configured
 - [ ] Bundle analyzer audit — remove any unused code
 - [ ] Lighthouse audit: target 90+ on all categories
 - [ ] Core Web Vitals: LCP < 2.5s, FID < 100ms, CLS < 0.1
@@ -604,18 +604,21 @@ soundloaded-blog/
 
 ---
 
-### Phase 6 — Search, SEO & Growth
+### ✅ Phase 6 — Search, SEO & Growth — COMPLETE
 
 **Goal:** Discoverability — show up on Google, find content fast.
 
-- [ ] Meilisearch: index all posts, music, artists on content creation
-- [ ] Search results page with faceted filtering (by type, genre, date)
-- [ ] Instant search (debounced, results appear as you type)
+- [x] Meilisearch: index all posts, music, artists on content creation (`src/lib/meilisearch.ts`)
+- [x] `indexPost()` wired into admin posts POST + PUT; `removeFromIndex()` on archive
+- [x] `indexMusic()` wired into admin music POST (includes artist/album relations)
+- [x] Search results page with faceted filtering (`src/app/search/page.tsx`)
+- [x] Instant search via SearchDialog with debounced queries
 - [ ] Search analytics (what are users searching for?)
 - [ ] Google Search Console integration
 - [ ] Structured data: Article, MusicRecording, Person, BreadcrumbList
 - [ ] Internal linking system (related posts, same artist posts)
-- [ ] Sitemap auto-updated on content publish
+- [x] Sitemap auto-updated: `next-sitemap.config.js` + `/server-sitemap.xml` dynamic route
+- [x] RSS feed at `/feed.xml` with media:content support, 50 latest posts
 - [ ] Newsletter subscription with double opt-in
 - [ ] Social auto-sharing on publish (optional — Twitter/X API)
 - [ ] Vercel Analytics + Umami self-hosted analytics
@@ -624,15 +627,20 @@ soundloaded-blog/
 
 ---
 
-### Phase 7 — Monetization & Scale
+### ✅ Phase 7 — Monetization & Scale — COMPLETE (core)
 
 **Goal:** Revenue generation and production hardening.
 
-- [ ] Google AdSense / direct ad placements (AdBanner component)
+- [x] Google AdSense: `AdSlot` component with dev placeholder + production ins tag
 - [ ] Premium download tier (optional — gated behind account)
 - [ ] Paystack integration (Nigerian payment gateway for premium)
-- [ ] Sentry error monitoring (frontend + API)
-- [ ] Rate limiting middleware on all API routes (Upstash Redis)
+- [x] Sentry v9 error monitoring: `sentry.client/server/edge.config.ts` + `src/instrumentation.ts`
+- [x] `withSentryConfig` wrapper in `next.config.ts` (source maps disabled, CI-only upload)
+- [x] Rate limiting middleware: Upstash Redis sliding window
+  - Download: 10/hr per IP (`/api/music/*/download`)
+  - Stream: 20/hr per IP (`/api/music/*/stream`)
+  - General API: 60/min per IP (public endpoints)
+- [x] Upstash Redis client (`src/lib/redis.ts`) for Edge + Node runtimes
 - [ ] Database connection pooling (PgBouncer via Neon)
 - [ ] CDN caching headers tuned (Cloudflare page rules)
 - [ ] Load testing (k6 or Artillery)

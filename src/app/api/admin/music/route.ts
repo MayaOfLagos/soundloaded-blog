@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
+import { indexMusic } from "@/lib/meilisearch";
 
 const ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN", "EDITOR"];
 
@@ -108,9 +109,14 @@ export async function POST(req: NextRequest) {
         isExclusive: data.isExclusive,
         postId: post.id,
       },
+      include: {
+        artist: { select: { name: true, slug: true } },
+        album: { select: { title: true, slug: true } },
+      },
     });
 
-    return NextResponse.json(music, { status: 201 });
+    indexMusic(music);
+    return NextResponse.json({ ...music, fileSize: music.fileSize.toString() }, { status: 201 });
   } catch (err) {
     if (err instanceof z.ZodError) return NextResponse.json({ error: err.errors }, { status: 422 });
     console.error("[POST /api/admin/music]", err);

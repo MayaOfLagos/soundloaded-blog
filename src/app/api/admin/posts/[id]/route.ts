@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
+import { indexPost, removeFromIndex, INDEXES } from "@/lib/meilisearch";
 
 const ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN", "EDITOR"];
 
@@ -67,6 +68,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       data: updateData as Parameters<typeof db.post.update>[0]["data"],
     });
 
+    indexPost(post);
     return NextResponse.json(post);
   } catch (err) {
     if (err instanceof z.ZodError) return NextResponse.json({ error: err.errors }, { status: 422 });
@@ -87,5 +89,6 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     data: { status: "ARCHIVED" },
   });
 
+  removeFromIndex(INDEXES.POSTS, id);
   return NextResponse.json(post);
 }

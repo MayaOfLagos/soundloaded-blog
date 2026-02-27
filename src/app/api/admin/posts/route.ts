@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
+import { indexPost } from "@/lib/meilisearch";
 
 const ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN", "EDITOR"];
 
@@ -98,6 +99,7 @@ export async function POST(req: NextRequest) {
       },
     });
 
+    indexPost(post);
     return NextResponse.json(post, { status: 201 });
   } catch (err) {
     if (err instanceof z.ZodError) {

@@ -1,4 +1,6 @@
 import { withPayload } from "@payloadcms/next/withPayload";
+import withSerwist from "@serwist/next";
+import { withSentryConfig } from "@sentry/nextjs";
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
@@ -52,4 +54,20 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default withPayload(nextConfig);
+const withPWA = withSerwist({
+  swSrc: "src/app/sw.ts",
+  swDest: "public/sw.js",
+  disable: process.env.NODE_ENV === "development",
+  reloadOnOnline: true,
+});
+
+export default withSentryConfig(withPWA(withPayload(nextConfig)), {
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
+  // Only upload source maps during CI builds
+  silent: !process.env.CI,
+  widenClientFileUpload: true,
+  sourcemaps: { disable: true },
+  disableLogger: true,
+  automaticVercelMonitors: true,
+});

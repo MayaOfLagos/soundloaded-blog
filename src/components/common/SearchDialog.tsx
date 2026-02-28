@@ -12,6 +12,7 @@ import {
   CommandList,
   CommandSeparator,
 } from "@/components/ui/command";
+import { DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useDebounce } from "@/hooks/useDebounce";
 
@@ -111,6 +112,7 @@ export function SearchDialog() {
       </Button>
 
       <CommandDialog open={open} onOpenChange={setOpen}>
+        <DialogTitle className="sr-only">Search</DialogTitle>
         <CommandInput
           placeholder="Search music, news, artists..."
           value={query}

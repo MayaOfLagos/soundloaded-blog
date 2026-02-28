@@ -14,6 +14,8 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // shadcn/ui generated components — do not lint
     "src/components/ui/**",
+    // uselayouts.com copy-paste components — do not lint
+    "src/components/layouts/**",
     // Payload CMS generated types
     "src/payload/payload-types.ts",
   ]),

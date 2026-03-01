@@ -25,8 +25,8 @@ export function ConditionalNavigation({ children }: ConditionalNavigationProps) 
   return (
     <div className="flex min-h-screen flex-col">
       <Navbar />
-      {/* pb-40 on mobile = space for floating bottom nav (bottom-20) + music player (h-~16) */}
-      <main className="flex-1 pb-40 md:pb-20">{children}</main>
+      {/* pb-24 on mobile = space for bottom nav bar (~68px). pb-20 on desktop = music player */}
+      <main className="flex-1 pb-24 md:pb-20">{children}</main>
       <MusicPlayer />
       <MobileBottomNav />
       <Footer />

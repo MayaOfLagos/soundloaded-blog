@@ -1,12 +1,13 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import type { Metadata } from "next";
-import { CategoryTabs } from "@/components/blog/CategoryTabs";
+import { LeftSidebar } from "@/components/home/LeftSidebar";
 import { FeaturedPost } from "@/components/blog/FeaturedPost";
 import { LatestPostsGrid } from "@/components/blog/LatestPostsGrid";
 import { TrendingSidebar } from "@/components/blog/TrendingSidebar";
 import { PopularMusicSidebar } from "@/components/music/PopularMusicSidebar";
 import { PostCardSkeleton } from "@/components/blog/PostCardSkeleton";
+import { NewsletterForm } from "@/components/common/NewsletterForm";
 
 export const metadata: Metadata = {
   title: "Soundloaded Blog — Nigeria's #1 Music Blog",
@@ -15,68 +16,129 @@ export const metadata: Metadata = {
 
 export default function HomePage() {
   return (
-    <>
-      <CategoryTabs />
+    <div className="mx-auto max-w-[1440px] px-4 sm:px-6">
+      {/* ━━━ Three-column grid ━━━
+          Mobile:  single column (left sidebar hidden, right sidebar below feed)
+          lg:      2 columns — feed + right sidebar
+          xl:      3 columns — left sidebar + feed + right sidebar
+      */}
+      <div className="grid grid-cols-1 gap-6 py-5 lg:grid-cols-[1fr_300px] xl:grid-cols-[220px_1fr_300px]">
+        {/* ── LEFT SIDEBAR (xl+ only) ── */}
+        <LeftSidebar />
 
-      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
-        {/* Featured post — hero */}
-        <section className="mb-8">
-          <Suspense fallback={<PostCardSkeleton variant="featured" className="aspect-[16/8]" />}>
-            <FeaturedPost />
-          </Suspense>
-        </section>
-
-        {/* Main content + sidebar */}
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_320px]">
-          {/* Latest posts */}
-          <section>
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-foreground text-lg font-bold">Latest</h2>
-              <Link href="/news" className="text-brand text-sm font-medium hover:underline">
-                View all
-              </Link>
-            </div>
-            <Suspense
-              fallback={
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  {Array.from({ length: 6 }).map((_, i) => (
-                    <PostCardSkeleton key={i} />
-                  ))}
-                </div>
-              }
-            >
-              <LatestPostsGrid />
+        {/* ── MAIN CONTENT ── */}
+        <main className="min-w-0">
+          {/* Hero / Featured post */}
+          <section className="mb-6">
+            <Suspense fallback={<HeroSkeleton />}>
+              <FeaturedPost />
             </Suspense>
           </section>
 
-          {/* Sidebar */}
-          <aside className="space-y-6">
-            <Suspense fallback={<TrendingSidebarSkeleton />}>
+          {/* Section header */}
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-foreground text-lg font-extrabold tracking-tight">
+              Latest Stories
+            </h2>
+            <Link
+              href="/news"
+              className="bg-muted text-muted-foreground hover:bg-brand/10 hover:text-brand rounded-full px-3 py-1 text-xs font-semibold transition-colors"
+            >
+              View all
+            </Link>
+          </div>
+
+          {/* Feed grid */}
+          <Suspense fallback={<FeedSkeleton />}>
+            <LatestPostsGrid />
+          </Suspense>
+
+          {/* ── Mobile-only: Right sidebar content below feed ── */}
+          <div className="mt-8 space-y-5 lg:hidden">
+            <Suspense fallback={<SidebarBlockSkeleton />}>
               <TrendingSidebar />
             </Suspense>
-            <Suspense fallback={<TrendingSidebarSkeleton />}>
+            <Suspense fallback={<SidebarBlockSkeleton />}>
               <PopularMusicSidebar />
             </Suspense>
-          </aside>
-        </div>
+            <MobileNewsletter />
+          </div>
+        </main>
+
+        {/* ── RIGHT SIDEBAR (lg+ only) ── */}
+        <aside className="sticky top-16 hidden h-[calc(100vh-4rem)] space-y-5 overflow-y-auto pb-8 lg:block">
+          <Suspense fallback={<SidebarBlockSkeleton />}>
+            <TrendingSidebar />
+          </Suspense>
+          <Suspense fallback={<SidebarBlockSkeleton />}>
+            <PopularMusicSidebar />
+          </Suspense>
+
+          {/* Newsletter signup */}
+          <div className="from-brand/10 via-card/80 to-card ring-border/40 overflow-hidden rounded-2xl bg-gradient-to-br ring-1">
+            <div className="p-4">
+              <h3 className="text-foreground text-sm font-bold">Stay in the loop</h3>
+              <p className="text-muted-foreground mt-1 text-[11px] leading-relaxed">
+                Get the latest drops, news &amp; gist delivered to your inbox.
+              </p>
+              <div className="mt-3">
+                <NewsletterForm compact />
+              </div>
+            </div>
+          </div>
+        </aside>
       </div>
-    </>
+    </div>
   );
 }
 
-function TrendingSidebarSkeleton() {
+/* ━━━ Skeleton loaders ━━━ */
+
+function HeroSkeleton() {
   return (
-    <div className="border-border bg-card space-y-3 rounded-xl border p-4">
-      <div className="bg-muted h-4 w-24 animate-pulse rounded" />
-      {Array.from({ length: 5 }).map((_, i) => (
+    <div className="bg-muted ring-border/20 aspect-[16/9] animate-pulse rounded-3xl ring-1 sm:aspect-[21/9]" />
+  );
+}
+
+function FeedSkeleton() {
+  return (
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      {Array.from({ length: 6 }).map((_, i) => (
+        <PostCardSkeleton key={i} />
+      ))}
+    </div>
+  );
+}
+
+function SidebarBlockSkeleton() {
+  return (
+    <div className="bg-card/50 ring-border/20 animate-pulse space-y-3 rounded-2xl p-4 ring-1">
+      <div className="bg-muted h-4 w-28 rounded" />
+      {Array.from({ length: 4 }).map((_, i) => (
         <div key={i} className="flex gap-3 py-2">
-          <div className="bg-muted h-12 w-16 flex-shrink-0 animate-pulse rounded-lg" />
+          <div className="bg-muted h-14 w-14 flex-shrink-0 rounded-xl" />
           <div className="flex-1 space-y-2">
-            <div className="bg-muted h-3 animate-pulse rounded" />
-            <div className="bg-muted h-3 w-2/3 animate-pulse rounded" />
+            <div className="bg-muted h-3 rounded" />
+            <div className="bg-muted h-3 w-2/3 rounded" />
           </div>
         </div>
       ))}
+    </div>
+  );
+}
+
+function MobileNewsletter() {
+  return (
+    <div className="from-brand/10 via-card/80 to-card ring-border/40 overflow-hidden rounded-2xl bg-gradient-to-br ring-1">
+      <div className="p-5">
+        <h3 className="text-foreground font-bold">Stay in the loop</h3>
+        <p className="text-muted-foreground mt-1 text-sm">
+          Get the latest drops, news &amp; gist right in your inbox.
+        </p>
+        <div className="mt-3">
+          <NewsletterForm compact />
+        </div>
+      </div>
     </div>
   );
 }

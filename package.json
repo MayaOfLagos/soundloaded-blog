@@ -23,6 +23,7 @@
     "db:seed": "dotenv -e .env -- tsx prisma/seed.ts",
     "db:push": "prisma db push",
     "payload:generate": "payload generate:types",
+    "generate:icons": "tsx scripts/generate-icons.ts",
     "prepare": "husky"
   },
   "dependencies": {

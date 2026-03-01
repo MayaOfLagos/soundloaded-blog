@@ -4,6 +4,8 @@ import { withSentryConfig } from "@sentry/nextjs";
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Allow phones/devices on the same LAN to access dev server without CORS warnings
+  allowedDevOrigins: ["192.168.1.*", "192.168.0.*", "10.*"],
   images: {
     remotePatterns: [
       {

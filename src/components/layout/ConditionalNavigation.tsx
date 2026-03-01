@@ -5,7 +5,6 @@ import type { ReactNode } from "react";
 import { Navbar } from "./Navbar";
 import { Footer } from "./Footer";
 import { MusicPlayer } from "@/components/music/MusicPlayer";
-import { MobileBottomNav } from "./MobileBottomNav";
 
 interface ConditionalNavigationProps {
   children: ReactNode;
@@ -25,10 +24,8 @@ export function ConditionalNavigation({ children }: ConditionalNavigationProps) 
   return (
     <div className="flex min-h-screen flex-col">
       <Navbar />
-      {/* pb-40 on mobile = space for floating bottom nav (bottom-20) + music player (h-~16) */}
-      <main className="flex-1 pb-40 md:pb-20">{children}</main>
+      <main className="flex-1 pb-20">{children}</main>
       <MusicPlayer />
-      <MobileBottomNav />
       <Footer />
     </div>
   );

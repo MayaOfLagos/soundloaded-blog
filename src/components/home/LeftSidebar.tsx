@@ -74,12 +74,7 @@ export function LeftSidebar() {
           icon: SOCIAL_ICON_MAP[key],
           label: key.charAt(0).toUpperCase() + key.slice(1),
         }))
-    : [
-        { href: "https://instagram.com/soundloadedng", icon: Instagram, label: "Instagram" },
-        { href: "https://twitter.com/soundloadedng", icon: Twitter, label: "X" },
-        { href: "https://youtube.com/@soundloadedng", icon: Youtube, label: "YouTube" },
-        { href: "https://facebook.com/soundloadedng", icon: Facebook, label: "Facebook" },
-      ];
+    : [];
 
   const copyrightName =
     settings?.copyrightText?.replace(". All rights reserved.", "") || "Soundloaded Nigeria";

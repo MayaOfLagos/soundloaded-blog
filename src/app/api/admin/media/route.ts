@@ -134,6 +134,14 @@ export async function POST(req: NextRequest) {
     // Get presigned URL
     const uploadUrl = await getPresignedUploadUrl(bucket, r2Key, contentType);
 
+    // Verify the session user exists in the DB before linking
+    const userId = session.user?.id ?? null;
+    let validUserId: string | null = null;
+    if (userId) {
+      const userExists = await db.user.findUnique({ where: { id: userId }, select: { id: true } });
+      if (userExists) validUserId = userId;
+    }
+
     // Create DB record (status: pending until client confirms upload)
     const media = await db.media.create({
       data: {
@@ -146,7 +154,7 @@ export async function POST(req: NextRequest) {
         height: height || null,
         folder: folder || "",
         type: mediaType,
-        uploadedBy: session.user?.id ?? null,
+        uploadedBy: validUserId,
       },
     });
 

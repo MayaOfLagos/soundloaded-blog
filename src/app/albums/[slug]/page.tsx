@@ -4,13 +4,16 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { Disc, Calendar, Music } from "lucide-react";
 import { getAlbumBySlug } from "@/lib/api/music";
+import { getPostBySlug } from "@/lib/api/posts";
 import { getSettings } from "@/lib/settings";
+import { getPostUrl } from "@/lib/urls";
 import { DownloadButton } from "@/components/music/DownloadButton";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { formatDuration } from "@/lib/utils";
 import { JsonLd } from "@/components/common/JsonLd";
 import { buildMusicAlbumSchema, buildBreadcrumbSchema } from "@/lib/structured-data";
+import { PostPageContent } from "@/components/blog/PostPageContent";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -19,18 +22,40 @@ interface Props {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const album = await getAlbumBySlug(slug);
-  if (!album) return { title: "Album Not Found" };
-  const settings = await getSettings();
-  return {
-    title: `${album.title} — ${album.artist.name}`,
-    description: `Download ${album.title} by ${album.artist.name} on Soundloaded Blog.`,
-    openGraph: {
+  if (album) {
+    const settings = await getSettings();
+    return {
       title: `${album.title} — ${album.artist.name}`,
-      images: album.coverArt ? [{ url: album.coverArt }] : [],
-      type: "music.album",
-    },
-    alternates: { canonical: `${settings.siteUrl}/albums/${slug}` },
-  };
+      description: `Download ${album.title} by ${album.artist.name} on Soundloaded Blog.`,
+      openGraph: {
+        title: `${album.title} — ${album.artist.name}`,
+        images: album.coverArt ? [{ url: album.coverArt }] : [],
+        type: "music.album",
+      },
+      alternates: { canonical: `${settings.siteUrl}/albums/${slug}` },
+    };
+  }
+
+  // Fallback: check if this is a blog post
+  const post = await getPostBySlug(slug);
+  if (post) {
+    const settings = await getSettings();
+    const canonicalPath = getPostUrl(post, settings.permalinkStructure);
+    return {
+      title: post.title,
+      description: post.excerpt ?? undefined,
+      openGraph: {
+        title: post.title,
+        description: post.excerpt ?? undefined,
+        images: post.coverImage ? [{ url: post.coverImage }] : [],
+        type: "article",
+        publishedTime: post.publishedAt?.toISOString(),
+      },
+      alternates: { canonical: canonicalPath },
+    };
+  }
+
+  return { title: "Not Found" };
 }
 
 export const revalidate = 3600;
@@ -38,7 +63,15 @@ export const revalidate = 3600;
 export default async function AlbumPage({ params }: Props) {
   const { slug } = await params;
   const [album, settings] = await Promise.all([getAlbumBySlug(slug), getSettings()]);
-  if (!album) notFound();
+
+  // If no album found, try resolving as a blog post
+  if (!album) {
+    const post = await getPostBySlug(slug);
+    if (post) {
+      return <PostPageContent post={post} settings={settings} currentPath={`/albums/${slug}`} />;
+    }
+    notFound();
+  }
 
   const totalDuration = album.tracks.reduce((sum, t) => sum + (t.duration ?? 0), 0);
   const releaseYear = album.releaseDate ? new Date(album.releaseDate).getFullYear() : null;

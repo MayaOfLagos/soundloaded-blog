@@ -3,13 +3,16 @@ import Image from "next/image";
 import type { Metadata } from "next";
 import { Music, Calendar, Disc } from "lucide-react";
 import { getMusicBySlug } from "@/lib/api/music";
+import { getPostBySlug } from "@/lib/api/posts";
 import { getSettings } from "@/lib/settings";
+import { getPostUrl } from "@/lib/urls";
 import { DownloadButton } from "@/components/music/DownloadButton";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { formatDuration, formatFileSize } from "@/lib/utils";
 import { JsonLd } from "@/components/common/JsonLd";
 import { buildMusicRecordingSchema, buildBreadcrumbSchema } from "@/lib/structured-data";
+import { PostPageContent } from "@/components/blog/PostPageContent";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -18,18 +21,40 @@ interface Props {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const track = await getMusicBySlug(slug);
-  if (!track) return { title: "Track Not Found" };
-  const settings = await getSettings();
-  return {
-    title: `${track.title} — ${track.artist.name}`,
-    description: `Download ${track.title} by ${track.artist.name} for free on Soundloaded Blog.`,
-    openGraph: {
+  if (track) {
+    const settings = await getSettings();
+    return {
       title: `${track.title} — ${track.artist.name}`,
-      images: track.coverArt ? [{ url: track.coverArt }] : [],
-      type: "music.song",
-    },
-    alternates: { canonical: `${settings.siteUrl}/music/${slug}` },
-  };
+      description: `Download ${track.title} by ${track.artist.name} for free on Soundloaded Blog.`,
+      openGraph: {
+        title: `${track.title} — ${track.artist.name}`,
+        images: track.coverArt ? [{ url: track.coverArt }] : [],
+        type: "music.song",
+      },
+      alternates: { canonical: `${settings.siteUrl}/music/${slug}` },
+    };
+  }
+
+  // Fallback: check if this is a blog post
+  const post = await getPostBySlug(slug);
+  if (post) {
+    const settings = await getSettings();
+    const canonicalPath = getPostUrl(post, settings.permalinkStructure);
+    return {
+      title: post.title,
+      description: post.excerpt ?? undefined,
+      openGraph: {
+        title: post.title,
+        description: post.excerpt ?? undefined,
+        images: post.coverImage ? [{ url: post.coverImage }] : [],
+        type: "article",
+        publishedTime: post.publishedAt?.toISOString(),
+      },
+      alternates: { canonical: canonicalPath },
+    };
+  }
+
+  return { title: "Not Found" };
 }
 
 export const revalidate = 3600;
@@ -37,7 +62,15 @@ export const revalidate = 3600;
 export default async function MusicDetailPage({ params }: Props) {
   const { slug } = await params;
   const [track, settings] = await Promise.all([getMusicBySlug(slug), getSettings()]);
-  if (!track) notFound();
+
+  // If no music track found, try resolving as a blog post
+  if (!track) {
+    const post = await getPostBySlug(slug);
+    if (post) {
+      return <PostPageContent post={post} settings={settings} currentPath={`/music/${slug}`} />;
+    }
+    notFound();
+  }
 
   const trackSchema = buildMusicRecordingSchema(track, settings.siteUrl);
   const breadcrumbSchema = buildBreadcrumbSchema(

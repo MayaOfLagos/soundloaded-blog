@@ -4,6 +4,7 @@ import { CategoryTabs } from "@/components/blog/CategoryTabs";
 import { PostCard } from "@/components/blog/PostCard";
 import { PostCardSkeleton } from "@/components/blog/PostCardSkeleton";
 import { getLatestPosts } from "@/lib/api/posts";
+import { getSettings } from "@/lib/settings";
 
 export const metadata: Metadata = {
   title: "Gist",
@@ -40,7 +41,12 @@ export default async function GistPage() {
 }
 
 async function GistGrid() {
-  const posts = await getLatestPosts({ type: "GIST", limit: 18 });
+  const settings = await getSettings();
+  const posts = await getLatestPosts({
+    type: "GIST",
+    limit: 18,
+    permalinkStructure: settings.permalinkStructure,
+  });
 
   if (!posts.length) {
     return (

@@ -2,16 +2,29 @@
 
 import { useState, useEffect, use } from "react";
 import { useRouter } from "next/navigation";
-import { useForm } from "react-hook-form";
+import { useForm, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import toast from "react-hot-toast";
 import axios from "axios";
 import Link from "next/link";
-import { ArrowLeft, Loader2, Trash2, ExternalLink } from "lucide-react";
+import Image from "next/image";
+import {
+  ArrowLeft,
+  Loader2,
+  Trash2,
+  ExternalLink,
+  X,
+  ImagePlus,
+  Paperclip,
+  Music,
+  FileText,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { MediaPickerModal } from "@/components/admin/MediaPickerModal";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -27,7 +40,6 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { generateSlug } from "@/lib/utils";
 
@@ -45,6 +57,9 @@ const postSchema = z.object({
   coverImage: z.string().url("Must be a valid URL").optional().or(z.literal("")),
   categoryId: z.string().optional(),
   authorId: z.string().min(1, "Author is required"),
+  enableDownload: z.boolean().default(false),
+  downloadLabel: z.string().max(120).optional(),
+  downloadMediaId: z.string().optional(),
 });
 
 type PostFormValues = z.infer<typeof postSchema>;
@@ -75,6 +90,22 @@ interface Post {
   authorId: string;
   views: number;
   createdAt: string;
+  enableDownload: boolean;
+  downloadLabel: string | null;
+  downloadMediaId: string | null;
+  downloadMedia?: {
+    id: string;
+    filename: string;
+    url: string;
+    type: "IMAGE" | "AUDIO" | "VIDEO" | "DOCUMENT";
+  } | null;
+}
+
+interface MediaItem {
+  id: string;
+  filename: string;
+  url: string;
+  type: "IMAGE" | "AUDIO" | "VIDEO" | "DOCUMENT";
 }
 
 interface EditPostPageProps {
@@ -116,9 +147,12 @@ export default function EditPostPage({ params }: EditPostPageProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [slugTouched, setSlugTouched] = useState(false);
+  const [mediaPickerOpen, setMediaPickerOpen] = useState(false);
+  const [downloadPickerOpen, setDownloadPickerOpen] = useState(false);
+  const [selectedDownload, setSelectedDownload] = useState<MediaItem | null>(null);
 
   const form = useForm<PostFormValues>({
-    resolver: zodResolver(postSchema),
+    resolver: zodResolver(postSchema) as Resolver<PostFormValues>,
     defaultValues: {
       title: "",
       slug: "",
@@ -130,8 +164,13 @@ export default function EditPostPage({ params }: EditPostPageProps) {
       coverImage: "",
       categoryId: "",
       authorId: "",
+      enableDownload: false,
+      downloadLabel: "",
+      downloadMediaId: "",
     },
   });
+
+  const enableDownload = form.watch("enableDownload");
 
   const titleValue = form.watch("title");
 
@@ -157,6 +196,7 @@ export default function EditPostPage({ params }: EditPostPageProps) {
 
         const bodyText = extractBodyText(p.body);
         const publishedAt = p.publishedAt ? new Date(p.publishedAt).toISOString().slice(0, 16) : "";
+        setSelectedDownload(p.downloadMedia ?? null);
 
         form.reset({
           title: p.title,
@@ -169,6 +209,9 @@ export default function EditPostPage({ params }: EditPostPageProps) {
           coverImage: p.coverImage ?? "",
           categoryId: p.categoryId ?? "",
           authorId: p.authorId,
+          enableDownload: p.enableDownload ?? false,
+          downloadLabel: p.downloadLabel ?? "",
+          downloadMediaId: p.downloadMediaId ?? "",
         });
       } catch {
         toast.error("Failed to load post");
@@ -192,6 +235,9 @@ export default function EditPostPage({ params }: EditPostPageProps) {
         coverImage: values.coverImage || null,
         categoryId: values.categoryId || null,
         publishedAt: values.publishedAt ? new Date(values.publishedAt).toISOString() : null,
+        enableDownload: values.enableDownload,
+        downloadLabel: values.downloadLabel?.trim() || null,
+        downloadMediaId: values.downloadMediaId || null,
       };
       await axios.put(`/api/admin/posts/${id}`, payload);
       toast.success("Post updated!");
@@ -375,14 +421,17 @@ export default function EditPostPage({ params }: EditPostPageProps) {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Category</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
+                  <Select
+                    onValueChange={(val) => field.onChange(val === "__none__" ? "" : val)}
+                    value={field.value || "__none__"}
+                  >
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="None" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="">None</SelectItem>
+                      <SelectItem value="__none__">None</SelectItem>
                       {categories.map((cat) => (
                         <SelectItem key={cat.id} value={cat.id}>
                           {cat.name}
@@ -442,13 +491,155 @@ export default function EditPostPage({ params }: EditPostPageProps) {
             name="coverImage"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Cover Image URL</FormLabel>
+                <FormLabel>Cover Image</FormLabel>
+                {field.value ? (
+                  <div className="relative inline-block">
+                    <div className="bg-muted h-40 w-72 overflow-hidden rounded-lg border">
+                      <Image
+                        src={field.value}
+                        alt="Cover"
+                        width={288}
+                        height={160}
+                        className="h-full w-full object-cover"
+                        unoptimized
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => field.onChange("")}
+                      className="bg-destructive text-destructive-foreground absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full shadow-sm"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setMediaPickerOpen(true)}
+                    className="border-border bg-muted/30 hover:bg-muted/60 flex h-40 w-72 flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed transition-colors"
+                  >
+                    <ImagePlus className="text-muted-foreground h-8 w-8" />
+                    <span className="text-muted-foreground text-sm font-medium">
+                      Set Featured Image
+                    </span>
+                  </button>
+                )}
                 <FormControl>
-                  <Input placeholder="https://cdn.soundloadedblog.ng/..." {...field} />
+                  <Input type="hidden" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
+          />
+          <MediaPickerModal
+            open={mediaPickerOpen}
+            onClose={() => setMediaPickerOpen(false)}
+            onSelect={(media) => {
+              const item = Array.isArray(media) ? media[0] : media;
+              form.setValue("coverImage", item.url, { shouldDirty: true });
+            }}
+            allowedTypes={["IMAGE"]}
+          />
+
+          {/* Download Attachment */}
+          <div className="space-y-3 rounded-xl border p-4">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-semibold">Post Download Attachment</h3>
+                <p className="text-muted-foreground mt-1 text-xs">
+                  Attach an audio or document file for readers to download.
+                </p>
+              </div>
+              <FormField
+                control={form.control}
+                name="enableDownload"
+                render={({ field }) => (
+                  <FormItem className="flex items-center gap-2 space-y-0">
+                    <FormControl>
+                      <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                    </FormControl>
+                    <FormLabel className="text-sm">Enable</FormLabel>
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            <FormField
+              control={form.control}
+              name="downloadMediaId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Attachment File</FormLabel>
+                  <div className="space-y-2">
+                    {selectedDownload ? (
+                      <div className="bg-muted/40 flex items-center justify-between rounded-lg border px-3 py-2">
+                        <div className="flex items-center gap-2">
+                          {selectedDownload.type === "AUDIO" ? (
+                            <Music className="text-muted-foreground h-4 w-4" />
+                          ) : (
+                            <FileText className="text-muted-foreground h-4 w-4" />
+                          )}
+                          <span className="text-sm font-medium">{selectedDownload.filename}</span>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedDownload(null);
+                            field.onChange("");
+                          }}
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="w-full justify-start gap-2"
+                        onClick={() => setDownloadPickerOpen(true)}
+                      >
+                        <Paperclip className="h-4 w-4" />
+                        Select file from media library
+                      </Button>
+                    )}
+                    <FormControl>
+                      <Input type="hidden" {...field} />
+                    </FormControl>
+                  </div>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="downloadLabel"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Download Button Label (optional)</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="e.g. Download Press Kit"
+                      {...field}
+                      disabled={!enableDownload}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+          <MediaPickerModal
+            open={downloadPickerOpen}
+            onClose={() => setDownloadPickerOpen(false)}
+            onSelect={(media) => {
+              const item = Array.isArray(media) ? media[0] : media;
+              setSelectedDownload(item);
+              form.setValue("downloadMediaId", item.id, { shouldDirty: true });
+            }}
+            allowedTypes={["AUDIO", "DOCUMENT"]}
           />
 
           {/* Excerpt */}

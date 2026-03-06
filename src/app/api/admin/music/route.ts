@@ -30,6 +30,7 @@ const createSchema = z.object({
   coverArt: z.string().optional().nullable(),
   label: z.string().optional().nullable(),
   isExclusive: z.boolean().default(false),
+  enableDownload: z.boolean().default(true),
 });
 
 export async function GET(req: NextRequest) {
@@ -107,6 +108,7 @@ export async function POST(req: NextRequest) {
         coverArt: data.coverArt ?? null,
         label: data.label ?? null,
         isExclusive: data.isExclusive,
+        enableDownload: data.enableDownload,
         postId: post.id,
       },
       include: {

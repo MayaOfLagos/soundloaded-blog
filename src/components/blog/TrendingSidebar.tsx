@@ -2,10 +2,15 @@ import Link from "next/link";
 import Image from "next/image";
 import { TrendingUp } from "lucide-react";
 import { getTrendingPosts } from "@/lib/api/posts";
+import { getSettings } from "@/lib/settings";
 import { formatRelativeDate } from "@/lib/utils";
 
 export async function TrendingSidebar() {
-  const posts = await getTrendingPosts({ limit: 5 });
+  const settings = await getSettings();
+  const posts = await getTrendingPosts({
+    limit: 5,
+    permalinkStructure: settings.permalinkStructure,
+  });
 
   return (
     <div className="bg-card/50 ring-border/40 overflow-hidden rounded-2xl ring-1 backdrop-blur-sm">
@@ -26,7 +31,7 @@ export async function TrendingSidebar() {
           {posts.map((post, idx) => (
             <Link
               key={post.id}
-              href={`/${post.slug}`}
+              href={post.href || `/${post.slug}`}
               className="group hover:bg-muted/50 flex items-start gap-3 px-4 py-3 transition-colors"
             >
               {/* Rank number */}

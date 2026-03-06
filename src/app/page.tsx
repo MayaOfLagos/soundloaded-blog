@@ -1,5 +1,4 @@
 import { Suspense } from "react";
-import Link from "next/link";
 import type { Metadata } from "next";
 import { LeftSidebar } from "@/components/home/LeftSidebar";
 import { FeaturedPost } from "@/components/blog/FeaturedPost";
@@ -8,87 +7,88 @@ import { TrendingSidebar } from "@/components/blog/TrendingSidebar";
 import { PopularMusicSidebar } from "@/components/music/PopularMusicSidebar";
 import { PostCardSkeleton } from "@/components/blog/PostCardSkeleton";
 import { NewsletterForm } from "@/components/common/NewsletterForm";
+import { getSettings } from "@/lib/settings";
+import { JsonLd } from "@/components/common/JsonLd";
+import { buildWebSiteSchema, buildOrganizationSchema } from "@/lib/structured-data";
 
 export const metadata: Metadata = {
   title: "Soundloaded Blog — Nigeria's #1 Music Blog",
   alternates: { canonical: "/" },
 };
 
-export default function HomePage() {
+export default async function HomePage() {
+  const settings = await getSettings();
+  const websiteSchema = buildWebSiteSchema(settings.siteName, settings.siteUrl);
+  const orgSchema = buildOrganizationSchema(
+    settings.siteName,
+    settings.siteUrl,
+    settings.logoLight
+  );
+
   return (
-    <div className="mx-auto max-w-[1440px] px-4 sm:px-6">
-      {/* ━━━ Three-column grid ━━━
+    <>
+      <JsonLd schema={[websiteSchema, orgSchema]} />
+      <div className="mx-auto max-w-[1440px] px-4 sm:px-6">
+        {/* ━━━ Three-column grid ━━━
           Mobile:  single column (left sidebar hidden, right sidebar below feed)
           lg:      2 columns — feed + right sidebar
           xl:      3 columns — left sidebar + feed + right sidebar
       */}
-      <div className="grid grid-cols-1 gap-6 py-5 lg:grid-cols-[1fr_300px] xl:grid-cols-[220px_1fr_300px]">
-        {/* ── LEFT SIDEBAR (xl+ only) ── */}
-        <LeftSidebar />
+        <div className="grid grid-cols-1 gap-6 py-5 lg:grid-cols-[1fr_300px] xl:grid-cols-[220px_1fr_300px]">
+          {/* ── LEFT SIDEBAR (xl+ only) ── */}
+          <LeftSidebar />
 
-        {/* ── MAIN CONTENT ── */}
-        <main className="min-w-0">
-          {/* Hero / Featured post */}
-          <section className="mb-6">
-            <Suspense fallback={<HeroSkeleton />}>
-              <FeaturedPost />
+          {/* ── MAIN CONTENT ── */}
+          <main className="min-w-0">
+            {/* Hero / Featured post */}
+            <section className="mb-6">
+              <Suspense fallback={<HeroSkeleton />}>
+                <FeaturedPost />
+              </Suspense>
+            </section>
+
+            {/* Feed grid with view toggle */}
+            <Suspense fallback={<FeedSkeleton />}>
+              <LatestPostsGrid />
             </Suspense>
-          </section>
 
-          {/* Section header */}
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-foreground text-lg font-extrabold tracking-tight">
-              Latest Stories
-            </h2>
-            <Link
-              href="/news"
-              className="bg-muted text-muted-foreground hover:bg-brand/10 hover:text-brand rounded-full px-3 py-1 text-xs font-semibold transition-colors"
-            >
-              View all
-            </Link>
-          </div>
+            {/* ── Mobile-only: Right sidebar content below feed ── */}
+            <div className="mt-8 space-y-5 lg:hidden">
+              <Suspense fallback={<SidebarBlockSkeleton />}>
+                <TrendingSidebar />
+              </Suspense>
+              <Suspense fallback={<SidebarBlockSkeleton />}>
+                <PopularMusicSidebar />
+              </Suspense>
+              <MobileNewsletter />
+            </div>
+          </main>
 
-          {/* Feed grid */}
-          <Suspense fallback={<FeedSkeleton />}>
-            <LatestPostsGrid />
-          </Suspense>
-
-          {/* ── Mobile-only: Right sidebar content below feed ── */}
-          <div className="mt-8 space-y-5 lg:hidden">
+          {/* ── RIGHT SIDEBAR (lg+ only) ── */}
+          <aside className="sticky top-16 hidden h-[calc(100vh-4rem)] space-y-5 overflow-y-auto pb-8 lg:block">
             <Suspense fallback={<SidebarBlockSkeleton />}>
               <TrendingSidebar />
             </Suspense>
             <Suspense fallback={<SidebarBlockSkeleton />}>
               <PopularMusicSidebar />
             </Suspense>
-            <MobileNewsletter />
-          </div>
-        </main>
 
-        {/* ── RIGHT SIDEBAR (lg+ only) ── */}
-        <aside className="sticky top-16 hidden h-[calc(100vh-4rem)] space-y-5 overflow-y-auto pb-8 lg:block">
-          <Suspense fallback={<SidebarBlockSkeleton />}>
-            <TrendingSidebar />
-          </Suspense>
-          <Suspense fallback={<SidebarBlockSkeleton />}>
-            <PopularMusicSidebar />
-          </Suspense>
-
-          {/* Newsletter signup */}
-          <div className="from-brand/10 via-card/80 to-card ring-border/40 overflow-hidden rounded-2xl bg-gradient-to-br ring-1">
-            <div className="p-4">
-              <h3 className="text-foreground text-sm font-bold">Stay in the loop</h3>
-              <p className="text-muted-foreground mt-1 text-[11px] leading-relaxed">
-                Get the latest drops, news &amp; gist delivered to your inbox.
-              </p>
-              <div className="mt-3">
-                <NewsletterForm compact />
+            {/* Newsletter signup */}
+            <div className="from-brand/10 via-card/80 to-card ring-border/40 overflow-hidden rounded-2xl bg-gradient-to-br ring-1">
+              <div className="p-4">
+                <h3 className="text-foreground text-sm font-bold">Stay in the loop</h3>
+                <p className="text-muted-foreground mt-1 text-[11px] leading-relaxed">
+                  Get the latest drops, news &amp; gist delivered to your inbox.
+                </p>
+                <div className="mt-3">
+                  <NewsletterForm compact />
+                </div>
               </div>
             </div>
-          </div>
-        </aside>
+          </aside>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 

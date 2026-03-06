@@ -34,6 +34,9 @@ export async function GET(req: NextRequest) {
         body: true,
         status: true,
         createdAt: true,
+        guestName: true,
+        guestEmail: true,
+        guestWebsite: true,
         post: { select: { title: true, slug: true } },
         author: { select: { name: true, email: true } },
       },
@@ -66,5 +69,20 @@ export async function PATCH(req: NextRequest) {
   } catch (err) {
     if (err instanceof z.ZodError) return NextResponse.json({ error: err.errors }, { status: 422 });
     return NextResponse.json({ error: "Failed to update comment" }, { status: 500 });
+  }
+}
+
+export async function DELETE(req: NextRequest) {
+  const session = await requireAdmin();
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  try {
+    const { id } = await req.json();
+    if (!id) return NextResponse.json({ error: "id is required" }, { status: 400 });
+
+    await db.comment.delete({ where: { id } });
+    return NextResponse.json({ success: true });
+  } catch {
+    return NextResponse.json({ error: "Failed to delete comment" }, { status: 500 });
   }
 }

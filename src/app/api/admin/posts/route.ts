@@ -26,6 +26,9 @@ const createSchema = z.object({
   publishedAt: z.string().optional().nullable(),
   categoryId: z.string().optional().nullable(),
   authorId: z.string().optional().nullable(),
+  enableDownload: z.boolean().optional().default(false),
+  downloadLabel: z.string().max(120).optional().nullable(),
+  downloadMediaId: z.string().optional().nullable(),
 });
 
 export async function GET(req: NextRequest) {
@@ -80,6 +83,20 @@ export async function POST(req: NextRequest) {
     const data = createSchema.parse(body);
     const userId = (session.user as { id?: string }).id;
 
+    if (data.downloadMediaId) {
+      const media = await db.media.findUnique({
+        where: { id: data.downloadMediaId },
+        select: { id: true, type: true },
+      });
+
+      if (!media || (media.type !== "AUDIO" && media.type !== "DOCUMENT")) {
+        return NextResponse.json(
+          { error: "Download attachment must be an audio or document file" },
+          { status: 422 }
+        );
+      }
+    }
+
     const post = await db.post.create({
       data: {
         title: data.title,
@@ -96,6 +113,9 @@ export async function POST(req: NextRequest) {
             : null,
         categoryId: data.categoryId ?? null,
         authorId: data.authorId ?? userId!,
+        enableDownload: data.enableDownload && !!data.downloadMediaId,
+        downloadLabel: data.downloadLabel?.trim() ? data.downloadLabel.trim() : null,
+        downloadMediaId: data.downloadMediaId ?? null,
       },
     });
 

@@ -22,6 +22,7 @@ interface SearchResult {
   type: "post" | "music" | "artist" | "album";
   slug: string;
   subtitle?: string;
+  href?: string;
 }
 
 const NAV_SHORTCUTS = [
@@ -74,6 +75,7 @@ export function SearchDialog() {
   };
 
   const getResultHref = (result: SearchResult) => {
+    if (result.href) return result.href;
     switch (result.type) {
       case "post":
         return `/${result.slug}`;

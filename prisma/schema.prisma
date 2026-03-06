@@ -24,6 +24,7 @@ model User {
   downloads  Download[]
   accounts   Account[]
   sessions   Session[]
+  media      Media[]
 }
 
 enum UserRole {
@@ -56,10 +57,16 @@ model Post {
   tags       PostTag[]
   comments   Comment[]
   music      Music?
+  enableDownload Boolean @default(false)
+  downloadLabel  String?
+  downloadCount  Int      @default(0)
+  downloadMediaId String?
+  downloadMedia   Media?   @relation("PostDownloadMedia", fields: [downloadMediaId], references: [id], onDelete: SetNull)
 
   @@index([slug])
   @@index([status, publishedAt])
   @@index([type, publishedAt])
+  @@index([downloadMediaId])
 }
 
 enum PostStatus {
@@ -96,6 +103,7 @@ model Music {
   genre         String?
   label         String?
   isExclusive   Boolean  @default(false)
+  enableDownload Boolean @default(true)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -218,15 +226,21 @@ model Comment {
   createdAt DateTime      @default(now())
   updatedAt DateTime      @updatedAt
 
+  // Guest comment fields (used when authorId is null)
+  guestName    String?
+  guestEmail   String?
+  guestWebsite String?
+
   postId   String
-  post     Post      @relation(fields: [postId], references: [id])
-  authorId String
-  author   User      @relation(fields: [authorId], references: [id])
+  post     Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  authorId String?
+  author   User?     @relation(fields: [authorId], references: [id], onDelete: SetNull)
   parentId String?
   parent   Comment?  @relation("CommentReplies", fields: [parentId], references: [id])
   replies  Comment[] @relation("CommentReplies")
 
   @@index([postId, status])
+  @@index([authorId])
 }
 
 enum CommentStatus {
@@ -285,4 +299,162 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+}
+
+// ── Site Settings (singleton – one row with id="default") ───────────
+model SiteSettings {
+  id        String   @id @default("default")
+  updatedAt DateTime @updatedAt
+
+  // General / Site Identity
+  siteName      String  @default("Soundloaded Blog")
+  tagline       String  @default("Nigeria's #1 music download & entertainment blog")
+  siteUrl       String  @default("https://soundloadedblog.ng")
+  contactEmail  String  @default("")
+  copyrightText String  @default("Soundloaded Nigeria. All rights reserved.")
+  logoLight     String? // R2 key
+  logoDark      String? // R2 key
+  favicon       String? // R2 key
+  defaultOgImage String? // R2 key (1200x630)
+
+  // SEO & Meta
+  metaTitleTemplate      String @default("%s | Soundloaded Blog")
+  metaDescription        String @default("Nigeria's premier music blog — latest music news, free music downloads, gist, artist profiles, and more.")
+  googleSiteVerification String @default("")
+  bingSiteVerification   String @default("")
+  googleAnalyticsId      String @default("")
+  seoKeywords            String @default("Nigeria music, Afrobeats, free music download, music news, African music")
+
+  // Social Links
+  instagram  String @default("soundloadedng")
+  twitter    String @default("soundloadedng")
+  facebook   String @default("soundloadedng")
+  youtube    String @default("")
+  spotify    String @default("")
+  tiktok     String @default("")
+  appleMusic String @default("")
+  telegram   String @default("")
+  whatsapp   String @default("")
+
+  // PWA
+  pwaAppName         String @default("Soundloaded Blog")
+  pwaShortName       String @default("Soundloaded")
+  pwaThemeColor      String @default("#e11d48")
+  pwaBackgroundColor String @default("#0a0a0a")
+  pwaDisplayMode     String @default("standalone")
+  pwaOrientation     String @default("any")
+  pwaIcons           Json   @default("[]")
+  pwaSplashScreens   Json   @default("[]")
+
+  // Notifications
+  discordWebhookUrl       String  @default("")
+  notifyOnNewComment      Boolean @default(true)
+  notifyOnNewSubscriber   Boolean @default(true)
+  notifyOnNewMusicUpload  Boolean @default(false)
+  emailNotificationsAdmin Boolean @default(true)
+
+  // Content / Reading
+  postsPerPage           Int     @default(20)
+  feedItemCount          Int     @default(20)
+  feedContentMode        String  @default("excerpt") // "full" | "excerpt"
+  searchEngineVisibility Boolean @default(true) // false = adds noindex
+  defaultPostStatus      String  @default("DRAFT")
+  enableDownloads        Boolean @default(true)
+  maxDownloadsPerHour    Int     @default(10)
+
+  // Permalinks
+  permalinkStructure String @default("/%postname%") // e.g. "/%category%/%postname%"
+  categoryBase       String @default("category") // prefix for category archive pages
+
+  // Discussion / Comments
+  enableComments           Boolean @default(true)
+  autoApproveComments      Boolean @default(false)
+  requireLoginToComment    Boolean @default(false)
+  commentNestingDepth      Int     @default(2) // 1–5 levels
+  commentsPerPage          Int     @default(20)
+  commentOrder             String  @default("oldest") // "oldest" | "newest"
+  closeCommentsAfterDays   Int     @default(0) // 0 = never
+  commentPreviouslyApproved Boolean @default(false) // require prior approved comment
+  commentMaxLinks           Int     @default(2) // hold if N+ links, 0 = disabled
+  emailOnNewComment         Boolean @default(true)
+  emailOnModeration         Boolean @default(true)
+  commentModerationKeywords String  @default("") @db.Text
+  commentBlocklist          String  @default("") @db.Text
+
+  // Locale
+  timezone   String @default("Africa/Lagos")
+  dateFormat String @default("MMM d, yyyy")
+  timeFormat String @default("h:mm a")
+  language   String @default("en")
+
+  // Maintenance
+  maintenanceMode       Boolean @default(false)
+  maintenanceMessage    String  @default("We're upgrading. Be right back!") @db.Text
+  maintenanceAllowedIPs String  @default("")
+
+  // Code Injection
+  headerScripts String @default("") @db.Text
+  footerScripts String @default("") @db.Text
+
+  // Media
+  thumbnailSize     Int     @default(150)
+  mediumImageSize   Int     @default(600)
+  largeImageSize    Int     @default(1200)
+  imageQuality      Int     @default(80)
+  enableWatermark   Boolean @default(false)
+  watermarkImage    String?
+  watermarkPosition String  @default("bottom-right")
+
+  // Security
+  maxLoginAttempts       Int     @default(5)
+  loginLockoutDuration   Int     @default(15)
+  requireStrongPasswords Boolean @default(true)
+  allowRegistration      Boolean @default(true)
+  defaultUserRole        String  @default("READER")
+
+  // Email
+  emailFromName       String  @default("Soundloaded Blog")
+  emailFromAddress    String  @default("")
+  emailWelcomeEnabled Boolean @default(true)
+  emailDigestEnabled  Boolean @default(false)
+  emailDigestDay      String  @default("monday")
+
+  // Appearance
+  brandColor     String  @default("#e11d48")
+  enableDarkMode Boolean @default(true)
+  defaultTheme   String  @default("dark")
+  customCss      String  @default("") @db.Text
+}
+
+// ── Media Library ────────────────────────────────────────────────────
+enum MediaType {
+  IMAGE
+  AUDIO
+  VIDEO
+  DOCUMENT
+}
+
+model Media {
+  id         String    @id @default(cuid())
+  filename   String
+  r2Key      String    @unique
+  url        String
+  mimeType   String
+  size       Int
+  width      Int?
+  height     Int?
+  alt        String    @default("")
+  title      String    @default("")
+  caption    String    @default("")
+  folder     String    @default("")
+  type       MediaType @default(IMAGE)
+  uploadedBy String?
+  user       User?     @relation(fields: [uploadedBy], references: [id])
+  postDownloads Post[] @relation("PostDownloadMedia")
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@index([type])
+  @@index([folder])
+  @@index([createdAt])
 }

@@ -5,15 +5,6 @@ import { Redis } from "@upstash/redis";
 // Only instantiate rate limiters when Upstash env vars are present
 const hasUpstash = !!process.env.UPSTASH_REDIS_REST_URL && !!process.env.UPSTASH_REDIS_REST_TOKEN;
 
-const downloadLimit = hasUpstash
-  ? new Ratelimit({
-      redis: Redis.fromEnv(),
-      limiter: Ratelimit.slidingWindow(10, "1 h"),
-      analytics: false,
-      prefix: "sl_download",
-    })
-  : null;
-
 const streamLimit = hasUpstash
   ? new Ratelimit({
       redis: Redis.fromEnv(),
@@ -44,23 +35,31 @@ export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
   const ip = getIP(req);
 
-  // Rate limit music downloads (10/hr per IP)
-  if (pathname.match(/^\/api\/music\/[^/]+\/download/) && downloadLimit) {
-    const { success, limit, remaining, reset } = await downloadLimit.limit(ip);
-    if (!success) {
-      return new NextResponse(
-        JSON.stringify({ error: "Download limit reached. Try again later." }),
-        {
-          status: 429,
-          headers: {
-            "Content-Type": "application/json",
-            "X-RateLimit-Limit": limit.toString(),
-            "X-RateLimit-Remaining": remaining.toString(),
-            "X-RateLimit-Reset": reset.toString(),
-            "Retry-After": Math.ceil((reset - Date.now()) / 1000).toString(),
-          },
+  // ── Maintenance mode ──────────────────────────────────────────────
+  // Skip maintenance check for admin, API, auth, and static paths
+  const skipMaintenance =
+    pathname.startsWith("/admin") ||
+    pathname.startsWith("/api") ||
+    pathname.startsWith("/login") ||
+    pathname.startsWith("/register") ||
+    pathname.startsWith("/maintenance") ||
+    pathname.startsWith("/_next") ||
+    pathname.startsWith("/icons");
+
+  if (!skipMaintenance) {
+    try {
+      const baseUrl = req.nextUrl.origin;
+      const res = await fetch(`${baseUrl}/api/settings`, {
+        headers: { "x-internal": "1" },
+      });
+      if (res.ok) {
+        const settings = await res.json();
+        if (settings.maintenanceMode) {
+          return NextResponse.rewrite(new URL("/maintenance", req.url));
         }
-      );
+      }
+    } catch {
+      // If settings fetch fails, don't block the site
     }
   }
 
@@ -96,5 +95,5 @@ export async function proxy(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/api/music/:path*/download", "/api/music/:path*/stream", "/api/:path*"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|icons).*)"],
 };

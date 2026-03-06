@@ -1,8 +1,7 @@
 import { db } from "@/lib/db";
+import { getPostUrl } from "@/lib/urls";
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://soundloaded.ng";
-const SITE_NAME = "Soundloaded";
-const SITE_DESCRIPTION = "Nigeria's #1 music news and free downloads blog";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://soundloadedblog.ng";
 
 function escapeXml(str: string): string {
   return str
@@ -13,25 +12,24 @@ function escapeXml(str: string): string {
     .replace(/'/g, "&apos;");
 }
 
-function postUrl(slug: string, type: string): string {
-  const prefix =
-    type === "NEWS"
-      ? "news"
-      : type === "MUSIC"
-        ? "music"
-        : type === "GIST"
-          ? "gist"
-          : type === "ALBUM"
-            ? "albums"
-            : "news";
-  return `${SITE_URL}/${prefix}/${slug}`;
-}
-
 export async function GET() {
+  const settingsRaw = await db.siteSettings.findUnique({
+    where: { id: "default" },
+    select: {
+      siteName: true,
+      metaDescription: true,
+      feedItemCount: true,
+      feedContentMode: true,
+      permalinkStructure: true,
+    },
+  });
+
+  const feedLimit = settingsRaw?.feedItemCount ?? 20;
+
   const posts = await db.post.findMany({
     where: { status: "PUBLISHED" },
     orderBy: { publishedAt: "desc" },
-    take: 50,
+    take: feedLimit,
     select: {
       id: true,
       slug: true,
@@ -41,13 +39,20 @@ export async function GET() {
       publishedAt: true,
       coverImage: true,
       author: { select: { name: true } },
-      category: { select: { name: true } },
+      category: { select: { name: true, slug: true } },
     },
   });
 
+  const settings = settingsRaw;
+
+  const siteName = settings?.siteName ?? "Soundloaded Blog";
+  const siteDescription =
+    settings?.metaDescription ?? "Nigeria's #1 music news and free downloads blog";
+
   const items = posts
     .map((post) => {
-      const url = postUrl(post.slug, post.type);
+      const permalinkStructure = settingsRaw?.permalinkStructure ?? "/%postname%";
+      const url = `${SITE_URL}${getPostUrl(post, permalinkStructure)}`;
       const pubDate = (post.publishedAt ?? new Date()).toUTCString();
       const description = post.excerpt ? escapeXml(post.excerpt) : "";
       const title = escapeXml(post.title);
@@ -61,7 +66,7 @@ export async function GET() {
       <link>${url}</link>
       <guid isPermaLink="true">${url}</guid>
       <pubDate>${pubDate}</pubDate>
-      ${post.author?.name ? `<author>${escapeXml(post.author.name)}</author>` : ""}
+      ${post.author?.name ? `<dc:creator>${escapeXml(post.author.name)}</dc:creator>` : ""}
       ${post.category?.name ? `<category>${escapeXml(post.category.name)}</category>` : ""}
       <description>${description}</description>
       ${imageTag}
@@ -72,16 +77,18 @@ export async function GET() {
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0"
   xmlns:media="http://search.yahoo.com/mrss/"
-  xmlns:atom="http://www.w3.org/2005/Atom">
+  xmlns:atom="http://www.w3.org/2005/Atom"
+  xmlns:dc="http://purl.org/dc/elements/1.1/">
   <channel>
-    <title>${escapeXml(SITE_NAME)}</title>
+    <title>${escapeXml(siteName)}</title>
     <link>${SITE_URL}</link>
-    <description>${escapeXml(SITE_DESCRIPTION)}</description>
+    <description>${escapeXml(siteDescription)}</description>
     <language>en-ng</language>
+    <lastBuildDate>${new Date().toUTCString()}</lastBuildDate>
     <atom:link href="${SITE_URL}/feed.xml" rel="self" type="application/rss+xml"/>
     <image>
       <url>${SITE_URL}/icons/icon-192.png</url>
-      <title>${escapeXml(SITE_NAME)}</title>
+      <title>${escapeXml(siteName)}</title>
       <link>${SITE_URL}</link>
     </image>
     ${items}

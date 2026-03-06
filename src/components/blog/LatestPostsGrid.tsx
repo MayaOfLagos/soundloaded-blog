@@ -1,10 +1,15 @@
 import Link from "next/link";
-import { PostCard } from "./PostCard";
 import { getLatestPosts } from "@/lib/api/posts";
+import { getSettings } from "@/lib/settings";
 import { Button } from "@/components/ui/button";
+import { FeedViewToggle } from "./FeedViewToggle";
 
 export async function LatestPostsGrid() {
-  const posts = await getLatestPosts({ limit: 12 });
+  const settings = await getSettings();
+  const posts = await getLatestPosts({
+    limit: settings.postsPerPage,
+    permalinkStructure: settings.permalinkStructure,
+  });
 
   if (!posts.length) {
     return (
@@ -23,11 +28,5 @@ export async function LatestPostsGrid() {
     );
   }
 
-  return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-      {posts.map((post) => (
-        <PostCard key={post.id} post={post} />
-      ))}
-    </div>
-  );
+  return <FeedViewToggle posts={posts} />;
 }

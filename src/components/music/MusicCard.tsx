@@ -92,7 +92,12 @@ export function MusicCard({ track, className }: MusicCardProps) {
               {formatFileSize(track.fileSize)}
             </span>
           )}
-          <DownloadButton musicId={track.id} title={track.title} className="flex-1" />
+          <DownloadButton
+            musicId={track.id}
+            title={track.title}
+            enabled={track.enableDownload}
+            className="flex-1"
+          />
         </div>
       </div>
     </div>

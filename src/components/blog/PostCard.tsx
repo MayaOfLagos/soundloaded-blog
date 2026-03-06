@@ -14,6 +14,8 @@ export interface PostCardData {
   viewCount?: number;
   category?: { name: string; slug: string; color?: string } | null;
   author?: { name: string; avatar?: string | null } | null;
+  /** Pre-computed permalink URL. Falls back to `/${slug}` if not set. */
+  href?: string;
 }
 
 interface PostCardProps {
@@ -23,7 +25,7 @@ interface PostCardProps {
 }
 
 export function PostCard({ post, variant = "default", className }: PostCardProps) {
-  const href = `/${post.slug}`;
+  const href = post.href || `/${post.slug}`;
 
   /* ━━━ COMPACT — sidebar / list items ━━━ */
   if (variant === "compact") {

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { getPostUrl } from "@/lib/urls";
 
 interface SimpleResult {
   id: string;
@@ -7,6 +8,7 @@ interface SimpleResult {
   type: "post" | "music" | "artist" | "album";
   slug: string;
   subtitle?: string;
+  href?: string;
 }
 
 export async function GET(req: NextRequest) {
@@ -21,6 +23,12 @@ export async function GET(req: NextRequest) {
   }
 
   try {
+    const settingsRaw = await db.siteSettings.findUnique({
+      where: { id: "default" },
+      select: { permalinkStructure: true },
+    });
+    const permalinkStructure = settingsRaw?.permalinkStructure ?? "/%postname%";
+
     const [posts, music, artists] = await Promise.all([
       db.post.findMany({
         where: {
@@ -105,6 +113,7 @@ export async function GET(req: NextRequest) {
         type: "post" as const,
         slug: p.slug,
         subtitle: p.category?.name,
+        href: getPostUrl(p, permalinkStructure),
       })),
       ...music.map((m) => ({
         id: m.id,

@@ -1,12 +1,8 @@
-import type { Metadata } from "next";
+"use client";
+
 import Link from "next/link";
 import { WifiOff, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-
-export const metadata: Metadata = {
-  title: "You're Offline — Soundloaded Blog",
-  robots: { index: false },
-};
 
 export default function OfflinePage() {
   return (

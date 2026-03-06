@@ -25,7 +25,10 @@ interface Comment {
   status: CommentStatus;
   createdAt: string;
   post: { title: string; slug: string };
-  author: { name: string | null; email: string };
+  author: { name: string | null; email: string } | null;
+  guestName: string | null;
+  guestEmail: string | null;
+  guestWebsite: string | null;
 }
 
 const STATUS_CONFIG: Record<CommentStatus, { label: string; className: string }> = {
@@ -207,9 +210,14 @@ export default function CommentsPage() {
                   <TableCell>
                     <div>
                       <p className="text-foreground text-sm font-medium">
-                        {comment.author.name ?? "Anonymous"}
+                        {comment.author?.name ?? comment.guestName ?? "Anonymous"}
                       </p>
-                      <p className="text-muted-foreground text-xs">{comment.author.email}</p>
+                      <p className="text-muted-foreground text-xs">
+                        {comment.author?.email ?? comment.guestEmail ?? "—"}
+                      </p>
+                      {!comment.author && comment.guestName && (
+                        <span className="text-muted-foreground text-[10px]">Guest</span>
+                      )}
                     </div>
                   </TableCell>
                   <TableCell>

@@ -30,6 +30,26 @@
   --input: #e5e7eb;
   --ring: #e11d48;
 
+  /* Popover (dropdown backgrounds) */
+  --popover: #ffffff;
+  --popover-foreground: #0a0a0a;
+
+  /* Accent (hover/focus states) */
+  --accent: #f3f4f6;
+  --accent-foreground: #111827;
+
+  /* Primary */
+  --primary: #e11d48;
+  --primary-foreground: #ffffff;
+
+  /* Secondary */
+  --secondary: #f3f4f6;
+  --secondary-foreground: #111827;
+
+  /* Destructive */
+  --destructive: #dc2626;
+  --destructive-foreground: #ffffff;
+
   /* Success / Play */
   --success: #16a34a;
   --success-foreground: #ffffff;
@@ -66,6 +86,26 @@
   --input: #262626;
   --ring: #fb7185;
 
+  /* Popover */
+  --popover: #111111;
+  --popover-foreground: #ededed;
+
+  /* Accent */
+  --accent: #1a1a1a;
+  --accent-foreground: #ededed;
+
+  /* Primary */
+  --primary: #fb7185;
+  --primary-foreground: #0a0a0a;
+
+  /* Secondary */
+  --secondary: #1a1a1a;
+  --secondary-foreground: #ededed;
+
+  /* Destructive */
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+
   /* Success */
   --success: #22c55e;
   --success-foreground: #0a0a0a;
@@ -95,6 +135,16 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
   --color-success: var(--success);
   --color-success-foreground: var(--success-foreground);
 

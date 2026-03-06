@@ -24,6 +24,9 @@ const updateSchema = z.object({
   publishedAt: z.string().optional().nullable(),
   categoryId: z.string().optional().nullable(),
   authorId: z.string().optional().nullable(),
+  enableDownload: z.boolean().optional(),
+  downloadLabel: z.string().max(120).optional().nullable(),
+  downloadMediaId: z.string().optional().nullable(),
 });
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -37,6 +40,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       category: { select: { id: true, name: true, slug: true } },
       author: { select: { id: true, name: true, email: true } },
       tags: { include: { tag: true } },
+      downloadMedia: {
+        select: { id: true, filename: true, url: true, type: true, mimeType: true, size: true },
+      },
     },
   });
 
@@ -53,14 +59,51 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   try {
     const body = await req.json();
     const data = updateSchema.parse(body);
+    const existingPost = await db.post.findUnique({
+      where: { id },
+      select: { downloadMediaId: true },
+    });
+
+    if (!existingPost) {
+      return NextResponse.json({ error: "Not found" }, { status: 404 });
+    }
 
     const { publishedAt: rawPublishedAt, ...rest } = data;
     const updateData: Record<string, unknown> = { ...rest };
+
+    if (data.downloadMediaId) {
+      const media = await db.media.findUnique({
+        where: { id: data.downloadMediaId },
+        select: { id: true, type: true },
+      });
+      if (!media || (media.type !== "AUDIO" && media.type !== "DOCUMENT")) {
+        return NextResponse.json(
+          { error: "Download attachment must be an audio or document file" },
+          { status: 422 }
+        );
+      }
+    }
 
     if (rawPublishedAt !== undefined) {
       updateData.publishedAt = rawPublishedAt ? new Date(rawPublishedAt) : null;
     } else if (data.status === "PUBLISHED") {
       updateData.publishedAt = new Date();
+    }
+
+    if (data.downloadLabel !== undefined) {
+      updateData.downloadLabel = data.downloadLabel?.trim() ? data.downloadLabel.trim() : null;
+    }
+
+    if (data.downloadMediaId !== undefined || data.enableDownload !== undefined) {
+      const downloadMediaId =
+        data.downloadMediaId === undefined ? existingPost.downloadMediaId : data.downloadMediaId;
+      const enableDownload = data.enableDownload ?? false;
+
+      if (data.downloadMediaId !== undefined) {
+        updateData.downloadMediaId = data.downloadMediaId;
+      }
+
+      updateData.enableDownload = enableDownload && !!downloadMediaId;
     }
 
     const post = await db.post.update({

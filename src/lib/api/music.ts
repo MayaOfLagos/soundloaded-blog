@@ -9,6 +9,7 @@ export interface MusicCardData {
   coverArt?: string | null;
   genre?: string | null;
   downloadCount: number;
+  enableDownload: boolean;
   fileSize?: bigint | null;
   releaseYear?: number | null;
 }
@@ -51,6 +52,7 @@ export async function getPopularMusic({ limit = 5 }: { limit?: number } = {}): P
       coverArt: t.coverArt,
       genre: t.genre,
       downloadCount: t.downloadCount,
+      enableDownload: t.enableDownload,
       fileSize: t.fileSize,
       releaseYear: t.year,
     }));
@@ -81,6 +83,7 @@ export async function getLatestMusic({
       coverArt: t.coverArt,
       genre: t.genre,
       downloadCount: t.downloadCount,
+      enableDownload: t.enableDownload,
       fileSize: t.fileSize,
       releaseYear: t.year,
     }));

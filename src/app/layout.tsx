@@ -6,6 +6,9 @@ import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { QueryProvider } from "@/components/common/QueryProvider";
 import { ConditionalNavigation } from "@/components/layout/ConditionalNavigation";
+import { getSettings } from "@/lib/settings";
+import { Suspense } from "react";
+import { HeadScripts, FooterScripts, CustomCss } from "@/components/common/CodeInjection";
 import "./globals.css";
 
 const inter = Inter({
@@ -14,40 +17,60 @@ const inter = Inter({
   display: "swap",
 });
 
-export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? "https://soundloadedblog.ng"),
-  title: {
-    default: "Soundloaded Blog — Nigeria's #1 Music Blog",
-    template: "%s | Soundloaded Blog",
-  },
-  description:
-    "Nigeria's premier music blog — latest music news, free music downloads, gist, artist profiles, and more. Empowering African artists.",
-  keywords: ["Nigeria music", "Afrobeats", "free music download", "music news", "African music"],
-  authors: [{ name: "Soundloaded", url: "https://soundloadedblog.ng" }],
-  creator: "Soundloaded Nigeria",
-  publisher: "Soundloaded Nigeria",
-  openGraph: {
-    type: "website",
-    locale: "en_NG",
-    url: "https://soundloadedblog.ng",
-    siteName: "Soundloaded Blog",
-    title: "Soundloaded Blog — Nigeria's #1 Music Blog",
-    description:
-      "Nigeria's premier music blog — latest music news, free music downloads, gist, and more.",
-    images: [{ url: "/og/default.jpg", width: 1200, height: 630, alt: "Soundloaded Blog" }],
-  },
-  twitter: {
-    card: "summary_large_image",
-    site: "@soundloadedng",
-    creator: "@soundloadedng",
-  },
-  robots: { index: true, follow: true },
-  manifest: "/manifest.json",
-  icons: {
-    icon: "/icons/icon-192x192.png",
-    apple: "/icons/apple-touch-icon.png",
-  },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const s = await getSettings();
+
+  return {
+    metadataBase: new URL(
+      s.siteUrl || process.env.NEXT_PUBLIC_APP_URL || "https://soundloadedblog.ng"
+    ),
+    title: {
+      default: `${s.siteName} — ${s.tagline}`,
+      template: s.metaTitleTemplate,
+    },
+    description: s.metaDescription,
+    keywords: s.seoKeywords
+      .split(",")
+      .map((k) => k.trim())
+      .filter(Boolean),
+    authors: [{ name: s.siteName, url: s.siteUrl }],
+    creator: s.copyrightText.replace(". All rights reserved.", ""),
+    publisher: s.copyrightText.replace(". All rights reserved.", ""),
+    openGraph: {
+      type: "website",
+      locale: "en_NG",
+      url: s.siteUrl,
+      siteName: s.siteName,
+      title: `${s.siteName} — ${s.tagline}`,
+      description: s.metaDescription,
+      images: s.defaultOgImage
+        ? [{ url: s.defaultOgImage, width: 1200, height: 630, alt: s.siteName }]
+        : [{ url: "/og/default.jpg", width: 1200, height: 630, alt: s.siteName }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      site: s.twitter ? `@${s.twitter}` : undefined,
+      creator: s.twitter ? `@${s.twitter}` : undefined,
+    },
+    alternates: {
+      types: {
+        "application/rss+xml": [{ url: `${s.siteUrl}/feed.xml`, title: `${s.siteName} RSS Feed` }],
+      },
+    },
+    robots: s.searchEngineVisibility
+      ? { index: true, follow: true }
+      : { index: false, follow: false },
+    manifest: "/api/manifest",
+    icons: {
+      icon: s.favicon || "/icons/icon-192x192.png",
+      apple: "/icons/apple-touch-icon.png",
+    },
+    verification: {
+      google: s.googleSiteVerification || undefined,
+      other: s.bingSiteVerification ? { "msvalidate.01": s.bingSiteVerification } : undefined,
+    },
+  };
+}
 
 export const viewport: Viewport = {
   themeColor: [
@@ -59,9 +82,16 @@ export const viewport: Viewport = {
   maximumScale: 5,
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const settings = await getSettings();
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang={settings.language || "en"} suppressHydrationWarning>
+      <head>
+        <Suspense>
+          <HeadScripts />
+          <CustomCss />
+        </Suspense>
+      </head>
       <body className={`${inter.variable} font-sans antialiased`}>
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
           <QueryProvider>
@@ -84,6 +114,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             }}
           />
         </ThemeProvider>
+        <Suspense>
+          <FooterScripts />
+        </Suspense>
         <Analytics />
         <SpeedInsights />
       </body>

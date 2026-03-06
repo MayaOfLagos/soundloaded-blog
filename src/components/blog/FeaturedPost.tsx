@@ -1,10 +1,15 @@
-import { PostCard } from "./PostCard";
-import { getFeaturedPost } from "@/lib/api/posts";
+import { getFeaturedPosts } from "@/lib/api/posts";
+import { getSettings } from "@/lib/settings";
+import { HeroSlider } from "./HeroSlider";
 
 export async function FeaturedPost() {
-  const post = await getFeaturedPost();
+  const settings = await getSettings();
+  const posts = await getFeaturedPosts({
+    limit: 5,
+    permalinkStructure: settings.permalinkStructure,
+  });
 
-  if (!post) {
+  if (!posts.length) {
     return (
       <div className="border-border bg-card rounded-2xl border p-12 text-center">
         <p className="mb-2 text-2xl">🎵</p>
@@ -13,5 +18,5 @@ export async function FeaturedPost() {
     );
   }
 
-  return <PostCard post={post} variant="featured" />;
+  return <HeroSlider posts={posts} />;
 }

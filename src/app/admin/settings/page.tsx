@@ -4,101 +4,238 @@ import { useState, useEffect } from "react";
 import { useForm, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import axios from "axios";
 import toast from "react-hot-toast";
 import {
   Settings,
   Save,
   Loader2,
-  Instagram,
-  Twitter,
-  Facebook,
-  Youtube,
   Globe,
+  Search,
+  Share2,
+  Smartphone,
   Bell,
+  FileText,
+  Palette,
+  Server,
+  MessageSquare,
+  Construction,
+  Code,
+  ImageIcon,
+  Shield,
+  Mail,
+  Link2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Separator } from "@/components/ui/separator";
+import { Form } from "@/components/ui/form";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { GeneralSettings } from "./_components/GeneralSettings";
+import { SeoSettings } from "./_components/SeoSettings";
+import { SocialSettings } from "./_components/SocialSettings";
+import { PwaSettings } from "./_components/PwaSettings";
+import { NotificationSettings } from "./_components/NotificationSettings";
+import { ContentSettings } from "./_components/ContentSettings";
+import { DiscussionSettings } from "./_components/DiscussionSettings";
+import { AppearanceSettings } from "./_components/AppearanceSettings";
+import { MaintenanceSettings } from "./_components/MaintenanceSettings";
+import { CodeInjectionSettings } from "./_components/CodeInjectionSettings";
+import { MediaSettings } from "./_components/MediaSettings";
+import { SecuritySettings } from "./_components/SecuritySettings";
+import { EmailSettings } from "./_components/EmailSettings";
+import { PermalinkSettings } from "./_components/PermalinkSettings";
+import { EnvironmentStatus } from "./_components/EnvironmentStatus";
 
-const SETTINGS_KEY = "soundloaded_site_settings";
-
+// ── Schema ───────────────────────────────────────────────────────────
 const settingsSchema = z.object({
-  siteName: z.string().min(2, "Site name required"),
-  tagline: z.string().max(160).optional(),
-  ogImageUrl: z.string().url("Must be a valid URL").optional().or(z.literal("")),
-  siteUrl: z.string().url("Must be a valid URL").optional().or(z.literal("")),
-  instagram: z.string().optional(),
-  twitter: z.string().optional(),
-  facebook: z.string().optional(),
-  youtube: z.string().optional(),
-  spotify: z.string().optional(),
-  discordWebhook: z.string().url("Must be a valid webhook URL").optional().or(z.literal("")),
-  notifyOnNewComment: z.boolean(),
-  notifyOnNewSubscriber: z.boolean(),
+  // General
+  siteName: z.string().min(1, "Required").max(100).default("Soundloaded Blog"),
+  tagline: z.string().max(300).default(""),
+  siteUrl: z.string().url("Must be a valid URL").or(z.literal("")).default(""),
+  contactEmail: z.string().email("Must be a valid email").or(z.literal("")).default(""),
+  copyrightText: z.string().max(200).default(""),
+  logoLight: z.string().nullable().default(null),
+  logoDark: z.string().nullable().default(null),
+  favicon: z.string().nullable().default(null),
+  defaultOgImage: z.string().nullable().default(null),
+  // SEO
+  metaTitleTemplate: z.string().max(100).default("%s | Soundloaded Blog"),
+  metaDescription: z.string().max(500).default(""),
+  googleSiteVerification: z.string().max(100).default(""),
+  bingSiteVerification: z.string().max(100).default(""),
+  googleAnalyticsId: z.string().max(50).default(""),
+  seoKeywords: z.string().max(500).default(""),
+  // Social
+  instagram: z.string().max(50).default(""),
+  twitter: z.string().max(50).default(""),
+  facebook: z.string().max(50).default(""),
+  youtube: z.string().max(100).default(""),
+  spotify: z.string().max(100).default(""),
+  tiktok: z.string().max(50).default(""),
+  appleMusic: z.string().max(100).default(""),
+  telegram: z.string().max(50).default(""),
+  whatsapp: z.string().max(20).default(""),
+  // PWA
+  pwaAppName: z.string().max(100).default("Soundloaded Blog"),
+  pwaShortName: z.string().max(30).default("Soundloaded"),
+  pwaThemeColor: z.string().default("#e11d48"),
+  pwaBackgroundColor: z.string().default("#0a0a0a"),
+  pwaDisplayMode: z.string().default("standalone"),
+  pwaOrientation: z.string().default("any"),
+  pwaIcons: z.array(z.record(z.string())).default([]),
+  pwaSplashScreens: z.array(z.record(z.string())).default([]),
+  // Notifications
+  discordWebhookUrl: z.string().url().or(z.literal("")).default(""),
+  notifyOnNewComment: z.boolean().default(true),
+  notifyOnNewSubscriber: z.boolean().default(true),
+  notifyOnNewMusicUpload: z.boolean().default(false),
+  emailNotificationsAdmin: z.boolean().default(true),
+  // Content / Reading
+  postsPerPage: z.number().int().min(1).max(100).default(20),
+  feedItemCount: z.number().int().min(1).max(100).default(20),
+  feedContentMode: z.string().default("excerpt"),
+  searchEngineVisibility: z.boolean().default(true),
+  defaultPostStatus: z.string().default("DRAFT"),
+  enableDownloads: z.boolean().default(true),
+  maxDownloadsPerHour: z.number().int().min(1).max(1000).default(10),
+  // Permalinks
+  permalinkStructure: z.string().min(1).max(200).default("/%postname%"),
+  categoryBase: z.string().max(100).default("category"),
+  // Discussion / Comments
+  enableComments: z.boolean().default(true),
+  autoApproveComments: z.boolean().default(false),
+  requireLoginToComment: z.boolean().default(false),
+  commentNestingDepth: z.number().int().min(1).max(5).default(2),
+  commentsPerPage: z.number().int().min(5).max(100).default(20),
+  commentOrder: z.string().default("oldest"),
+  closeCommentsAfterDays: z.number().int().min(0).max(365).default(0),
+  commentPreviouslyApproved: z.boolean().default(false),
+  commentMaxLinks: z.number().int().min(0).max(100).default(2),
+  emailOnNewComment: z.boolean().default(true),
+  emailOnModeration: z.boolean().default(true),
+  commentModerationKeywords: z.string().max(5000).default(""),
+  commentBlocklist: z.string().max(5000).default(""),
+  // Locale
+  timezone: z.string().max(50).default("Africa/Lagos"),
+  dateFormat: z.string().max(30).default("MMM d, yyyy"),
+  timeFormat: z.string().max(20).default("h:mm a"),
+  language: z.string().max(10).default("en"),
+  // Maintenance
+  maintenanceMode: z.boolean().default(false),
+  maintenanceMessage: z.string().max(2000).default("We're upgrading. Be right back!"),
+  maintenanceAllowedIPs: z.string().max(1000).default(""),
+  // Code Injection
+  headerScripts: z.string().max(20000).default(""),
+  footerScripts: z.string().max(20000).default(""),
+  // Media
+  thumbnailSize: z.number().int().min(50).max(500).default(150),
+  mediumImageSize: z.number().int().min(200).max(1200).default(600),
+  largeImageSize: z.number().int().min(600).max(3000).default(1200),
+  imageQuality: z.number().int().min(1).max(100).default(80),
+  enableWatermark: z.boolean().default(false),
+  watermarkImage: z.string().nullable().default(null),
+  watermarkPosition: z.string().default("bottom-right"),
+  // Security
+  maxLoginAttempts: z.number().int().min(1).max(20).default(5),
+  loginLockoutDuration: z.number().int().min(1).max(1440).default(15),
+  requireStrongPasswords: z.boolean().default(true),
+  allowRegistration: z.boolean().default(true),
+  defaultUserRole: z.string().default("READER"),
+  // Email
+  emailFromName: z.string().max(100).default("Soundloaded Blog"),
+  emailFromAddress: z.string().email().or(z.literal("")).default(""),
+  emailWelcomeEnabled: z.boolean().default(true),
+  emailDigestEnabled: z.boolean().default(false),
+  emailDigestDay: z.string().default("monday"),
+  // Appearance
+  brandColor: z.string().default("#e11d48"),
+  enableDarkMode: z.boolean().default(true),
+  defaultTheme: z.string().default("dark"),
+  customCss: z.string().max(10000).default(""),
 });
 
-type SettingsFormValues = z.infer<typeof settingsSchema>;
+export type SettingsFormValues = z.infer<typeof settingsSchema>;
 
-const DEFAULT_SETTINGS: SettingsFormValues = {
-  siteName: "Soundloaded Blog",
-  tagline: "Nigeria's #1 music download & entertainment blog",
-  ogImageUrl: "",
-  siteUrl: "https://soundloadedblog.ng",
-  instagram: "soundloadedng",
-  twitter: "soundloadedng",
-  facebook: "soundloadedng",
-  youtube: "",
-  spotify: "",
-  discordWebhook: "",
-  notifyOnNewComment: true,
-  notifyOnNewSubscriber: true,
-};
+const SETTINGS_TABS = [
+  { value: "general", label: "General", icon: Globe },
+  { value: "seo", label: "SEO & Meta", icon: Search },
+  { value: "social", label: "Social Links", icon: Share2 },
+  { value: "content", label: "Content", icon: FileText },
+  { value: "permalinks", label: "Permalinks", icon: Link2 },
+  { value: "discussion", label: "Discussion", icon: MessageSquare },
+  { value: "appearance", label: "Appearance", icon: Palette },
+  { value: "media", label: "Media", icon: ImageIcon },
+  { value: "pwa", label: "PWA", icon: Smartphone },
+  { value: "notifications", label: "Notifications", icon: Bell },
+  { value: "security", label: "Security", icon: Shield },
+  { value: "email", label: "Email", icon: Mail },
+  { value: "maintenance", label: "Maintenance", icon: Construction },
+  { value: "code-injection", label: "Code Injection", icon: Code },
+  { value: "environment", label: "Environment", icon: Server },
+] as const;
+
+const OLD_LOCALSTORAGE_KEY = "soundloaded_site_settings";
 
 export default function SettingsPage() {
-  const [isSaving, setIsSaving] = useState(false);
-  const [lastSaved, setLastSaved] = useState<Date | null>(null);
+  const queryClient = useQueryClient();
+  const [showMigrationBanner, setShowMigrationBanner] = useState(() => {
+    try {
+      return !!localStorage.getItem(OLD_LOCALSTORAGE_KEY);
+    } catch {
+      return false;
+    }
+  });
+
+  const { data: serverSettings, isLoading } = useQuery({
+    queryKey: ["admin-settings"],
+    queryFn: () => axios.get("/api/admin/settings").then((r) => r.data),
+  });
 
   const form = useForm<SettingsFormValues>({
     resolver: zodResolver(settingsSchema) as Resolver<SettingsFormValues>,
-    defaultValues: DEFAULT_SETTINGS,
+    defaultValues: settingsSchema.parse({}) as SettingsFormValues,
   });
 
+  // Populate form when server data arrives
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem(SETTINGS_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved) as Partial<SettingsFormValues>;
-        form.reset({ ...DEFAULT_SETTINGS, ...parsed });
-      }
-    } catch {
-      // ignore
+    if (serverSettings) {
+      form.reset(settingsSchema.parse(serverSettings));
     }
-  }, [form]);
+  }, [serverSettings, form]);
 
-  async function onSubmit(values: SettingsFormValues) {
-    setIsSaving(true);
-    try {
-      localStorage.setItem(SETTINGS_KEY, JSON.stringify(values));
-      await new Promise((r) => setTimeout(r, 400));
-      setLastSaved(new Date());
+  const mutation = useMutation({
+    mutationFn: (values: SettingsFormValues) =>
+      axios.put("/api/admin/settings", values).then((r) => r.data),
+    onSuccess: () => {
       toast.success("Settings saved!");
-    } catch {
+      queryClient.invalidateQueries({ queryKey: ["admin-settings"] });
+      queryClient.invalidateQueries({ queryKey: ["site-settings"] });
+      try {
+        localStorage.removeItem(OLD_LOCALSTORAGE_KEY);
+        setShowMigrationBanner(false);
+      } catch {
+        // ignore
+      }
+    },
+    onError: () => {
       toast.error("Failed to save settings");
-    } finally {
-      setIsSaving(false);
-    }
+    },
+  });
+
+  function onSubmit(values: SettingsFormValues) {
+    mutation.mutate(values);
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="text-muted-foreground h-8 w-8 animate-spin" />
+      </div>
+    );
   }
 
   return (
-    <div className="max-w-2xl space-y-8">
+    <div className="mx-auto max-w-4xl space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -107,269 +244,105 @@ export default function SettingsPage() {
           </div>
           <div>
             <h1 className="text-foreground text-2xl font-black">Settings</h1>
-            <p className="text-muted-foreground mt-0.5 text-sm">
-              {lastSaved ? `Last saved ${lastSaved.toLocaleTimeString()}` : "Site configuration"}
-            </p>
+            <p className="text-muted-foreground mt-0.5 text-sm">Site configuration & preferences</p>
           </div>
         </div>
       </div>
 
+      {/* Migration banner */}
+      {showMigrationBanner && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950/30">
+          <p className="text-sm text-amber-800 dark:text-amber-200">
+            We found settings saved locally from a previous session. Click{" "}
+            <strong>Save Settings</strong> to persist them to the database.
+          </p>
+        </div>
+      )}
+
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-          {/* Site Identity */}
-          <section className="space-y-4">
-            <div>
-              <h2 className="text-foreground text-base font-bold">Site Identity</h2>
-              <p className="text-muted-foreground mt-0.5 text-sm">
-                Basic information about your site
-              </p>
-            </div>
-            <Separator />
-
-            <FormField
-              control={form.control}
-              name="siteName"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Site Name *</FormLabel>
-                  <FormControl>
-                    <Input {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="tagline"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Tagline</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Nigeria's #1 music blog..." {...field} />
-                  </FormControl>
-                  <p className="text-muted-foreground text-xs">
-                    Used in meta descriptions and the site header
-                  </p>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="siteUrl"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>
-                    <Globe className="mr-1.5 inline h-3.5 w-3.5" />
-                    Site URL
-                  </FormLabel>
-                  <FormControl>
-                    <Input placeholder="https://soundloadedblog.ng" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="ogImageUrl"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Default OG Image URL</FormLabel>
-                  <FormControl>
-                    <Input placeholder="https://cdn.soundloadedblog.ng/og-default.jpg" {...field} />
-                  </FormControl>
-                  <p className="text-muted-foreground text-xs">
-                    1200x630px recommended for social sharing previews
-                  </p>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </section>
-
-          {/* Social Links */}
-          <section className="space-y-4">
-            <div>
-              <h2 className="text-foreground text-base font-bold">Social Links</h2>
-              <p className="text-muted-foreground mt-0.5 text-sm">
-                Used in the site footer and JSON-LD schema
-              </p>
-            </div>
-            <Separator />
-
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <FormField
-                control={form.control}
-                name="instagram"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>
-                      <Instagram className="mr-1.5 inline h-3.5 w-3.5" />
-                      Instagram handle
-                    </FormLabel>
-                    <FormControl>
-                      <div className="flex">
-                        <span className="bg-muted border-input text-muted-foreground flex items-center rounded-l-md border border-r-0 px-3 text-sm">
-                          @
-                        </span>
-                        <Input placeholder="soundloadedng" className="rounded-l-none" {...field} />
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="twitter"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>
-                      <Twitter className="mr-1.5 inline h-3.5 w-3.5" />X / Twitter handle
-                    </FormLabel>
-                    <FormControl>
-                      <div className="flex">
-                        <span className="bg-muted border-input text-muted-foreground flex items-center rounded-l-md border border-r-0 px-3 text-sm">
-                          @
-                        </span>
-                        <Input placeholder="soundloadedng" className="rounded-l-none" {...field} />
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="facebook"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>
-                      <Facebook className="mr-1.5 inline h-3.5 w-3.5" />
-                      Facebook page
-                    </FormLabel>
-                    <FormControl>
-                      <Input placeholder="soundloadedng" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="youtube"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>
-                      <Youtube className="mr-1.5 inline h-3.5 w-3.5" />
-                      YouTube channel
-                    </FormLabel>
-                    <FormControl>
-                      <Input placeholder="@soundloadedng" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-          </section>
-
-          {/* Notifications */}
-          <section className="space-y-4">
-            <div>
-              <h2 className="text-foreground text-base font-bold">Notifications</h2>
-              <p className="text-muted-foreground mt-0.5 text-sm">
-                Discord webhook for admin alerts
-              </p>
-            </div>
-            <Separator />
-
-            <FormField
-              control={form.control}
-              name="discordWebhook"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>
-                    <Bell className="mr-1.5 inline h-3.5 w-3.5" />
-                    Discord Webhook URL
-                  </FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="https://discord.com/api/webhooks/..."
-                      className="font-mono text-sm"
-                      {...field}
-                    />
-                  </FormControl>
-                  <p className="text-muted-foreground text-xs">
-                    Get notified in Discord for new comments, subscribers, and download spikes.
-                    Create a webhook in your Discord server settings.
-                  </p>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <div className="flex flex-col gap-3">
-              {[
-                {
-                  name: "notifyOnNewComment" as const,
-                  label: "Notify on new comment (pending review)",
-                },
-                {
-                  name: "notifyOnNewSubscriber" as const,
-                  label: "Notify on new newsletter subscriber",
-                },
-              ].map(({ name, label }) => (
-                <FormField
-                  key={name}
-                  control={form.control}
-                  name={name}
-                  render={({ field }) => (
-                    <FormItem className="flex items-center gap-3 space-y-0">
-                      <FormControl>
-                        <input
-                          type="checkbox"
-                          checked={field.value as boolean}
-                          onChange={field.onChange}
-                          className="border-input accent-brand h-4 w-4 rounded"
-                        />
-                      </FormControl>
-                      <FormLabel className="text-foreground cursor-pointer text-sm font-normal">
-                        {label}
-                      </FormLabel>
-                    </FormItem>
-                  )}
-                />
+        <form onSubmit={form.handleSubmit(onSubmit)}>
+          <Tabs defaultValue="general" className="space-y-6">
+            {/* Tab navigation — horizontal, scrollable on mobile */}
+            <TabsList className="flex h-auto w-full flex-nowrap justify-start gap-1 overflow-x-auto bg-transparent p-0">
+              {SETTINGS_TABS.map(({ value, label, icon: Icon }) => (
+                <TabsTrigger
+                  key={value}
+                  value={value}
+                  className="data-[state=active]:bg-brand/10 data-[state=active]:text-brand flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium whitespace-nowrap transition-colors"
+                >
+                  <Icon className="h-4 w-4" />
+                  {label}
+                </TabsTrigger>
               ))}
-            </div>
-          </section>
+            </TabsList>
 
-          {/* Save */}
-          <div className="pt-2">
+            {/* Tab content */}
+            <div className="bg-card rounded-xl border p-6">
+              <TabsContent value="general" className="mt-0">
+                <GeneralSettings form={form} />
+              </TabsContent>
+              <TabsContent value="seo" className="mt-0">
+                <SeoSettings form={form} />
+              </TabsContent>
+              <TabsContent value="social" className="mt-0">
+                <SocialSettings form={form} />
+              </TabsContent>
+              <TabsContent value="content" className="mt-0">
+                <ContentSettings form={form} />
+              </TabsContent>
+              <TabsContent value="permalinks" className="mt-0">
+                <PermalinkSettings form={form} />
+              </TabsContent>
+              <TabsContent value="discussion" className="mt-0">
+                <DiscussionSettings form={form} />
+              </TabsContent>
+              <TabsContent value="appearance" className="mt-0">
+                <AppearanceSettings form={form} />
+              </TabsContent>
+              <TabsContent value="media" className="mt-0">
+                <MediaSettings form={form} />
+              </TabsContent>
+              <TabsContent value="pwa" className="mt-0">
+                <PwaSettings form={form} />
+              </TabsContent>
+              <TabsContent value="notifications" className="mt-0">
+                <NotificationSettings form={form} />
+              </TabsContent>
+              <TabsContent value="security" className="mt-0">
+                <SecuritySettings form={form} />
+              </TabsContent>
+              <TabsContent value="email" className="mt-0">
+                <EmailSettings form={form} />
+              </TabsContent>
+              <TabsContent value="maintenance" className="mt-0">
+                <MaintenanceSettings form={form} />
+              </TabsContent>
+              <TabsContent value="code-injection" className="mt-0">
+                <CodeInjectionSettings form={form} />
+              </TabsContent>
+              <TabsContent value="environment" className="mt-0">
+                <EnvironmentStatus />
+              </TabsContent>
+            </div>
+          </Tabs>
+
+          {/* Sticky save button */}
+          <div className="bg-background/80 sticky bottom-0 z-10 flex items-center gap-4 border-t py-4 backdrop-blur-sm">
             <Button
               type="submit"
-              disabled={isSaving}
+              disabled={mutation.isPending}
               className="bg-brand hover:bg-brand/90 text-brand-foreground gap-2"
             >
-              {isSaving ? (
+              {mutation.isPending ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
                 <Save className="h-4 w-4" />
               )}
-              {isSaving ? "Saving..." : "Save Settings"}
+              {mutation.isPending ? "Saving..." : "Save Settings"}
             </Button>
-            <p className="text-muted-foreground mt-3 text-xs">
-              Settings are saved to localStorage. A settings table will be added to the DB in a
-              future update.
-            </p>
+            {form.formState.isDirty && (
+              <p className="text-muted-foreground text-xs">Unsaved changes</p>
+            )}
           </div>
         </form>
       </Form>

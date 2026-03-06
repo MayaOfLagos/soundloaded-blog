@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
-import { Plus, FileText, Eye, Pencil, Trash2, ExternalLink } from "lucide-react";
+import { Plus, FileText, Pencil, ExternalLink } from "lucide-react";
+import { DeletePostButton } from "./_components/DeletePostButton";
 import { db } from "@/lib/db";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -14,13 +15,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { formatDate } from "@/lib/utils";
 
 export const metadata: Metadata = { title: "Posts — Soundloaded Admin" };
@@ -269,23 +263,7 @@ export default async function PostsPage({ searchParams }: PostsPageProps) {
                             </Button>
                           </Link>
                         )}
-                        <form
-                          action={`/api/admin/posts/${post.id}`}
-                          method="POST"
-                          onSubmit={(e) => {
-                            if (!confirm("Delete this post?")) e.preventDefault();
-                          }}
-                        >
-                          <input type="hidden" name="_method" value="DELETE" />
-                          <Button
-                            size="icon"
-                            variant="ghost"
-                            className="text-destructive hover:text-destructive h-8 w-8"
-                            type="submit"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </form>
+                        <DeletePostButton postId={post.id} />
                       </div>
                     </TableCell>
                   </TableRow>

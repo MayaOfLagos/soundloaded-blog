@@ -14,8 +14,11 @@ import {
   Twitter,
   Youtube,
   Facebook,
+  Send,
+  Phone,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useSettings } from "@/hooks/useSettings";
 
 const NAV_LINKS = [
   { href: "/", label: "Home", icon: Home },
@@ -39,15 +42,47 @@ const TRENDING_TAGS = [
   "Mixtape",
 ];
 
-const SOCIALS = [
-  { href: "https://instagram.com/soundloadedng", icon: Instagram, label: "Instagram" },
-  { href: "https://twitter.com/soundloadedng", icon: Twitter, label: "X" },
-  { href: "https://youtube.com/@soundloadedng", icon: Youtube, label: "YouTube" },
-  { href: "https://facebook.com/soundloadedng", icon: Facebook, label: "Facebook" },
-];
+const SOCIAL_ICON_MAP: Record<string, typeof Instagram> = {
+  instagram: Instagram,
+  twitter: Twitter,
+  youtube: Youtube,
+  facebook: Facebook,
+  tiktok: Music,
+  telegram: Send,
+  whatsapp: Phone,
+};
+
+const SOCIAL_URL_MAP: Record<string, (handle: string) => string> = {
+  instagram: (h) => `https://instagram.com/${h}`,
+  twitter: (h) => `https://twitter.com/${h}`,
+  youtube: (h) => `https://youtube.com/@${h}`,
+  facebook: (h) => `https://facebook.com/${h}`,
+  tiktok: (h) => `https://tiktok.com/@${h}`,
+  telegram: (h) => `https://t.me/${h}`,
+  whatsapp: (h) => `https://wa.me/${h}`,
+};
 
 export function LeftSidebar() {
   const pathname = usePathname();
+  const { data: settings } = useSettings();
+
+  const socialLinks = settings
+    ? (["instagram", "twitter", "youtube", "facebook", "tiktok", "telegram"] as const)
+        .filter((key) => settings[key])
+        .map((key) => ({
+          href: SOCIAL_URL_MAP[key](settings[key]),
+          icon: SOCIAL_ICON_MAP[key],
+          label: key.charAt(0).toUpperCase() + key.slice(1),
+        }))
+    : [
+        { href: "https://instagram.com/soundloadedng", icon: Instagram, label: "Instagram" },
+        { href: "https://twitter.com/soundloadedng", icon: Twitter, label: "X" },
+        { href: "https://youtube.com/@soundloadedng", icon: Youtube, label: "YouTube" },
+        { href: "https://facebook.com/soundloadedng", icon: Facebook, label: "Facebook" },
+      ];
+
+  const copyrightName =
+    settings?.copyrightText?.replace(". All rights reserved.", "") || "Soundloaded Nigeria";
 
   return (
     <aside className="sticky top-16 hidden h-[calc(100vh-4rem)] flex-col gap-5 overflow-y-auto pb-8 xl:flex">
@@ -84,7 +119,6 @@ export function LeftSidebar() {
 
       {/* ── Submit Music CTA ── */}
       <div className="from-brand via-brand/90 relative overflow-hidden rounded-2xl bg-gradient-to-br to-rose-600 p-4 text-white">
-        {/* Decorative circles */}
         <div className="absolute -top-6 -right-6 h-20 w-20 rounded-full bg-white/10" />
         <div className="absolute -bottom-4 -left-4 h-14 w-14 rounded-full bg-white/5" />
 
@@ -129,7 +163,7 @@ export function LeftSidebar() {
           Follow Us
         </p>
         <div className="flex gap-1.5">
-          {SOCIALS.map(({ href, icon: Icon, label }) => (
+          {socialLinks.map(({ href, icon: Icon, label }) => (
             <a
               key={href}
               href={href}
@@ -143,7 +177,7 @@ export function LeftSidebar() {
           ))}
         </div>
         <p className="text-muted-foreground/50 mt-3 text-[10px]">
-          &copy; {new Date().getFullYear()} Soundloaded Nigeria
+          &copy; {new Date().getFullYear()} {copyrightName}
         </p>
       </div>
     </aside>

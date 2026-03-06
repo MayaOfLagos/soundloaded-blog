@@ -1,6 +1,8 @@
 /** @type {import('next-sitemap').IConfig} */
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://soundloadedblog.ng";
+
 module.exports = {
-  siteUrl: process.env.NEXT_PUBLIC_SITE_URL || "https://soundloaded.ng",
+  siteUrl,
   generateRobotsTxt: true,
   changefreq: "daily",
   priority: 0.7,
@@ -14,6 +16,7 @@ module.exports = {
     "/forgot-password",
     "/reset-password",
     "/offline",
+    "/feed/*",
   ],
   robotsTxtOptions: {
     policies: [
@@ -24,7 +27,8 @@ module.exports = {
       },
     ],
     additionalSitemaps: [
-      `${process.env.NEXT_PUBLIC_SITE_URL || "https://soundloaded.ng"}/server-sitemap.xml`,
+      `${siteUrl}/server-sitemap.xml`,
+      `${siteUrl}/news-sitemap.xml`,
     ],
   },
 };

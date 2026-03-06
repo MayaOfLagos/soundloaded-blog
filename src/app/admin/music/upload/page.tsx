@@ -50,6 +50,7 @@ const musicSchema = z.object({
   coverArt: z.string().url("Must be a valid URL").optional().or(z.literal("")),
   label: z.string().optional(),
   isExclusive: z.boolean(),
+  enableDownload: z.boolean(),
 });
 
 type MusicFormValues = z.infer<typeof musicSchema>;
@@ -93,6 +94,7 @@ export default function MusicUploadPage() {
       coverArt: "",
       label: "",
       isExclusive: false,
+      enableDownload: true,
     },
   });
 
@@ -141,6 +143,7 @@ export default function MusicUploadPage() {
         coverArt: values.coverArt || null,
         label: values.label || null,
         fileSize: BigInt(values.fileSize).toString(),
+        enableDownload: values.enableDownload,
       };
       await axios.post("/api/admin/music", payload);
       toast.success("Music track saved successfully!");
@@ -257,14 +260,17 @@ export default function MusicUploadPage() {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Album (optional)</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
+                  <Select
+                    onValueChange={(val) => field.onChange(val === "__none__" ? "" : val)}
+                    value={field.value || "__none__"}
+                  >
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="No album" />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="">No album (single)</SelectItem>
+                      <SelectItem value="__none__">No album (single)</SelectItem>
                       {filteredAlbums.map((a) => (
                         <SelectItem key={a.id} value={a.id}>
                           {a.title}
@@ -475,6 +481,28 @@ export default function MusicUploadPage() {
                   Exclusive to Soundloaded
                   <span className="text-muted-foreground ml-2 text-xs">
                     (shows exclusive badge on track page)
+                  </span>
+                </Label>
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="enableDownload"
+            render={({ field }) => (
+              <FormItem className="flex items-center gap-3 space-y-0">
+                <FormControl>
+                  <Checkbox
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                    id="enableDownload"
+                  />
+                </FormControl>
+                <Label htmlFor="enableDownload" className="cursor-pointer">
+                  Allow downloads for this track
+                  <span className="text-muted-foreground ml-2 text-xs">
+                    (disable for premium/exclusive releases)
                   </span>
                 </Label>
               </FormItem>

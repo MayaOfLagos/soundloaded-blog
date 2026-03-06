@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { Calendar, Eye, Clock } from "lucide-react";
+import { Calendar, Eye } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -24,9 +24,10 @@ interface PostHeroProps {
     category?: { name: string; slug: string } | null;
     tags?: { tag: { name: string; slug: string } }[];
   };
+  dateFormat?: string;
 }
 
-export function PostHero({ post }: PostHeroProps) {
+export function PostHero({ post, dateFormat }: PostHeroProps) {
   return (
     <header>
       {/* Breadcrumb */}
@@ -88,7 +89,9 @@ export function PostHero({ post }: PostHeroProps) {
         {post.publishedAt && (
           <div className="flex items-center gap-1.5">
             <Calendar className="h-3.5 w-3.5" />
-            <time dateTime={post.publishedAt.toISOString()}>{formatDate(post.publishedAt)}</time>
+            <time dateTime={post.publishedAt.toISOString()}>
+              {formatDate(post.publishedAt, dateFormat)}
+            </time>
             <span className="text-muted-foreground/60">
               ({formatRelativeDate(post.publishedAt)})
             </span>

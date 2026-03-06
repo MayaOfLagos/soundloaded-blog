@@ -1,6 +1,3 @@
-// Rich text body renderer for Payload CMS Lexical content
-// The body is stored as JSON (Lexical state)
-
 interface PostBodyProps {
   body: unknown;
 }
@@ -8,10 +5,7 @@ interface PostBodyProps {
 export function PostBody({ body }: PostBodyProps) {
   if (!body) return null;
 
-  // Render Lexical JSON as HTML
-  // For full Lexical rendering, install @payloadcms/richtext-lexical/react
-  // For now we render a simplified version of the content
-  const rendered = renderLexical(body);
+  const rendered = isLexicalFormat(body) ? renderLexical(body) : renderTiptap(body);
 
   return (
     <div
@@ -20,6 +14,101 @@ export function PostBody({ body }: PostBodyProps) {
     />
   );
 }
+
+function isLexicalFormat(body: unknown): boolean {
+  if (!body || typeof body !== "object") return false;
+  const b = body as Record<string, unknown>;
+  return "root" in b;
+}
+
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+// ─── Tiptap / ProseMirror JSON renderer ───
+
+function renderTiptap(node: unknown): string {
+  if (!node || typeof node !== "object") return "";
+  const n = node as Record<string, unknown>;
+
+  const children = Array.isArray(n.content)
+    ? (n.content as unknown[]).map(renderTiptap).join("")
+    : "";
+
+  switch (n.type) {
+    case "doc":
+      return children;
+    case "paragraph":
+      return children ? `<p>${children}</p>` : "<p>&nbsp;</p>";
+    case "heading": {
+      const level = (n.attrs as Record<string, unknown>)?.level ?? 2;
+      return `<h${level}>${children}</h${level}>`;
+    }
+    case "text": {
+      let text = escapeHtml(String(n.text ?? ""));
+      const marks = Array.isArray(n.marks) ? (n.marks as Record<string, unknown>[]) : [];
+      for (const mark of marks) {
+        switch (mark.type) {
+          case "bold":
+            text = `<strong>${text}</strong>`;
+            break;
+          case "italic":
+            text = `<em>${text}</em>`;
+            break;
+          case "underline":
+            text = `<u>${text}</u>`;
+            break;
+          case "strike":
+            text = `<s>${text}</s>`;
+            break;
+          case "code":
+            text = `<code>${text}</code>`;
+            break;
+          case "link": {
+            const attrs = mark.attrs as Record<string, string> | undefined;
+            const href = escapeHtml(attrs?.href ?? "");
+            const target = attrs?.target ?? "_blank";
+            text = `<a href="${href}" target="${target}" rel="noopener noreferrer">${text}</a>`;
+            break;
+          }
+        }
+      }
+      return text;
+    }
+    case "bulletList":
+      return `<ul>${children}</ul>`;
+    case "orderedList":
+      return `<ol>${children}</ol>`;
+    case "listItem":
+      return `<li>${children}</li>`;
+    case "blockquote":
+      return `<blockquote>${children}</blockquote>`;
+    case "codeBlock": {
+      const lang = (n.attrs as Record<string, unknown>)?.language ?? "";
+      return `<pre><code${lang ? ` class="language-${escapeHtml(String(lang))}"` : ""}>${children}</code></pre>`;
+    }
+    case "image": {
+      const attrs = n.attrs as Record<string, string> | undefined;
+      if (attrs?.src) {
+        const alt = escapeHtml(attrs.alt ?? "");
+        return `<figure><img src="${escapeHtml(attrs.src)}" alt="${alt}" />${attrs.title ? `<figcaption>${escapeHtml(attrs.title)}</figcaption>` : ""}</figure>`;
+      }
+      return "";
+    }
+    case "horizontalRule":
+      return "<hr />";
+    case "hardBreak":
+      return "<br />";
+    default:
+      return children;
+  }
+}
+
+// ─── Lexical JSON renderer (backward compat) ───
 
 function renderLexical(node: unknown): string {
   if (!node || typeof node !== "object") return "";
@@ -38,7 +127,7 @@ function renderLexical(node: unknown): string {
     case "heading":
       return `<h${n.tag}>${children}</h${n.tag}>`;
     case "text": {
-      let text = String(n.text ?? "");
+      let text = escapeHtml(String(n.text ?? ""));
       if ((n.format as number) & 1) text = `<strong>${text}</strong>`;
       if ((n.format as number) & 2) text = `<em>${text}</em>`;
       if ((n.format as number) & 4) text = `<u>${text}</u>`;
@@ -47,7 +136,7 @@ function renderLexical(node: unknown): string {
       return text;
     }
     case "link":
-      return `<a href="${n.url}" target="${n.newTab ? "_blank" : "_self"}" rel="noopener noreferrer">${children}</a>`;
+      return `<a href="${escapeHtml(String(n.url ?? ""))}" target="${n.newTab ? "_blank" : "_self"}" rel="noopener noreferrer">${children}</a>`;
     case "quote":
       return `<blockquote>${children}</blockquote>`;
     case "list":
@@ -61,7 +150,7 @@ function renderLexical(node: unknown): string {
     case "upload": {
       const val = n.value as Record<string, string> | undefined;
       if (val?.url) {
-        return `<figure><img src="${val.url}" alt="${val.alt ?? ""}" />${val.caption ? `<figcaption>${val.caption}</figcaption>` : ""}</figure>`;
+        return `<figure><img src="${escapeHtml(val.url)}" alt="${escapeHtml(val.alt ?? "")}" />${val.caption ? `<figcaption>${escapeHtml(val.caption)}</figcaption>` : ""}</figure>`;
       }
       return "";
     }

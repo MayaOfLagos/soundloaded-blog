@@ -69,7 +69,7 @@ export function ImageUploadField({
     () => ({
       process: ((
         _fieldName: string,
-        file: File,
+        file: unknown,
         _metadata: Record<string, unknown>,
         load: (id: string) => void,
         error: (message: string) => void,
@@ -77,20 +77,21 @@ export function ImageUploadField({
         abort: () => void
       ) => {
         const controller = new AbortController();
+        const f = file as File;
 
         (async () => {
           try {
             // 1. Get presigned URL from our API
             const { data } = await axios.post("/api/admin/settings/upload", {
               type,
-              contentType: file.type,
-              filename: file.name,
+              contentType: f.type,
+              filename: f.name,
             });
 
             // 2. Upload directly to R2
             const xhr = new XMLHttpRequest();
             xhr.open("PUT", data.uploadUrl, true);
-            xhr.setRequestHeader("Content-Type", file.type);
+            xhr.setRequestHeader("Content-Type", f.type);
 
             xhr.upload.onprogress = (e) => {
               if (e.lengthComputable) {
@@ -118,7 +119,7 @@ export function ImageUploadField({
               xhr.abort();
             });
 
-            xhr.send(file);
+            xhr.send(f);
           } catch {
             error("Upload failed");
             toast.error("Upload failed");

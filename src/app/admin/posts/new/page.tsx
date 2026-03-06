@@ -13,6 +13,7 @@ import { ArrowLeft, Loader2, X, ImagePlus, Paperclip, Music, FileText } from "lu
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { RichTextEditor } from "@/components/admin/RichTextEditor";
 import { Label } from "@/components/ui/label";
 import { MediaPickerModal } from "@/components/admin/MediaPickerModal";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -40,7 +41,12 @@ const postSchema = z.object({
     .min(3, "Slug must be at least 3 characters")
     .regex(/^[a-z0-9-]+$/, "Slug must be lowercase with hyphens only"),
   excerpt: z.string().max(300, "Excerpt max 300 chars").optional(),
-  body: z.string().min(1, "Body is required"),
+  body: z
+    .any()
+    .refine(
+      (v) => v && typeof v === "object" && Array.isArray((v as Record<string, unknown>).content),
+      "Body is required"
+    ),
   type: z.enum(["NEWS", "MUSIC", "GIST", "ALBUM", "VIDEO", "LYRICS"]),
   status: z.enum(["DRAFT", "PUBLISHED", "SCHEDULED", "ARCHIVED"]),
   publishedAt: z.string().optional(),
@@ -90,7 +96,7 @@ export default function NewPostPage() {
       title: "",
       slug: "",
       excerpt: "",
-      body: "",
+      body: null as unknown as Record<string, unknown>,
       type: "NEWS",
       status: "DRAFT",
       publishedAt: "",
@@ -134,10 +140,7 @@ export default function NewPostPage() {
     try {
       const payload = {
         ...values,
-        body: {
-          type: "doc",
-          content: [{ type: "paragraph", content: [{ type: "text", text: values.body }] }],
-        },
+        body: values.body,
         coverImage: values.coverImage || null,
         categoryId: values.categoryId || null,
         publishedAt: values.publishedAt ? new Date(values.publishedAt).toISOString() : null,
@@ -522,16 +525,12 @@ export default function NewPostPage() {
               <FormItem>
                 <FormLabel>Body *</FormLabel>
                 <FormControl>
-                  <Textarea
-                    placeholder="Write your post content here... (rich editor coming soon)"
-                    rows={16}
-                    className="resize-y font-mono text-sm"
-                    {...field}
+                  <RichTextEditor
+                    content={field.value}
+                    onChange={field.onChange}
+                    placeholder="Write your post content..."
                   />
                 </FormControl>
-                <p className="text-muted-foreground text-xs">
-                  Rich text editor will replace this textarea in a future update.
-                </p>
                 <FormMessage />
               </FormItem>
             )}

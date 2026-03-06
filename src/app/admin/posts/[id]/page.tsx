@@ -23,6 +23,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { RichTextEditor } from "@/components/admin/RichTextEditor";
 import { MediaPickerModal } from "@/components/admin/MediaPickerModal";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -42,6 +43,7 @@ import {
 } from "@/components/ui/form";
 import { Skeleton } from "@/components/ui/skeleton";
 import { generateSlug } from "@/lib/utils";
+import { isLexicalFormat, convertLexicalToTiptap } from "@/lib/editor-compat";
 
 const postSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters"),
@@ -50,7 +52,12 @@ const postSchema = z.object({
     .min(3)
     .regex(/^[a-z0-9-]+$/, "Slug must be lowercase with hyphens only"),
   excerpt: z.string().max(300).optional(),
-  body: z.string().min(1, "Body is required"),
+  body: z
+    .any()
+    .refine(
+      (v) => v && typeof v === "object" && Array.isArray((v as Record<string, unknown>).content),
+      "Body is required"
+    ),
   type: z.enum(["NEWS", "MUSIC", "GIST", "ALBUM", "VIDEO", "LYRICS"]),
   status: z.enum(["DRAFT", "PUBLISHED", "SCHEDULED", "ARCHIVED"]),
   publishedAt: z.string().optional(),
@@ -112,31 +119,6 @@ interface EditPostPageProps {
   params: Promise<{ id: string }>;
 }
 
-function extractBodyText(body: unknown): string {
-  if (typeof body === "string") return body;
-  if (body && typeof body === "object") {
-    const b = body as Record<string, unknown>;
-    if (Array.isArray(b.content)) {
-      return b.content
-        .flatMap((block: unknown) => {
-          if (block && typeof block === "object") {
-            const blk = block as Record<string, unknown>;
-            if (Array.isArray(blk.content)) {
-              return blk.content
-                .filter(
-                  (n: unknown): n is Record<string, unknown> => typeof n === "object" && n !== null
-                )
-                .map((n: Record<string, unknown>) => n.text ?? "");
-            }
-          }
-          return [];
-        })
-        .join("\n\n");
-    }
-  }
-  return "";
-}
-
 export default function EditPostPage({ params }: EditPostPageProps) {
   const { id } = use(params);
   const router = useRouter();
@@ -157,7 +139,7 @@ export default function EditPostPage({ params }: EditPostPageProps) {
       title: "",
       slug: "",
       excerpt: "",
-      body: "",
+      body: null as unknown as Record<string, unknown>,
       type: "NEWS",
       status: "DRAFT",
       publishedAt: "",
@@ -194,7 +176,7 @@ export default function EditPostPage({ params }: EditPostPageProps) {
         setCategories(catRes.data.categories ?? []);
         setUsers(userRes.data.users ?? []);
 
-        const bodyText = extractBodyText(p.body);
+        const bodyJson = isLexicalFormat(p.body) ? convertLexicalToTiptap(p.body) : p.body;
         const publishedAt = p.publishedAt ? new Date(p.publishedAt).toISOString().slice(0, 16) : "";
         setSelectedDownload(p.downloadMedia ?? null);
 
@@ -202,7 +184,7 @@ export default function EditPostPage({ params }: EditPostPageProps) {
           title: p.title,
           slug: p.slug,
           excerpt: p.excerpt ?? "",
-          body: bodyText,
+          body: bodyJson ?? { type: "doc", content: [{ type: "paragraph" }] },
           type: p.type as PostFormValues["type"],
           status: p.status as PostFormValues["status"],
           publishedAt,
@@ -228,10 +210,7 @@ export default function EditPostPage({ params }: EditPostPageProps) {
     try {
       const payload = {
         ...values,
-        body: {
-          type: "doc",
-          content: [{ type: "paragraph", content: [{ type: "text", text: values.body }] }],
-        },
+        body: values.body,
         coverImage: values.coverImage || null,
         categoryId: values.categoryId || null,
         publishedAt: values.publishedAt ? new Date(values.publishedAt).toISOString() : null,
@@ -665,14 +644,12 @@ export default function EditPostPage({ params }: EditPostPageProps) {
               <FormItem>
                 <FormLabel>Body *</FormLabel>
                 <FormControl>
-                  <Textarea
-                    placeholder="Post content..."
-                    rows={16}
-                    className="resize-y font-mono text-sm"
-                    {...field}
+                  <RichTextEditor
+                    content={field.value}
+                    onChange={field.onChange}
+                    placeholder="Write your post content..."
                   />
                 </FormControl>
-                <p className="text-muted-foreground text-xs">Rich text editor coming soon.</p>
                 <FormMessage />
               </FormItem>
             )}

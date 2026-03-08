@@ -4,30 +4,42 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Home,
-  Music,
-  Newspaper,
-  MessageSquare,
-  Disc3,
-  Mic2,
   Upload,
+  Music,
+  Tag,
   Instagram,
   Twitter,
   Youtube,
   Facebook,
   Send,
   Phone,
+  icons,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSettings } from "@/hooks/useSettings";
+import { useQuery } from "@tanstack/react-query";
+import axios from "axios";
 
-const NAV_LINKS = [
-  { href: "/", label: "Home", icon: Home },
-  { href: "/news", label: "News", icon: Newspaper },
-  { href: "/music", label: "Music", icon: Music },
-  { href: "/gist", label: "Gist", icon: MessageSquare },
-  { href: "/albums", label: "Albums", icon: Disc3 },
-  { href: "/artists", label: "Artists", icon: Mic2 },
-];
+interface Category {
+  id: string;
+  name: string;
+  slug: string;
+  icon: string | null;
+}
+
+function toPascalCase(kebab: string): string {
+  return kebab
+    .split("-")
+    .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
+    .join("");
+}
+
+function LucideIcon({ name, className }: { name: string; className?: string }) {
+  const pascalName = toPascalCase(name);
+  const IconComponent = icons[pascalName as keyof typeof icons];
+  if (!IconComponent) return <Tag className={className} />;
+  return <IconComponent className={className} />;
+}
 
 const TRENDING_TAGS = [
   "Afrobeats",
@@ -65,6 +77,15 @@ const SOCIAL_URL_MAP: Record<string, (handle: string) => string> = {
 export function LeftSidebar() {
   const pathname = usePathname();
   const { data: settings } = useSettings();
+  const { data: categoriesData } = useQuery({
+    queryKey: ["categories"],
+    queryFn: async () => {
+      const res = await axios.get<{ categories: Category[] }>("/api/categories");
+      return res.data.categories;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+  const categories = categoriesData ?? [];
 
   const socialLinks = settings
     ? (["instagram", "twitter", "youtube", "facebook", "tiktok", "telegram"] as const)
@@ -80,100 +101,129 @@ export function LeftSidebar() {
     settings?.copyrightText?.replace(". All rights reserved.", "") || "Soundloaded Nigeria";
 
   return (
-    <aside className="sticky top-16 hidden h-[calc(100vh-4rem)] flex-col gap-5 overflow-y-auto pb-8 xl:flex">
-      {/* ── Quick Nav ── */}
-      <nav className="space-y-0.5">
-        <p className="text-muted-foreground/60 mb-2 px-3 text-[10px] font-bold tracking-[0.2em] uppercase">
-          Browse
-        </p>
-        {NAV_LINKS.map(({ href, label, icon: Icon }) => {
-          const isActive = href === "/" ? pathname === "/" : pathname.startsWith(href);
+    <aside className="sticky top-16 hidden h-[calc(100vh-4rem)] flex-col xl:flex">
+      {/* ── Quick Nav (scrollable) ── */}
+      <nav className="min-h-0 flex-1 space-y-1 overflow-y-auto pr-1">
+        {/* Home link */}
+        <Link
+          href="/"
+          className={cn(
+            "group flex items-center gap-3.5 rounded-xl px-3 py-3 text-[15px] font-semibold transition-all duration-200",
+            pathname === "/"
+              ? "bg-brand/10 text-brand font-bold"
+              : "text-muted-foreground hover:bg-muted hover:text-foreground"
+          )}
+        >
+          <div
+            className={cn(
+              "flex h-9 w-9 items-center justify-center rounded-lg transition-colors",
+              pathname === "/"
+                ? "bg-brand/15 text-brand"
+                : "bg-muted text-muted-foreground group-hover:bg-muted group-hover:text-foreground"
+            )}
+          >
+            <Home className="h-[18px] w-[18px]" />
+          </div>
+          Home
+          {pathname === "/" && <span className="bg-brand ml-auto h-2 w-2 rounded-full" />}
+        </Link>
+        {/* Dynamic categories */}
+        {categories.map((cat) => {
+          const href = `/${cat.slug}`;
+          const isActive = pathname.startsWith(href);
           return (
             <Link
-              key={href}
+              key={cat.id}
               href={href}
               className={cn(
-                "group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all duration-200",
+                "group flex items-center gap-3.5 rounded-xl px-3 py-3 text-[15px] font-semibold transition-all duration-200",
                 isActive
-                  ? "bg-brand/10 text-brand"
+                  ? "bg-brand/10 text-brand font-bold"
                   : "text-muted-foreground hover:bg-muted hover:text-foreground"
               )}
             >
-              <Icon
+              <div
                 className={cn(
-                  "h-[18px] w-[18px] transition-colors",
-                  isActive ? "text-brand" : "text-muted-foreground group-hover:text-foreground"
+                  "flex h-9 w-9 items-center justify-center rounded-lg transition-colors",
+                  isActive
+                    ? "bg-brand/15 text-brand"
+                    : "bg-muted text-muted-foreground group-hover:bg-muted group-hover:text-foreground"
                 )}
-              />
-              {label}
-              {isActive && <span className="bg-brand ml-auto h-1.5 w-1.5 rounded-full" />}
+              >
+                <LucideIcon name={cat.icon ?? "tag"} className="h-[18px] w-[18px]" />
+              </div>
+              {cat.name}
+              {isActive && <span className="bg-brand ml-auto h-2 w-2 rounded-full" />}
             </Link>
           );
         })}
       </nav>
 
-      {/* ── Submit Music CTA ── */}
-      <div className="from-brand via-brand/90 relative overflow-hidden rounded-2xl bg-gradient-to-br to-rose-600 p-4 text-white">
-        <div className="absolute -top-6 -right-6 h-20 w-20 rounded-full bg-white/10" />
-        <div className="absolute -bottom-4 -left-4 h-14 w-14 rounded-full bg-white/5" />
+      {/* ── Fixed bottom section ── */}
+      <div className="flex-shrink-0 space-y-5 pt-5">
+        {/* ── Submit Music CTA ── */}
+        <div className="from-brand via-brand/90 relative overflow-hidden rounded-2xl bg-gradient-to-br to-rose-600 p-4 text-white">
+          <div className="absolute -top-6 -right-6 h-20 w-20 rounded-full bg-white/10" />
+          <div className="absolute -bottom-4 -left-4 h-14 w-14 rounded-full bg-white/5" />
 
-        <div className="relative">
-          <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm">
-            <Upload className="h-4 w-4" />
-          </div>
-          <h3 className="text-sm font-bold">Submit Your Music</h3>
-          <p className="mt-1 text-[11px] leading-relaxed text-white/70">
-            Get your music featured on Nigeria&apos;s #1 blog
-          </p>
-          <Link
-            href="/submit"
-            className="mt-3 inline-flex items-center rounded-lg bg-white/20 px-3 py-1.5 text-xs font-semibold backdrop-blur-sm transition-colors hover:bg-white/30"
-          >
-            Submit now
-          </Link>
-        </div>
-      </div>
-
-      {/* ── Trending Tags ── */}
-      <div>
-        <p className="text-muted-foreground/60 mb-2.5 px-1 text-[10px] font-bold tracking-[0.2em] uppercase">
-          Trending Tags
-        </p>
-        <div className="flex flex-wrap gap-1.5">
-          {TRENDING_TAGS.map((tag) => (
+          <div className="relative flex flex-col items-center text-center">
+            <div className="mb-2 flex h-9 w-9 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm">
+              <Upload className="h-4 w-4" />
+            </div>
+            <h3 className="text-sm font-bold">Submit Your Music</h3>
+            <p className="mt-1 text-[11px] leading-relaxed text-white/70">
+              Get your music featured on Nigeria&apos;s #1 blog
+            </p>
             <Link
-              key={tag}
-              href={`/search?q=${encodeURIComponent(tag)}`}
-              className="bg-muted text-muted-foreground hover:bg-brand/10 hover:text-brand rounded-lg px-2.5 py-1 text-[11px] font-medium transition-all"
+              href="/submit"
+              className="mt-3 inline-flex items-center rounded-lg bg-white/20 px-3 py-1.5 text-xs font-semibold backdrop-blur-sm transition-colors hover:bg-white/30"
             >
-              #{tag}
+              Submit now
             </Link>
-          ))}
+          </div>
         </div>
-      </div>
 
-      {/* ── Follow Us ── */}
-      <div className="mt-auto">
-        <p className="text-muted-foreground/60 mb-2.5 px-1 text-[10px] font-bold tracking-[0.2em] uppercase">
-          Follow Us
-        </p>
-        <div className="flex gap-1.5">
-          {socialLinks.map(({ href, icon: Icon, label }) => (
-            <a
-              key={href}
-              href={href}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label={label}
-              className="bg-muted text-muted-foreground hover:bg-brand/10 hover:text-brand flex h-9 w-9 items-center justify-center rounded-xl transition-all"
-            >
-              <Icon className="h-4 w-4" />
-            </a>
-          ))}
+        {/* ── Trending Tags ── */}
+        <div>
+          <p className="text-muted-foreground/60 mb-2.5 px-1 text-[10px] font-bold tracking-[0.2em] uppercase">
+            Trending Tags
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {TRENDING_TAGS.map((tag) => (
+              <Link
+                key={tag}
+                href={`/search?q=${encodeURIComponent(tag)}`}
+                className="bg-muted text-muted-foreground hover:bg-brand/10 hover:text-brand rounded-lg px-2.5 py-1 text-[11px] font-medium transition-all"
+              >
+                #{tag}
+              </Link>
+            ))}
+          </div>
         </div>
-        <p className="text-muted-foreground/50 mt-3 text-[10px]">
-          &copy; {new Date().getFullYear()} {copyrightName}
-        </p>
+
+        {/* ── Follow Us ── */}
+        <div>
+          <p className="text-muted-foreground/60 mb-2.5 px-1 text-[10px] font-bold tracking-[0.2em] uppercase">
+            Follow Us
+          </p>
+          <div className="flex gap-1.5" suppressHydrationWarning>
+            {socialLinks.map(({ href, icon: Icon, label }) => (
+              <a
+                key={href}
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={label}
+                className="bg-muted text-muted-foreground hover:bg-brand/10 hover:text-brand flex h-9 w-9 items-center justify-center rounded-xl transition-all"
+              >
+                <Icon className="h-4 w-4" />
+              </a>
+            ))}
+          </div>
+          <p className="text-muted-foreground/50 mt-3 text-[10px]">
+            &copy; {new Date().getFullYear()} {copyrightName}
+          </p>
+        </div>
       </div>
     </aside>
   );

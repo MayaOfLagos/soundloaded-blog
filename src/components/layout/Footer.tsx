@@ -14,6 +14,7 @@ const FOOTER_LINKS = {
     { href: "/gist", label: "Gist" },
     { href: "/albums", label: "Albums" },
     { href: "/artists", label: "Artists" },
+    { href: "/lyrics", label: "Lyrics" },
   ],
   Company: [
     { href: "/about", label: "About Us" },

@@ -7,6 +7,9 @@ import toast from "react-hot-toast";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useSettings } from "@/hooks/useSettings";
+import { useSubscription } from "@/hooks/useSubscription";
+import { PaystackButton } from "@/components/payments/PaystackButton";
+import { PremiumBadge } from "@/components/payments/PremiumBadge";
 
 interface DownloadButtonProps {
   musicId: string;
@@ -15,9 +18,11 @@ interface DownloadButtonProps {
   size?: "sm" | "default" | "lg";
   variant?: "default" | "outline" | "ghost";
   enabled?: boolean;
+  isExclusive?: boolean;
+  price?: number | null;
 }
 
-type State = "idle" | "loading" | "done" | "error";
+type State = "idle" | "loading" | "done" | "error" | "premium";
 
 export function DownloadButton({
   musicId,
@@ -26,12 +31,26 @@ export function DownloadButton({
   size = "sm",
   variant = "default",
   enabled = true,
+  isExclusive = false,
+  price,
 }: DownloadButtonProps) {
   const [state, setState] = useState<State>("idle");
   const { data: settings } = useSettings();
+  const { data: subscription } = useSubscription();
 
   const downloadsGloballyEnabled = settings?.enableDownloads ?? true;
   const canDownload = downloadsGloballyEnabled && enabled;
+  const hasAccess = !isExclusive || (subscription?.hasSubscription ?? false);
+
+  // For exclusive content without subscription, show purchase option
+  if (isExclusive && !hasAccess && state !== "premium") {
+    return (
+      <div className="flex flex-col items-start gap-2">
+        <PremiumBadge />
+        <PaystackButton type="download" musicId={musicId} price={price} className={className} />
+      </div>
+    );
+  }
 
   const handleDownload = async () => {
     if (!canDownload) {
@@ -39,6 +58,11 @@ export function DownloadButton({
       return;
     }
     if (state !== "idle") return;
+
+    if (!navigator.onLine) {
+      toast.error("You're offline. Download will be available when you reconnect.");
+      return;
+    }
 
     setState("loading");
     const loadingToast = toast.loading(`Preparing download — ${title}...`);
@@ -58,6 +82,12 @@ export function DownloadButton({
         return;
       }
 
+      if (res.status === 402) {
+        toast.error("This is premium content. Purchase to download.", { id: loadingToast });
+        setState("premium");
+        return;
+      }
+
       if (res.status === 403) {
         const data = (await res.json().catch(() => null)) as { error?: string } | null;
         toast.error(data?.error ?? "Downloads are currently unavailable.", { id: loadingToast });
@@ -69,7 +99,6 @@ export function DownloadButton({
 
       const { url, filename } = await res.json();
 
-      // Trigger download
       const a = document.createElement("a");
       a.href = url;
       a.download = filename;
@@ -79,7 +108,7 @@ export function DownloadButton({
       document.body.removeChild(a);
 
       setState("done");
-      toast.success(`⬇️ Downloading — ${title}`, { id: loadingToast, duration: 4000 });
+      toast.success(`Downloading — ${title}`, { id: loadingToast, duration: 4000 });
       setTimeout(() => setState("idle"), 3000);
     } catch {
       setState("error");
@@ -88,14 +117,24 @@ export function DownloadButton({
     }
   };
 
-  const icons: Record<State, React.ReactNode> = {
+  // If download was rejected as premium, show the purchase button
+  if (state === "premium") {
+    return (
+      <div className="flex flex-col items-start gap-2">
+        <PremiumBadge />
+        <PaystackButton type="download" musicId={musicId} price={price} className={className} />
+      </div>
+    );
+  }
+
+  const icons: Record<Exclude<State, "premium">, React.ReactNode> = {
     idle: <Download className="h-3.5 w-3.5" />,
     loading: <Loader2 className="h-3.5 w-3.5 animate-spin" />,
     done: <Check className="h-3.5 w-3.5 text-green-500" />,
     error: <Download className="h-3.5 w-3.5" />,
   };
 
-  const labels: Record<State, string> = {
+  const labels: Record<Exclude<State, "premium">, string> = {
     idle: "Download",
     loading: "Getting...",
     done: "Downloaded!",
@@ -127,8 +166,8 @@ export function DownloadButton({
           }}
         />
         <span className="relative z-10 flex items-center gap-1.5">
-          {icons[state]}
-          <span>{canDownload ? labels[state] : "Unavailable"}</span>
+          {icons[state as Exclude<State, "premium">]}
+          <span>{canDownload ? labels[state as Exclude<State, "premium">] : "Unavailable"}</span>
         </span>
       </Button>
     </motion.div>

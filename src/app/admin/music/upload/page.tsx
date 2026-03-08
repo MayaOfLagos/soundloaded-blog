@@ -50,6 +50,7 @@ const musicSchema = z.object({
   coverArt: z.string().url("Must be a valid URL").optional().or(z.literal("")),
   label: z.string().optional(),
   isExclusive: z.boolean(),
+  price: z.coerce.number().int().min(0).optional(),
   enableDownload: z.boolean(),
 });
 
@@ -94,6 +95,7 @@ export default function MusicUploadPage() {
       coverArt: "",
       label: "",
       isExclusive: false,
+      price: undefined,
       enableDownload: true,
     },
   });
@@ -143,6 +145,7 @@ export default function MusicUploadPage() {
         coverArt: values.coverArt || null,
         label: values.label || null,
         fileSize: BigInt(values.fileSize).toString(),
+        price: values.isExclusive && values.price ? values.price * 100 : null,
         enableDownload: values.enableDownload,
       };
       await axios.post("/api/admin/music", payload);
@@ -478,14 +481,40 @@ export default function MusicUploadPage() {
                   />
                 </FormControl>
                 <Label htmlFor="isExclusive" className="cursor-pointer">
-                  Exclusive to Soundloaded
+                  Exclusive / Premium
                   <span className="text-muted-foreground ml-2 text-xs">
-                    (shows exclusive badge on track page)
+                    (requires purchase or subscription to download)
                   </span>
                 </Label>
               </FormItem>
             )}
           />
+
+          {form.watch("isExclusive") && (
+            <FormField
+              control={form.control}
+              name="price"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Price (Naira)</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="number"
+                      min={0}
+                      step={50}
+                      placeholder="100"
+                      {...field}
+                      value={field.value ?? ""}
+                    />
+                  </FormControl>
+                  <p className="text-muted-foreground text-xs">
+                    Per-download price in Naira. Leave empty to use default (₦100).
+                  </p>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          )}
 
           <FormField
             control={form.control}

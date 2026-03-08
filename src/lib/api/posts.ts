@@ -71,6 +71,28 @@ export async function getFeaturedPosts({
   }
 }
 
+export async function getFeaturedPostsByType({
+  type,
+  limit = 3,
+  permalinkStructure,
+}: {
+  type: string;
+  limit?: number;
+  permalinkStructure?: string;
+}): Promise<PostCardData[]> {
+  try {
+    const posts = await db.post.findMany({
+      where: { status: "PUBLISHED", type: type as never },
+      orderBy: { publishedAt: "desc" },
+      take: limit,
+      select: SELECT,
+    });
+    return posts.map((p) => mapPost(p, permalinkStructure));
+  } catch {
+    return [];
+  }
+}
+
 export async function getLatestPosts({
   limit = 12,
   page = 1,
@@ -119,25 +141,38 @@ export async function getTrendingPosts({
   }
 }
 
+const POST_DETAIL_INCLUDE = {
+  author: { select: { name: true, image: true, email: true } },
+  category: { select: { name: true, slug: true } },
+  tags: { include: { tag: { select: { name: true, slug: true } } } },
+  downloadMedia: {
+    select: {
+      id: true,
+      filename: true,
+      r2Key: true,
+      type: true,
+      mimeType: true,
+      size: true,
+    },
+  },
+  music: {
+    include: {
+      artist: true,
+      album: {
+        include: {
+          tracks: { orderBy: { trackNumber: "asc" as const } },
+          artist: { select: { name: true, slug: true } },
+        },
+      },
+    },
+  },
+} as const;
+
 export async function getPostBySlug(slug: string) {
   try {
     return await db.post.findUnique({
       where: { slug, status: "PUBLISHED" },
-      include: {
-        author: { select: { name: true, image: true, email: true } },
-        category: { select: { name: true, slug: true } },
-        tags: { include: { tag: { select: { name: true, slug: true } } } },
-        downloadMedia: {
-          select: {
-            id: true,
-            filename: true,
-            r2Key: true,
-            type: true,
-            mimeType: true,
-            size: true,
-          },
-        },
-      },
+      include: POST_DETAIL_INCLUDE,
     });
   } catch {
     return null;
@@ -148,21 +183,7 @@ export async function getPostById(id: string) {
   try {
     return await db.post.findUnique({
       where: { id, status: "PUBLISHED" },
-      include: {
-        author: { select: { name: true, image: true, email: true } },
-        category: { select: { name: true, slug: true } },
-        tags: { include: { tag: { select: { name: true, slug: true } } } },
-        downloadMedia: {
-          select: {
-            id: true,
-            filename: true,
-            r2Key: true,
-            type: true,
-            mimeType: true,
-            size: true,
-          },
-        },
-      },
+      include: POST_DETAIL_INCLUDE,
     });
   } catch {
     return null;
@@ -187,6 +208,51 @@ export async function getRelatedPosts(
       select: SELECT,
     });
     return posts.map((p) => mapPost(p, permalinkStructure));
+  } catch {
+    return [];
+  }
+}
+
+export async function getRelatedPostsByType(
+  postId: string,
+  type: string,
+  categorySlug?: string,
+  limit = 4,
+  permalinkStructure?: string
+): Promise<PostCardData[]> {
+  try {
+    const posts = await db.post.findMany({
+      where: {
+        status: "PUBLISHED",
+        id: { not: postId },
+        type: type as never,
+        ...(categorySlug ? { category: { slug: categorySlug } } : {}),
+      },
+      orderBy: { publishedAt: "desc" },
+      take: limit,
+      select: SELECT,
+    });
+    return posts.map((p) => mapPost(p, permalinkStructure));
+  } catch {
+    return [];
+  }
+}
+
+export async function getMoreFromArtist(artistId: string, excludeMusicId: string, limit = 5) {
+  try {
+    return await db.music.findMany({
+      where: { artistId, id: { not: excludeMusicId } },
+      orderBy: { downloadCount: "desc" },
+      take: limit,
+      select: {
+        id: true,
+        slug: true,
+        title: true,
+        coverArt: true,
+        downloadCount: true,
+        duration: true,
+      },
+    });
   } catch {
     return [];
   }

@@ -613,15 +613,15 @@ soundloaded-blog/
 - [x] `indexMusic()` wired into admin music POST (includes artist/album relations)
 - [x] Search results page with faceted filtering (`src/app/search/page.tsx`)
 - [x] Instant search via SearchDialog with debounced queries
-- [ ] Search analytics (what are users searching for?)
-- [ ] Google Search Console integration
-- [ ] Structured data: Article, MusicRecording, Person, BreadcrumbList
-- [ ] Internal linking system (related posts, same artist posts)
+- [x] Search analytics: `SearchQuery` model tracks every search query, results count, IP. Admin endpoint at `/api/admin/analytics/search` with top queries, zero-result queries, trends
+- [x] Google Search Console: `googleSiteVerification` field in SiteSettings, rendered in layout metadata. Bing verification also supported
+- [x] Structured data: Article, MusicRecording, MusicAlbum, Person, BreadcrumbList — type-specific JSON-LD per post type
+- [x] Internal linking system: `getRelatedPostsByType()` for related posts, `getMoreFromArtist()` sidebar, album tracklist cross-linking
 - [x] Sitemap auto-updated: `next-sitemap.config.js` + `/server-sitemap.xml` dynamic route
 - [x] RSS feed at `/feed.xml` with media:content support, 50 latest posts
-- [ ] Newsletter subscription with double opt-in
-- [ ] Social auto-sharing on publish (optional — Twitter/X API)
-- [ ] Vercel Analytics + Umami self-hosted analytics
+- [x] Newsletter subscription with double opt-in: `Subscriber` model, confirmation tokens (24h expiry), Resend email integration
+- [x] Social auto-sharing on publish: Twitter/X API v2, Telegram bot, Discord webhook. Fires on post create/update → PUBLISHED. Configurable per channel in admin settings
+- [x] Vercel Analytics + Umami Cloud analytics: `@vercel/analytics` + `@vercel/speed-insights` in layout, Umami script conditionally loaded via env vars
 
 **Deliverable:** SEO-ready, discoverable, newsletter growing.
 
@@ -632,8 +632,8 @@ soundloaded-blog/
 **Goal:** Revenue generation and production hardening.
 
 - [x] Google AdSense: `AdSlot` component with dev placeholder + production ins tag
-- [ ] Premium download tier (optional — gated behind account)
-- [ ] Paystack integration (Nigerian payment gateway for premium)
+- [x] Premium download tier: `isExclusive` flag on Music, active subscription or one-time purchase check in download route (402 Payment Required)
+- [x] Paystack integration: `src/lib/paystack.ts` client, `/api/payments/initialize|verify|webhook|status` endpoints, HMAC-SHA512 webhook validation, Subscription + Transaction models
 - [x] Sentry v9 error monitoring: `sentry.client/server/edge.config.ts` + `src/instrumentation.ts`
 - [x] `withSentryConfig` wrapper in `next.config.ts` (source maps disabled, CI-only upload)
 - [x] Rate limiting middleware: Upstash Redis sliding window
@@ -641,11 +641,11 @@ soundloaded-blog/
   - Stream: 20/hr per IP (`/api/music/*/stream`)
   - General API: 60/min per IP (public endpoints)
 - [x] Upstash Redis client (`src/lib/redis.ts`) for Edge + Node runtimes
-- [ ] Database connection pooling (PgBouncer via Neon)
-- [ ] CDN caching headers tuned (Cloudflare page rules)
-- [ ] Load testing (k6 or Artillery)
-- [ ] Security audit (OWASP headers, CSP, rate limits, input sanitization)
-- [ ] Backup strategy (daily Neon snapshots, R2 versioning)
+- [x] Security audit: CSP headers, X-Content-Type-Options, X-Frame-Options, X-XSS-Protection, HSTS, Referrer-Policy, Permissions-Policy — all configured in `next.config.ts`
+- [ ] Database connection pooling — enable PgBouncer via Neon dashboard (config-only, no code change needed)
+- [ ] CDN caching headers — configure Cloudflare page rules for R2 assets (config-only)
+- [ ] Load testing — run k6 or Artillery against staging before launch
+- [ ] Backup strategy — enable Neon daily snapshots + R2 versioning (config-only)
 
 ---
 

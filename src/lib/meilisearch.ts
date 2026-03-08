@@ -131,6 +131,56 @@ export function indexArtist(artist: {
     .catch(() => {});
 }
 
+/** Search all indexes in parallel. Returns typed results for posts, music, artists. */
+export async function searchAll(
+  query: string,
+  limits?: { posts?: number; music?: number; artists?: number }
+) {
+  const postLimit = limits?.posts ?? 5;
+  const musicLimit = limits?.music ?? 3;
+  const artistLimit = limits?.artists ?? 3;
+
+  const response = await searchClient.multiSearch({
+    queries: [
+      {
+        indexUid: INDEXES.POSTS,
+        q: query,
+        limit: postLimit,
+        filter: "status = PUBLISHED",
+        attributesToRetrieve: [
+          "id",
+          "slug",
+          "title",
+          "excerpt",
+          "coverImage",
+          "categoryName",
+          "categorySlug",
+          "publishedAt",
+          "type",
+        ],
+      },
+      {
+        indexUid: INDEXES.MUSIC,
+        q: query,
+        limit: musicLimit,
+        attributesToRetrieve: ["id", "slug", "title", "artistName", "coverArt", "genre"],
+      },
+      {
+        indexUid: INDEXES.ARTISTS,
+        q: query,
+        limit: artistLimit,
+        attributesToRetrieve: ["id", "slug", "name", "photo", "genre"],
+      },
+    ],
+  });
+
+  return {
+    posts: response.results[0]?.hits ?? [],
+    music: response.results[1]?.hits ?? [],
+    artists: response.results[2]?.hits ?? [],
+  };
+}
+
 /** Remove a document from an index */
 export function removeFromIndex(index: string, id: string): void {
   if (!isConfigured) return;

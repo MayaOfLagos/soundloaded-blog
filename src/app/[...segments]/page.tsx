@@ -44,22 +44,51 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   if (!post) return { title: "Post Not Found" };
 
   const canonicalPath = getPostUrl(post, settings.permalinkStructure);
+  const music = post.music;
+
+  // Type-specific title and OG type
+  let title = post.title;
+  let ogType: "article" | "music.song" | "music.album" | "video.other" = "article";
+  let description = post.excerpt ?? undefined;
+  let images = post.coverImage ? [{ url: post.coverImage }] : [];
+
+  switch (post.type) {
+    case "MUSIC":
+      if (music) {
+        title = `${music.title} — ${music.artist.name}`;
+        description = `Download ${music.title} by ${music.artist.name} for free on ${settings.siteName}.`;
+        ogType = "music.song";
+        if (music.coverArt) images = [{ url: music.coverArt }];
+      }
+      break;
+    case "ALBUM":
+      if (music?.album) {
+        title = `${music.album.title} — ${music.artist.name}`;
+        description = `Download ${music.album.title} by ${music.artist.name} on ${settings.siteName}.`;
+        ogType = "music.album";
+        if (music.album.coverArt) images = [{ url: music.album.coverArt }];
+      }
+      break;
+    case "VIDEO":
+      ogType = "video.other";
+      break;
+  }
 
   return {
-    title: post.title,
-    description: post.excerpt ?? undefined,
+    title,
+    description,
     openGraph: {
-      title: post.title,
-      description: post.excerpt ?? undefined,
-      images: post.coverImage ? [{ url: post.coverImage }] : [],
-      type: "article",
+      title,
+      description,
+      images,
+      type: ogType,
       publishedTime: post.publishedAt?.toISOString(),
       authors: post.author.name ? [post.author.name] : [],
     },
     twitter: {
       card: "summary_large_image",
-      title: post.title,
-      description: post.excerpt ?? undefined,
+      title,
+      description,
     },
     alternates: { canonical: canonicalPath },
   };

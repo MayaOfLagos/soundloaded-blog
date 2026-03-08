@@ -11,10 +11,13 @@ import { getSettings } from "@/lib/settings";
 import { JsonLd } from "@/components/common/JsonLd";
 import { buildWebSiteSchema, buildOrganizationSchema } from "@/lib/structured-data";
 
-export const metadata: Metadata = {
-  title: "Soundloaded Blog — Nigeria's #1 Music Blog",
-  alternates: { canonical: "/" },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const s = await getSettings();
+  return {
+    title: `${s.siteName} — ${s.tagline}`,
+    alternates: { canonical: "/" },
+  };
+}
 
 export default async function HomePage() {
   const settings = await getSettings();

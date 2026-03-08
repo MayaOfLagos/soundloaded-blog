@@ -7,8 +7,11 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import { QueryProvider } from "@/components/common/QueryProvider";
 import { ConditionalNavigation } from "@/components/layout/ConditionalNavigation";
 import { getSettings } from "@/lib/settings";
+import Script from "next/script";
 import { Suspense } from "react";
 import { HeadScripts, FooterScripts, CustomCss } from "@/components/common/CodeInjection";
+import { InstallPrompt } from "@/components/pwa/InstallPrompt";
+import { NotificationPrompt } from "@/components/pwa/NotificationPrompt";
 import "./globals.css";
 
 const inter = Inter({
@@ -87,6 +90,43 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang={settings.language || "en"} suppressHydrationWarning>
       <head>
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta
+          name="apple-mobile-web-app-title"
+          content={settings.pwaShortName || settings.siteName || "Soundloaded"}
+        />
+        {/* iOS splash screens */}
+        <link
+          rel="apple-touch-startup-image"
+          href="/splash/apple-splash-1170x2532.png"
+          media="(device-width: 390px) and (device-height: 844px) and (-webkit-device-pixel-ratio: 3)"
+        />
+        <link
+          rel="apple-touch-startup-image"
+          href="/splash/apple-splash-1284x2778.png"
+          media="(device-width: 428px) and (device-height: 926px) and (-webkit-device-pixel-ratio: 3)"
+        />
+        <link
+          rel="apple-touch-startup-image"
+          href="/splash/apple-splash-1179x2556.png"
+          media="(device-width: 393px) and (device-height: 852px) and (-webkit-device-pixel-ratio: 3)"
+        />
+        <link
+          rel="apple-touch-startup-image"
+          href="/splash/apple-splash-750x1334.png"
+          media="(device-width: 375px) and (device-height: 667px) and (-webkit-device-pixel-ratio: 2)"
+        />
+        <link
+          rel="apple-touch-startup-image"
+          href="/splash/apple-splash-1125x2436.png"
+          media="(device-width: 375px) and (device-height: 812px) and (-webkit-device-pixel-ratio: 3)"
+        />
+        <link
+          rel="apple-touch-startup-image"
+          href="/splash/apple-splash-2048x2732.png"
+          media="(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2)"
+        />
         <Suspense>
           <HeadScripts />
           <CustomCss />
@@ -117,8 +157,17 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <Suspense>
           <FooterScripts />
         </Suspense>
+        <InstallPrompt />
+        <NotificationPrompt />
         <Analytics />
         <SpeedInsights />
+        {process.env.NEXT_PUBLIC_UMAMI_URL && process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID && (
+          <Script
+            src={`${process.env.NEXT_PUBLIC_UMAMI_URL}/script.js`}
+            data-website-id={process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID}
+            strategy="afterInteractive"
+          />
+        )}
       </body>
     </html>
   );

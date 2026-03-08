@@ -21,10 +21,11 @@ export interface PostCardData {
 interface PostCardProps {
   post: PostCardData;
   variant?: "default" | "featured" | "compact";
+  hideExcerpt?: boolean;
   className?: string;
 }
 
-export function PostCard({ post, variant = "default", className }: PostCardProps) {
+export function PostCard({ post, variant = "default", hideExcerpt, className }: PostCardProps) {
   const href = post.href || `/${post.slug}`;
 
   /* ━━━ COMPACT — sidebar / list items ━━━ */
@@ -178,7 +179,7 @@ export function PostCard({ post, variant = "default", className }: PostCardProps
         <h3 className="text-foreground group-hover:text-brand line-clamp-2 text-[15px] leading-snug font-bold transition-colors">
           {post.title}
         </h3>
-        {post.excerpt && (
+        {post.excerpt && !hideExcerpt && (
           <p className="text-muted-foreground mt-1.5 line-clamp-2 hidden text-xs leading-relaxed sm:block">
             {post.excerpt}
           </p>

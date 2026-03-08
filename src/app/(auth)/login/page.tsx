@@ -11,6 +11,7 @@ import toast from "react-hot-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useSettings } from "@/hooks/useSettings";
 
 const schema = z.object({
   email: z.string().email("Enter a valid email"),
@@ -22,6 +23,7 @@ export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [error, setError] = useState<string | null>(null);
+  const { data: settings } = useSettings();
 
   useEffect(() => {
     if (searchParams.get("registered") === "1") {
@@ -59,7 +61,9 @@ export default function LoginPage() {
       <div className="border-border bg-card rounded-2xl border p-8 shadow-sm">
         <div className="mb-8 text-center">
           <h1 className="text-foreground text-2xl font-black">Admin Login</h1>
-          <p className="text-muted-foreground mt-1 text-sm">Soundloaded Blog editorial access</p>
+          <p className="text-muted-foreground mt-1 text-sm">
+            {settings?.siteName ?? "Blog"} editorial access
+          </p>
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">

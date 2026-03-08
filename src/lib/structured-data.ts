@@ -3,6 +3,23 @@
  * All functions return plain objects ready for JSON.stringify.
  */
 
+export function buildCollectionPageSchema(
+  name: string,
+  description: string,
+  path: string,
+  siteUrl: string,
+  siteName: string
+) {
+  return {
+    "@context": "https://schema.org",
+    "@type": "CollectionPage",
+    name,
+    description,
+    url: `${siteUrl}${path}`,
+    isPartOf: { "@type": "WebSite", name: siteName, url: siteUrl },
+  };
+}
+
 export function buildWebSiteSchema(siteName: string, siteUrl: string) {
   return {
     "@context": "https://schema.org",

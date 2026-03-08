@@ -1,68 +1,156 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
-import { CategoryTabs } from "@/components/blog/CategoryTabs";
-import { PostCard } from "@/components/blog/PostCard";
+import { LeftSidebar } from "@/components/home/LeftSidebar";
+import { CategoryHero } from "@/components/blog/CategoryHero";
+import { CategoryMasonryGrid } from "@/components/blog/CategoryMasonryGrid";
+import { TrendingSidebar } from "@/components/blog/TrendingSidebar";
+import { PopularMusicSidebar } from "@/components/music/PopularMusicSidebar";
 import { PostCardSkeleton } from "@/components/blog/PostCardSkeleton";
-import { getLatestPosts } from "@/lib/api/posts";
+import { NewsletterForm } from "@/components/common/NewsletterForm";
 import { getSettings } from "@/lib/settings";
+import { JsonLd } from "@/components/common/JsonLd";
+import { buildCollectionPageSchema } from "@/lib/structured-data";
 
-export const metadata: Metadata = {
-  title: "Music News",
-  description: "Latest Nigerian and African music news, updates, industry gist, and more.",
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const s = await getSettings();
+  const description = `Latest Nigerian and African music news, updates, and industry gist on ${s.siteName}.`;
+  return {
+    title: "Music News",
+    description,
+    alternates: { canonical: "/news" },
+    openGraph: {
+      title: `Music News | ${s.siteName}`,
+      description,
+      images: s.defaultOgImage ? [{ url: s.defaultOgImage }] : [],
+    },
+  };
+}
 
 export const revalidate = 60;
 
 export default async function NewsPage() {
+  const settings = await getSettings();
+  const schema = buildCollectionPageSchema(
+    "Music News",
+    `Latest Nigerian and African music news on ${settings.siteName}.`,
+    "/news",
+    settings.siteUrl,
+    settings.siteName
+  );
+
   return (
     <>
-      <CategoryTabs />
-      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
-        <div className="mb-6">
-          <h1 className="text-foreground text-2xl font-black">Music News</h1>
-          <p className="text-muted-foreground mt-1">
-            Latest Nigerian and African music news, interviews, and industry updates.
-          </p>
-        </div>
-        <Suspense
-          fallback={
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {Array.from({ length: 9 }).map((_, i) => (
-                <PostCardSkeleton key={i} />
-              ))}
+      <JsonLd schema={[schema]} />
+      <div className="mx-auto max-w-[1440px] px-4 sm:px-6">
+        <div className="grid grid-cols-1 gap-6 py-5 lg:grid-cols-[1fr_300px] xl:grid-cols-[220px_1fr_300px]">
+          <LeftSidebar />
+
+          <main className="min-w-0">
+            <section className="mb-6">
+              <Suspense fallback={<HeroSkeleton />}>
+                <CategoryHero type="NEWS" emptyMessage="No featured news yet. Check back soon!" />
+              </Suspense>
+            </section>
+
+            <div className="mb-5">
+              <h1 className="text-foreground text-2xl font-black">Music News</h1>
+              <p className="text-muted-foreground mt-1 text-sm">
+                Latest Nigerian and African music news, interviews, and industry updates.
+              </p>
             </div>
-          }
-        >
-          <NewsGrid />
-        </Suspense>
+
+            <Suspense fallback={<MasonrySkeleton />}>
+              <CategoryMasonryGrid
+                type="NEWS"
+                heroCount={3}
+                emptyTitle="No news articles yet"
+                emptyMessage="Check back soon for the latest music news!"
+              />
+            </Suspense>
+
+            <div className="mt-8 space-y-5 lg:hidden">
+              <Suspense fallback={<SidebarBlockSkeleton />}>
+                <TrendingSidebar />
+              </Suspense>
+              <Suspense fallback={<SidebarBlockSkeleton />}>
+                <PopularMusicSidebar />
+              </Suspense>
+              <MobileNewsletter />
+            </div>
+          </main>
+
+          <aside className="sticky top-16 hidden h-[calc(100vh-4rem)] space-y-5 overflow-y-auto pb-8 lg:block">
+            <Suspense fallback={<SidebarBlockSkeleton />}>
+              <TrendingSidebar />
+            </Suspense>
+            <Suspense fallback={<SidebarBlockSkeleton />}>
+              <PopularMusicSidebar />
+            </Suspense>
+            <div className="from-brand/10 via-card/80 to-card ring-border/40 overflow-hidden rounded-2xl bg-gradient-to-br ring-1">
+              <div className="p-4">
+                <h3 className="text-foreground text-sm font-bold">Stay in the loop</h3>
+                <p className="text-muted-foreground mt-1 text-[11px] leading-relaxed">
+                  Get the latest drops, news &amp; gist delivered to your inbox.
+                </p>
+                <div className="mt-3">
+                  <NewsletterForm compact />
+                </div>
+              </div>
+            </div>
+          </aside>
+        </div>
       </div>
     </>
   );
 }
 
-async function NewsGrid() {
-  const settings = await getSettings();
-  const posts = await getLatestPosts({
-    type: "NEWS",
-    limit: 18,
-    permalinkStructure: settings.permalinkStructure,
-  });
-
-  if (!posts.length) {
-    return (
-      <div className="py-20 text-center">
-        <p className="mb-4 text-4xl">📰</p>
-        <p className="text-xl font-bold">No news articles yet</p>
-        <p className="text-muted-foreground mt-2">Check back soon for the latest music news!</p>
-      </div>
-    );
-  }
-
+function HeroSkeleton() {
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      {posts.map((post) => (
-        <PostCard key={post.id} post={post} />
+    <div className="bg-muted ring-border/20 aspect-[16/9] animate-pulse rounded-3xl ring-1 sm:aspect-[21/9]" />
+  );
+}
+
+function MasonrySkeleton() {
+  return (
+    <div className="columns-1 gap-4 sm:columns-2 lg:columns-3">
+      {Array.from({ length: 9 }).map((_, i) => (
+        <div key={i} className="mb-4 break-inside-avoid">
+          <PostCardSkeleton />
+        </div>
       ))}
+    </div>
+  );
+}
+
+function SidebarBlockSkeleton() {
+  return (
+    <div className="bg-card/50 ring-border/20 animate-pulse space-y-3 rounded-2xl p-4 ring-1">
+      <div className="bg-muted h-4 w-28 rounded" />
+      {Array.from({ length: 4 }).map((_, i) => (
+        <div key={i} className="flex gap-3 py-2">
+          <div className="bg-muted h-14 w-14 flex-shrink-0 rounded-xl" />
+          <div className="flex-1 space-y-2">
+            <div className="bg-muted h-3 rounded" />
+            <div className="bg-muted h-3 w-2/3 rounded" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function MobileNewsletter() {
+  return (
+    <div className="from-brand/10 via-card/80 to-card ring-border/40 overflow-hidden rounded-2xl bg-gradient-to-br ring-1">
+      <div className="p-5">
+        <h3 className="text-foreground font-bold">Stay in the loop</h3>
+        <p className="text-muted-foreground mt-1 text-sm">
+          Get the latest drops, news &amp; gist right in your inbox.
+        </p>
+        <div className="mt-3">
+          <NewsletterForm compact />
+        </div>
+      </div>
     </div>
   );
 }

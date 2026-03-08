@@ -1,27 +1,83 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getPostUrl } from "@/lib/urls";
+import { searchAll } from "@/lib/meilisearch";
 
-interface SimpleResult {
-  id: string;
-  title: string;
-  type: "post" | "music" | "artist" | "album";
-  slug: string;
-  subtitle?: string;
-  href?: string;
+function trackSearch(query: string, results: number, ip: string | null) {
+  db.searchQuery
+    .create({
+      data: { query: query.toLowerCase().slice(0, 200), results, ip },
+    })
+    .catch(() => {});
 }
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const q = (searchParams.get("q") ?? "").trim();
-  const full = searchParams.get("full") === "1";
 
   if (!q || q.length < 2) {
-    return NextResponse.json(
-      full ? { results: { posts: [], music: [], artists: [] } } : { results: [] }
-    );
+    return NextResponse.json({ posts: [], music: [], artists: [] });
   }
 
+  const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
+
+  try {
+    // Try Meilisearch first
+    const meili = await searchAll(q);
+
+    const settingsRaw = await db.siteSettings.findUnique({
+      where: { id: "default" },
+      select: { permalinkStructure: true },
+    });
+    const permalinkStructure = settingsRaw?.permalinkStructure ?? "/%postname%";
+
+    const totalResults = meili.posts.length + meili.music.length + meili.artists.length;
+    trackSearch(q, totalResults, ip);
+
+    return NextResponse.json({
+      posts: meili.posts.map((p: Record<string, unknown>) => ({
+        id: p.id,
+        slug: p.slug,
+        title: p.title,
+        excerpt: p.excerpt ?? null,
+        coverImage: p.coverImage ?? null,
+        category: p.categoryName ?? null,
+        categorySlug: p.categorySlug ?? null,
+        type: p.type ?? null,
+        href: getPostUrl(
+          {
+            slug: p.slug as string,
+            id: p.id as string,
+            category: p.categorySlug ? { slug: p.categorySlug as string } : null,
+          },
+          permalinkStructure
+        ),
+      })),
+      music: meili.music.map((m: Record<string, unknown>) => ({
+        id: m.id,
+        slug: m.slug,
+        title: m.title,
+        artist: m.artistName ?? null,
+        coverArt: m.coverArt ?? null,
+        genre: m.genre ?? null,
+        href: `/music/${m.slug}`,
+      })),
+      artists: meili.artists.map((a: Record<string, unknown>) => ({
+        id: a.id,
+        slug: a.slug,
+        name: a.name,
+        photo: a.photo ?? null,
+        genre: a.genre ?? null,
+        href: `/artists/${a.slug}`,
+      })),
+    });
+  } catch {
+    // Meilisearch unavailable — fall back to PostgreSQL
+    return fallbackSearch(q, ip);
+  }
+}
+
+async function fallbackSearch(q: string, ip: string | null) {
   try {
     const settingsRaw = await db.siteSettings.findUnique({
       where: { id: "default" },
@@ -38,17 +94,14 @@ export async function GET(req: NextRequest) {
             { excerpt: { contains: q, mode: "insensitive" } },
           ],
         },
-        take: full ? 12 : 5,
+        take: 5,
         select: {
           id: true,
           slug: true,
           title: true,
           excerpt: true,
           coverImage: true,
-          publishedAt: true,
-          views: true,
           category: { select: { name: true, slug: true } },
-          author: { select: { name: true, image: true } },
         },
       }),
       db.music.findMany({
@@ -58,84 +111,56 @@ export async function GET(req: NextRequest) {
             { artist: { name: { contains: q, mode: "insensitive" } } },
           ],
         },
-        take: full ? 8 : 3,
-        include: { artist: { select: { name: true } }, album: { select: { title: true } } },
+        take: 3,
+        select: {
+          id: true,
+          slug: true,
+          title: true,
+          coverArt: true,
+          genre: true,
+          artist: { select: { name: true } },
+        },
       }),
       db.artist.findMany({
         where: { name: { contains: q, mode: "insensitive" } },
-        take: full ? 8 : 3,
-        include: { _count: { select: { music: true } } },
+        take: 3,
+        select: { id: true, slug: true, name: true, photo: true, genre: true },
       }),
     ]);
 
-    if (full) {
-      return NextResponse.json({
-        results: {
-          posts: posts.map((p) => ({
-            id: p.id,
-            slug: p.slug,
-            title: p.title,
-            excerpt: p.excerpt,
-            coverImage: p.coverImage,
-            publishedAt: p.publishedAt,
-            viewCount: p.views,
-            category: p.category,
-            author: p.author.name ? { name: p.author.name, avatar: p.author.image } : null,
-          })),
-          music: music.map((m) => ({
-            id: m.id,
-            slug: m.slug,
-            title: m.title,
-            artistName: m.artist.name,
-            albumTitle: m.album?.title,
-            coverArt: m.coverArt,
-            genre: m.genre,
-            downloadCount: m.downloadCount,
-            fileSize: null,
-            releaseYear: m.year,
-          })),
-          artists: artists.map((a) => ({
-            id: a.id,
-            slug: a.slug,
-            name: a.name,
-            photo: a.photo,
-            genre: a.genre,
-            songCount: a._count.music,
-          })),
-        },
-      });
-    }
+    trackSearch(q, posts.length + music.length + artists.length, ip);
 
-    const results: SimpleResult[] = [
-      ...posts.map((p) => ({
+    return NextResponse.json({
+      posts: posts.map((p) => ({
         id: p.id,
-        title: p.title,
-        type: "post" as const,
         slug: p.slug,
-        subtitle: p.category?.name,
+        title: p.title,
+        excerpt: p.excerpt,
+        coverImage: p.coverImage,
+        category: p.category?.name ?? null,
+        categorySlug: p.category?.slug ?? null,
         href: getPostUrl(p, permalinkStructure),
       })),
-      ...music.map((m) => ({
+      music: music.map((m) => ({
         id: m.id,
-        title: m.title,
-        type: "music" as const,
         slug: m.slug,
-        subtitle: m.artist.name,
+        title: m.title,
+        artist: m.artist.name,
+        coverArt: m.coverArt,
+        genre: m.genre,
+        href: `/music/${m.slug}`,
       })),
-      ...artists.map((a) => ({
+      artists: artists.map((a) => ({
         id: a.id,
-        title: a.name,
-        type: "artist" as const,
         slug: a.slug,
-        subtitle: a.genre ?? undefined,
+        name: a.name,
+        photo: a.photo,
+        genre: a.genre,
+        href: `/artists/${a.slug}`,
       })),
-    ];
-
-    return NextResponse.json({ results });
+    });
   } catch (err) {
-    console.error("[GET /api/search]", err);
-    return NextResponse.json(
-      full ? { results: { posts: [], music: [], artists: [] } } : { results: [] }
-    );
+    console.error("[GET /api/search] fallback error:", err);
+    return NextResponse.json({ posts: [], music: [], artists: [] });
   }
 }

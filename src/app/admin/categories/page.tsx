@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import toast from "react-hot-toast";
 import axios from "axios";
-import { Plus, Pencil, Trash2, Tag, Loader2, Check, X } from "lucide-react";
+import { Plus, Pencil, Trash2, Tag, Loader2, Check, X, icons } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -33,7 +33,64 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { generateSlug } from "@/lib/utils";
+
+// Curated icon options for categories (lucide kebab-case names)
+const ICON_OPTIONS = [
+  "headphones",
+  "flame",
+  "sparkles",
+  "disc-3",
+  "mic-vocal",
+  "music",
+  "newspaper",
+  "message-square",
+  "radio",
+  "guitar",
+  "drum",
+  "piano",
+  "megaphone",
+  "tv",
+  "film",
+  "camera",
+  "star",
+  "heart",
+  "zap",
+  "trending-up",
+  "globe",
+  "bookmark",
+  "circle-play",
+  "volume-2",
+  "podcast",
+  "rss",
+  "hash",
+  "audio-lines",
+  "speaker",
+  "crown",
+  "party-popper",
+  "trophy",
+  "album",
+  "disc-album",
+  "clapperboard",
+  "palette",
+  "layers",
+];
+
+function toPascalCase(kebab: string): string {
+  return kebab
+    .split("-")
+    .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
+    .join("");
+}
+
+function LucideIcon({ name, className }: { name: string; className?: string }) {
+  const pascalName = toPascalCase(name);
+  const IconComponent = icons[pascalName as keyof typeof icons];
+  if (!IconComponent) return null;
+  return <IconComponent className={className} />;
+}
 
 const categorySchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -43,6 +100,7 @@ const categorySchema = z.object({
     .regex(/^[a-z0-9-]+$/, "Lowercase, hyphens only"),
   description: z.string().optional(),
   color: z.string().optional(),
+  icon: z.string().optional(),
 });
 
 type CategoryFormValues = z.infer<typeof categorySchema>;
@@ -53,6 +111,7 @@ interface Category {
   slug: string;
   description: string | null;
   color: string | null;
+  icon: string | null;
   _count?: { posts: number };
 }
 
@@ -67,7 +126,7 @@ export default function CategoriesPage() {
 
   const form = useForm<CategoryFormValues>({
     resolver: zodResolver(categorySchema),
-    defaultValues: { name: "", slug: "", description: "", color: "" },
+    defaultValues: { name: "", slug: "", description: "", color: "", icon: "" },
   });
 
   const nameValue = form.watch("name");
@@ -96,7 +155,7 @@ export default function CategoriesPage() {
   function openCreate() {
     setEditingCategory(null);
     setSlugTouched(false);
-    form.reset({ name: "", slug: "", description: "", color: "" });
+    form.reset({ name: "", slug: "", description: "", color: "", icon: "" });
     setDialogOpen(true);
   }
 
@@ -108,6 +167,7 @@ export default function CategoriesPage() {
       slug: cat.slug,
       description: cat.description ?? "",
       color: cat.color ?? "",
+      icon: cat.icon ?? "",
     });
     setDialogOpen(true);
   }
@@ -119,6 +179,7 @@ export default function CategoriesPage() {
         ...values,
         description: values.description || null,
         color: values.color || null,
+        icon: values.icon || null,
       };
 
       if (editingCategory) {
@@ -194,7 +255,7 @@ export default function CategoriesPage() {
               <TableRow className="border-border hover:bg-transparent">
                 <TableHead>Name</TableHead>
                 <TableHead>Slug</TableHead>
-                <TableHead>Description</TableHead>
+                <TableHead>Icon</TableHead>
                 <TableHead>Color</TableHead>
                 <TableHead className="text-center">Posts</TableHead>
                 <TableHead className="w-24 text-right">Actions</TableHead>
@@ -212,9 +273,14 @@ export default function CategoriesPage() {
                     </code>
                   </TableCell>
                   <TableCell>
-                    <span className="text-muted-foreground line-clamp-1 text-sm">
-                      {cat.description ?? "—"}
-                    </span>
+                    {cat.icon ? (
+                      <div className="flex items-center gap-2">
+                        <LucideIcon name={cat.icon} className="text-muted-foreground h-4 w-4" />
+                        <span className="text-muted-foreground font-mono text-xs">{cat.icon}</span>
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground text-sm">—</span>
+                    )}
                   </TableCell>
                   <TableCell>
                     {cat.color ? (
@@ -317,6 +383,56 @@ export default function CategoriesPage() {
                     <FormControl>
                       <Input placeholder="Optional description..." {...field} />
                     </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="icon"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Icon</FormLabel>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant="outline"
+                            className="w-full justify-start gap-2 font-normal"
+                          >
+                            {field.value ? (
+                              <>
+                                <LucideIcon name={field.value} className="h-4 w-4" />
+                                {field.value}
+                              </>
+                            ) : (
+                              <span className="text-muted-foreground">Choose an icon...</span>
+                            )}
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-[320px] p-0" align="start">
+                        <ScrollArea className="h-[280px] p-3">
+                          <div className="grid grid-cols-6 gap-1.5">
+                            {ICON_OPTIONS.map((iconName) => (
+                              <button
+                                key={iconName}
+                                type="button"
+                                title={iconName}
+                                onClick={() => field.onChange(iconName)}
+                                className={`flex h-10 w-10 items-center justify-center rounded-lg transition-colors ${
+                                  field.value === iconName
+                                    ? "bg-brand/15 text-brand ring-brand ring-2"
+                                    : "hover:bg-muted text-muted-foreground hover:text-foreground"
+                                }`}
+                              >
+                                <LucideIcon name={iconName} className="h-5 w-5" />
+                              </button>
+                            ))}
+                          </div>
+                        </ScrollArea>
+                      </PopoverContent>
+                    </Popover>
                     <FormMessage />
                   </FormItem>
                 )}

@@ -17,6 +17,7 @@ const schema = z.object({
   slug: z.string().min(1),
   description: z.string().optional().nullable(),
   color: z.string().optional().nullable(),
+  icon: z.string().optional().nullable(),
 });
 
 export async function POST(req: NextRequest) {

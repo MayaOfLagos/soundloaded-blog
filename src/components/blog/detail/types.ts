@@ -1,0 +1,110 @@
+import type { PostCardData } from "@/components/blog/PostCard";
+import type { PublicSettings } from "@/lib/settings";
+
+export interface DetailPageProps {
+  post: {
+    id: string;
+    title: string;
+    slug: string;
+    excerpt: string | null;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    body: any;
+    coverImage: string | null;
+    publishedAt: Date | null;
+    updatedAt: Date;
+    views: number;
+    type: string;
+    enableDownload: boolean;
+    downloadLabel: string | null;
+    downloadCount: number;
+    author: { name: string | null; image: string | null; email: string };
+    category: { name: string; slug: string } | null;
+    tags?: { tag: { name: string; slug: string } }[];
+    downloadMedia: {
+      id: string;
+      filename: string;
+      r2Key: string;
+      type: string;
+      mimeType: string;
+      size: number;
+    } | null;
+    music: {
+      id: string;
+      title: string;
+      slug: string;
+      coverArt: string | null;
+      genre: string | null;
+      year: number | null;
+      duration: number | null;
+      fileSize: bigint;
+      format: string;
+      bitrate: number | null;
+      label: string | null;
+      downloadCount: number;
+      streamCount: number;
+      enableDownload: boolean;
+      isExclusive: boolean;
+      price: number | null;
+      trackNumber: number | null;
+      artist: {
+        id: string;
+        name: string;
+        slug: string;
+        photo: string | null;
+        bio: string | null;
+        genre: string | null;
+        country: string | null;
+        instagram: string | null;
+        twitter: string | null;
+        facebook: string | null;
+        spotify: string | null;
+        appleMusic: string | null;
+        createdAt: Date;
+        updatedAt: Date;
+      };
+      album: {
+        id: string;
+        title: string;
+        slug: string;
+        coverArt: string | null;
+        type: string;
+        genre: string | null;
+        label: string | null;
+        releaseDate: Date | null;
+        artistId: string;
+        createdAt: Date;
+        updatedAt: Date;
+        artist: { name: string; slug: string };
+        tracks: Array<{
+          id: string;
+          title: string;
+          slug: string;
+          trackNumber: number | null;
+          duration: number | null;
+          enableDownload: boolean;
+          coverArt: string | null;
+          genre: string | null;
+          year: number | null;
+          fileSize: bigint;
+          format: string;
+          bitrate: number | null;
+          label: string | null;
+          downloadCount: number;
+          streamCount: number;
+          isExclusive: boolean;
+          price: number | null;
+          r2Key: string;
+          filename: string;
+          postId: string;
+          artistId: string;
+          albumId: string | null;
+          createdAt: Date;
+          updatedAt: Date;
+        }>;
+      } | null;
+    } | null;
+  };
+  settings: PublicSettings;
+  related: PostCardData[];
+  articleUrl: string;
+}

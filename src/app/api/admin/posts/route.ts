@@ -3,6 +3,8 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
 import { indexPost } from "@/lib/meilisearch";
+import { autoSharePost } from "@/lib/social-share";
+import { getPostUrl } from "@/lib/urls";
 
 const ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN", "EDITOR"];
 
@@ -120,6 +122,16 @@ export async function POST(req: NextRequest) {
     });
 
     indexPost(post);
+
+    if (post.status === "PUBLISHED") {
+      const settings = await db.siteSettings.findUnique({
+        where: { id: "default" },
+        select: { permalinkStructure: true },
+      });
+      const url = getPostUrl(post, settings?.permalinkStructure ?? "/%postname%");
+      autoSharePost({ title: post.title, url, excerpt: post.excerpt, type: post.type });
+    }
+
     return NextResponse.json(post, { status: 201 });
   } catch (err) {
     if (err instanceof z.ZodError) {

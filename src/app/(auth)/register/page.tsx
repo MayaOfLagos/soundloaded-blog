@@ -114,7 +114,9 @@ export default function RegisterPage() {
       <div className="border-border bg-card rounded-2xl border p-8 shadow-sm">
         <div className="mb-8 text-center">
           <h1 className="text-foreground text-2xl font-black">Create Account</h1>
-          <p className="text-muted-foreground mt-1 text-sm">Join the Soundloaded community</p>
+          <p className="text-muted-foreground mt-1 text-sm">
+            Join the {settings?.siteName ?? "blog"} community
+          </p>
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">

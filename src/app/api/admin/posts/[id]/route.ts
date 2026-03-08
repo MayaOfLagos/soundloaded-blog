@@ -3,6 +3,8 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
 import { indexPost, removeFromIndex, INDEXES } from "@/lib/meilisearch";
+import { autoSharePost } from "@/lib/social-share";
+import { getPostUrl } from "@/lib/urls";
 
 const ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN", "EDITOR"];
 
@@ -61,7 +63,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     const data = updateSchema.parse(body);
     const existingPost = await db.post.findUnique({
       where: { id },
-      select: { downloadMediaId: true },
+      select: { downloadMediaId: true, status: true },
     });
 
     if (!existingPost) {
@@ -112,6 +114,18 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     });
 
     indexPost(post);
+
+    // Auto-share when transitioning to PUBLISHED
+    const wasPublished = existingPost.status === "PUBLISHED";
+    if (post.status === "PUBLISHED" && !wasPublished) {
+      const settings = await db.siteSettings.findUnique({
+        where: { id: "default" },
+        select: { permalinkStructure: true },
+      });
+      const url = getPostUrl(post, settings?.permalinkStructure ?? "/%postname%");
+      autoSharePost({ title: post.title, url, excerpt: post.excerpt, type: post.type });
+    }
+
     return NextResponse.json(post);
   } catch (err) {
     if (err instanceof z.ZodError) return NextResponse.json({ error: err.errors }, { status: 422 });

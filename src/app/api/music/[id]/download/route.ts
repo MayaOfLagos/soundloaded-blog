@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { auth } from "@/lib/auth";
 import { getPresignedDownloadUrl, MUSIC_BUCKET } from "@/lib/r2";
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
@@ -23,7 +24,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const [music, siteSettings] = await Promise.all([
       db.music.findUnique({
         where: { id },
-        select: { id: true, r2Key: true, filename: true, enableDownload: true },
+        select: {
+          id: true,
+          r2Key: true,
+          filename: true,
+          enableDownload: true,
+          isExclusive: true,
+          price: true,
+        },
       }),
       db.siteSettings.findUnique({
         where: { id: "default" },
@@ -41,6 +49,41 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     if (!music.enableDownload) {
       return NextResponse.json({ error: "Downloads are disabled for this track" }, { status: 403 });
+    }
+
+    // Premium gating for exclusive tracks
+    if (music.isExclusive) {
+      const session = await auth();
+      if (!session?.user) {
+        return NextResponse.json(
+          { error: "Premium content", requiresAuth: true, price: music.price },
+          { status: 402 }
+        );
+      }
+
+      const userId = (session.user as { id: string }).id;
+      const subscription = await db.subscription.findUnique({
+        where: { userId },
+        select: { status: true, currentPeriodEnd: true },
+      });
+
+      const hasActiveSub =
+        subscription?.status === "ACTIVE" &&
+        subscription.currentPeriodEnd &&
+        subscription.currentPeriodEnd > new Date();
+
+      if (!hasActiveSub) {
+        const purchase = await db.transaction.findFirst({
+          where: { userId, musicId: id, type: "download", status: "success" },
+        });
+
+        if (!purchase) {
+          return NextResponse.json(
+            { error: "Premium content", requiresPurchase: true, price: music.price },
+            { status: 402 }
+          );
+        }
+      }
     }
 
     const maxDownloadsPerHour = siteSettings?.maxDownloadsPerHour ?? 10;

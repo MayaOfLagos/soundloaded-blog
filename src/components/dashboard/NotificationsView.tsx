@@ -161,7 +161,7 @@ export function NotificationsView() {
     return <NotificationsSkeleton />;
   }
 
-  const notifications = data?.notifications ?? [];
+  const notifications = (data?.notifications ?? []) as unknown as Notification[];
   const totalPages = data?.totalPages ?? 1;
 
   if (notifications.length === 0 && page === 1) {

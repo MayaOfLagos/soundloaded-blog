@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Home,
+  Compass,
   Upload,
   Music,
   Tag,
@@ -18,6 +19,7 @@ import {
 import { cn } from "@/lib/utils";
 import { useSettings } from "@/hooks/useSettings";
 import { useQuery } from "@tanstack/react-query";
+import { useIsMounted } from "@/hooks/useIsMounted";
 import axios from "axios";
 
 interface Category {
@@ -76,6 +78,7 @@ const SOCIAL_URL_MAP: Record<string, (handle: string) => string> = {
 
 export function LeftSidebar() {
   const pathname = usePathname();
+  const mounted = useIsMounted();
   const { data: settings } = useSettings();
   const { data: categoriesData } = useQuery({
     queryKey: ["categories"],
@@ -85,17 +88,18 @@ export function LeftSidebar() {
     },
     staleTime: 5 * 60 * 1000,
   });
-  const categories = categoriesData ?? [];
+  const categories = mounted ? (categoriesData ?? []) : [];
 
-  const socialLinks = settings
-    ? (["instagram", "twitter", "youtube", "facebook", "tiktok", "telegram"] as const)
-        .filter((key) => settings[key])
-        .map((key) => ({
-          href: SOCIAL_URL_MAP[key](settings[key]),
-          icon: SOCIAL_ICON_MAP[key],
-          label: key.charAt(0).toUpperCase() + key.slice(1),
-        }))
-    : [];
+  const socialLinks =
+    mounted && settings
+      ? (["instagram", "twitter", "youtube", "facebook", "tiktok", "telegram"] as const)
+          .filter((key) => settings[key])
+          .map((key) => ({
+            href: SOCIAL_URL_MAP[key](settings[key]),
+            icon: SOCIAL_ICON_MAP[key],
+            label: key.charAt(0).toUpperCase() + key.slice(1),
+          }))
+      : [];
 
   const copyrightName =
     settings?.copyrightText?.replace(". All rights reserved.", "") || "Soundloaded Nigeria";
@@ -126,6 +130,29 @@ export function LeftSidebar() {
           </div>
           Home
           {pathname === "/" && <span className="bg-brand ml-auto h-2 w-2 rounded-full" />}
+        </Link>
+        {/* Explore link */}
+        <Link
+          href="/explore"
+          className={cn(
+            "group flex items-center gap-3.5 rounded-xl px-3 py-3 text-[15px] font-semibold transition-all duration-200",
+            pathname === "/explore"
+              ? "bg-brand/10 text-brand font-bold"
+              : "text-muted-foreground hover:bg-muted hover:text-foreground"
+          )}
+        >
+          <div
+            className={cn(
+              "flex h-9 w-9 items-center justify-center rounded-lg transition-colors",
+              pathname === "/explore"
+                ? "bg-brand/15 text-brand"
+                : "bg-muted text-muted-foreground group-hover:bg-muted group-hover:text-foreground"
+            )}
+          >
+            <Compass className="h-[18px] w-[18px]" />
+          </div>
+          Explore
+          {pathname === "/explore" && <span className="bg-brand ml-auto h-2 w-2 rounded-full" />}
         </Link>
         {/* Dynamic categories */}
         {categories.map((cat) => {
@@ -220,7 +247,7 @@ export function LeftSidebar() {
               </a>
             ))}
           </div>
-          <p className="text-muted-foreground/50 mt-3 text-[10px]">
+          <p className="text-muted-foreground/50 mt-3 text-[10px]" suppressHydrationWarning>
             &copy; {new Date().getFullYear()} {copyrightName}
           </p>
         </div>

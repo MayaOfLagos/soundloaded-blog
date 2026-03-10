@@ -14,6 +14,7 @@ import {
   Mail,
   ImageIcon,
   BarChart3,
+  Clapperboard,
   Settings,
   ChevronLeft,
   ChevronRight,
@@ -37,6 +38,7 @@ const NAV = [
   { href: "/admin/comments", label: "Comments", icon: MessageSquare },
   { href: "/admin/newsletter", label: "Newsletter", icon: Mail },
   { href: "/admin/analytics", label: "Analytics", icon: BarChart3 },
+  { href: "/admin/stories", label: "Stories", icon: Clapperboard },
   { href: "/admin/users", label: "Users", icon: Users },
   { href: "/admin/settings", label: "Settings", icon: Settings },
 ];

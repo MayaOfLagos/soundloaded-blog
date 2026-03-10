@@ -53,7 +53,14 @@ export function BillingView() {
   const { data: subscription, isLoading: subLoading } = useSubscription();
   const { data: txData, isLoading: txLoading } = useUserTransactions(page);
 
-  const transactions = txData?.transactions ?? [];
+  const transactions = (txData?.transactions ?? []) as {
+    id: string;
+    createdAt: string;
+    type: string;
+    description?: string;
+    amount: number;
+    status: string;
+  }[];
   const totalPages = txData?.totalPages ?? 1;
 
   const handleUpgrade = async () => {
@@ -190,38 +197,29 @@ export function BillingView() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {transactions.map(
-                      (tx: {
-                        id: string;
-                        createdAt: string;
-                        type: string;
-                        description?: string;
-                        amount: number;
-                        status: string;
-                      }) => (
-                        <TableRow key={tx.id}>
-                          <TableCell className="text-muted-foreground text-sm whitespace-nowrap">
-                            {format(new Date(tx.createdAt), "MMM d, yyyy")}
-                          </TableCell>
-                          <TableCell className="text-sm capitalize">{tx.type}</TableCell>
-                          <TableCell className="text-sm">{tx.description ?? "—"}</TableCell>
-                          <TableCell className="text-sm font-medium whitespace-nowrap">
-                            {(tx.amount / 100).toLocaleString("en-NG", {
-                              style: "currency",
-                              currency: "NGN",
-                            })}
-                          </TableCell>
-                          <TableCell>
-                            <Badge
-                              variant="secondary"
-                              className={transactionStatusColors[tx.status] ?? ""}
-                            >
-                              {tx.status}
-                            </Badge>
-                          </TableCell>
-                        </TableRow>
-                      )
-                    )}
+                    {transactions.map((tx) => (
+                      <TableRow key={tx.id}>
+                        <TableCell className="text-muted-foreground text-sm whitespace-nowrap">
+                          {format(new Date(tx.createdAt), "MMM d, yyyy")}
+                        </TableCell>
+                        <TableCell className="text-sm capitalize">{tx.type}</TableCell>
+                        <TableCell className="text-sm">{tx.description ?? "—"}</TableCell>
+                        <TableCell className="text-sm font-medium whitespace-nowrap">
+                          {(tx.amount / 100).toLocaleString("en-NG", {
+                            style: "currency",
+                            currency: "NGN",
+                          })}
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant="secondary"
+                            className={transactionStatusColors[tx.status] ?? ""}
+                          >
+                            {tx.status}
+                          </Badge>
+                        </TableCell>
+                      </TableRow>
+                    ))}
                   </TableBody>
                 </Table>
               </div>

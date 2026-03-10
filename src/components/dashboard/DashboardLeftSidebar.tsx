@@ -6,9 +6,6 @@ import { useSession } from "next-auth/react";
 import {
   LayoutDashboard,
   Library,
-  Download,
-  Bookmark,
-  Heart,
   MessageSquare,
   Bell,
   CreditCard,
@@ -23,9 +20,6 @@ import { signOut } from "next-auth/react";
 const NAV_ITEMS = [
   { label: "Overview", href: "/dashboard", icon: LayoutDashboard },
   { label: "Library", href: "/library", icon: Library },
-  { label: "Downloads", href: "/downloads", icon: Download },
-  { label: "Bookmarks", href: "/bookmarks", icon: Bookmark },
-  { label: "Favorites", href: "/favorites", icon: Heart },
   { label: "Comments", href: "/comments", icon: MessageSquare },
   { label: "Notifications", href: "/notifications", icon: Bell },
   { label: "Billing", href: "/billing", icon: CreditCard },

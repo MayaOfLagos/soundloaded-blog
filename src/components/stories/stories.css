@@ -1,0 +1,20 @@
+@property --story-angle {
+  syntax: "<angle>";
+  initial-value: 0deg;
+  inherits: false;
+}
+
+.story-ring-unseen {
+  background: conic-gradient(from var(--story-angle), #e11d48, #f97316, #a855f7, #3b82f6, #e11d48);
+  animation: story-ring-rotate 3s linear infinite;
+}
+
+.story-ring-seen {
+  background: hsl(var(--muted));
+}
+
+@keyframes story-ring-rotate {
+  to {
+    --story-angle: 360deg;
+  }
+}

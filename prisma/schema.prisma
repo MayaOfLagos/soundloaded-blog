@@ -35,6 +35,11 @@ model User {
   searchQueries     SearchQuery[]
   bookmarks         Bookmark[]
   favorites         Favorite[]
+  reactions         Reaction[]
+  following         Follow[]    @relation("UserFollowing")
+  followers         Follow[]    @relation("UserFollowers")
+  stories           Story[]
+  storyViews        StoryView[]
   notifications     Notification[]
   preferences       UserPreferences?
 }
@@ -76,6 +81,7 @@ model Post {
   downloadMedia   Media?   @relation("PostDownloadMedia", fields: [downloadMediaId], references: [id], onDelete: SetNull)
   bookmarks  Bookmark[]
   favorites  Favorite[]
+  reactions  Reaction[]
 
   @@index([slug])
   @@index([status, publishedAt])
@@ -98,6 +104,8 @@ enum PostType {
   VIDEO
   LYRICS
 }
+
+
 
 // ── Music ─────────────────────────────────────────────────────────────
 model Music {
@@ -586,6 +594,21 @@ model Favorite {
   @@index([userId, createdAt])
 }
 
+// ── Reactions ──────────────────────────────────────────────────────────
+model Reaction {
+  id        String   @id @default(cuid())
+  emoji     String   @default("❤️")
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, postId])
+  @@index([postId, emoji])
+  @@index([userId, createdAt])
+}
+
 // ── Notifications ──────────────────────────────────────────────────────
 model Notification {
   id        String           @id @default(cuid())
@@ -626,4 +649,74 @@ model UserPreferences {
   themePreference     String   @default("system")
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
+}
+
+// ── Follow ────────────────────────────────────────────────────────────
+model Follow {
+  id          String   @id @default(cuid())
+  followerId  String
+  follower    User     @relation("UserFollowing", fields: [followerId], references: [id], onDelete: Cascade)
+  followingId String
+  following   User     @relation("UserFollowers", fields: [followingId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+
+  @@unique([followerId, followingId])
+  @@index([followerId])
+  @@index([followingId])
+}
+
+// ── Stories ───────────────────────────────────────────────────────────
+enum StoryItemType {
+  IMAGE
+  VIDEO
+  GIF
+  TEXT
+}
+
+model Story {
+  id        String      @id @default(cuid())
+  authorId  String
+  author    User        @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  items     StoryItem[]
+  createdAt DateTime    @default(now())
+  expiresAt DateTime
+
+  @@index([authorId, expiresAt])
+  @@index([expiresAt])
+}
+
+model StoryItem {
+  id        String        @id @default(cuid())
+  storyId   String
+  story     Story         @relation(fields: [storyId], references: [id], onDelete: Cascade)
+  type      StoryItemType @default(IMAGE)
+  mediaUrl  String
+  caption   String?
+  duration  Int           @default(5)
+  order     Int           @default(0)
+  views     StoryView[]
+  createdAt DateTime      @default(now())
+
+  // Audio overlay (TEXT and IMAGE stories only)
+  audioUrl       String?
+  audioStartTime Float?   @default(0)
+  audioEndTime   Float?   @default(30)
+
+  // Text story fields
+  backgroundColor String?
+  textContent     String?
+
+  @@index([storyId, order])
+}
+
+model StoryView {
+  id          String    @id @default(cuid())
+  storyItemId String
+  storyItem   StoryItem @relation(fields: [storyItemId], references: [id], onDelete: Cascade)
+  viewerId    String
+  viewer      User      @relation(fields: [viewerId], references: [id], onDelete: Cascade)
+  viewedAt    DateTime  @default(now())
+
+  @@unique([storyItemId, viewerId])
+  @@index([storyItemId])
 }

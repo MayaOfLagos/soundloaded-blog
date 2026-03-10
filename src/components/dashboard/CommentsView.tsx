@@ -50,7 +50,13 @@ export function CommentsView() {
     );
   }
 
-  const comments = data?.comments ?? [];
+  const comments = (data?.comments ?? []) as {
+    id: string;
+    content: string;
+    status: string;
+    createdAt: string;
+    post?: { slug: string; title: string };
+  }[];
   const totalPages = data?.totalPages ?? 1;
 
   return (
@@ -89,56 +95,48 @@ export function CommentsView() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {comments.map(
-                  (comment: {
-                    id: string;
-                    content: string;
-                    status: string;
-                    createdAt: string;
-                    post?: { slug: string; title: string };
-                  }) => (
-                    <TableRow key={comment.id}>
-                      <TableCell className="max-w-[300px]">
-                        <p className="truncate">
-                          {comment.content?.length > 80
-                            ? `${comment.content.slice(0, 80)}...`
-                            : comment.content}
-                        </p>
-                      </TableCell>
-                      <TableCell>
-                        {comment.post ? (
-                          <Link
-                            href={`/${comment.post.slug}`}
-                            className="flex items-center gap-1 text-sm text-blue-600 hover:underline"
-                          >
-                            <span className="max-w-[150px] truncate">{comment.post.title}</span>
-                            <ExternalLink className="h-3 w-3 shrink-0" />
-                          </Link>
-                        ) : (
-                          <span className="text-muted-foreground">—</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="secondary" className={statusColors[comment.status] ?? ""}>
-                          {comment.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground text-sm whitespace-nowrap">
-                        {format(new Date(comment.createdAt), "MMM d, yyyy")}
-                      </TableCell>
-                      <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleDelete(comment.id)}
-                          className="text-red-500 hover:text-red-700"
+                {comments.map((comment) => (
+                  <TableRow key={comment.id}>
+                    <TableCell className="max-w-[300px]">
+                      <p className="truncate">
+                        {comment.content?.length > 80
+                          ? `${comment.content.slice(0, 80)}...`
+                          : comment.content}
+                      </p>
+                    </TableCell>
+                    <TableCell>
+                      {comment.post ? (
+                        <Link
+                          href={`/${comment.post.slug}`}
+                          className="flex items-center gap-1 text-sm text-blue-600 hover:underline"
                         >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  )
-                )}
+                          <span className="max-w-[150px] truncate">{comment.post.title}</span>
+                          <ExternalLink className="h-3 w-3 shrink-0" />
+                        </Link>
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="secondary" className={statusColors[comment.status] ?? ""}>
+                        {comment.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground text-sm whitespace-nowrap">
+                      {format(new Date(comment.createdAt), "MMM d, yyyy")}
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDelete(comment.id)}
+                        className="text-red-500 hover:text-red-700"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))}
               </TableBody>
             </Table>
           </div>

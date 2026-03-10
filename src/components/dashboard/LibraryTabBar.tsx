@@ -1,0 +1,65 @@
+"use client";
+
+import { motion } from "motion/react";
+import { Library, Bookmark, Heart, Download, type LucideIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+const snappySpring = {
+  type: "spring" as const,
+  stiffness: 350,
+  damping: 30,
+  mass: 1,
+};
+
+const LIBRARY_TABS: { id: string; label: string; icon: LucideIcon }[] = [
+  { id: "saved", label: "Saved", icon: Library },
+  { id: "bookmarks", label: "Bookmarks", icon: Bookmark },
+  { id: "favorites", label: "Favorites", icon: Heart },
+  { id: "downloads", label: "Downloads", icon: Download },
+];
+
+interface LibraryTabBarProps {
+  activeTab: string;
+  onTabChange: (id: string) => void;
+}
+
+export function LibraryTabBar({ activeTab, onTabChange }: LibraryTabBarProps) {
+  return (
+    <div className="scrollbar-hide -mx-1 overflow-x-auto px-1">
+      <div className="bg-muted border-border flex w-fit rounded-full border p-1">
+        {LIBRARY_TABS.map(({ id, label, icon: Icon }) => {
+          const isActive = activeTab === id;
+          return (
+            <button
+              key={id}
+              onClick={() => onTabChange(id)}
+              className={cn(
+                "relative flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-all outline-none",
+                isActive ? "text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              {isActive && (
+                <motion.div
+                  layoutId="library-active-tab"
+                  className="bg-brand absolute inset-0 rounded-full shadow-md"
+                  transition={snappySpring}
+                />
+              )}
+              <span className="relative z-10 flex items-center gap-2">
+                <Icon
+                  className={cn(
+                    "h-4 w-4 transition-transform duration-300",
+                    isActive && "scale-110"
+                  )}
+                />
+                <span className="hidden sm:inline">{label}</span>
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+export { LIBRARY_TABS };

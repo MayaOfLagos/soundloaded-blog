@@ -5,9 +5,6 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard,
   Library,
-  Download,
-  Bookmark,
-  Heart,
   MessageSquare,
   CreditCard,
   Bell,
@@ -21,9 +18,6 @@ import { Separator } from "@/components/ui/separator";
 const NAV = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/library", label: "Library", icon: Library },
-  { href: "/downloads", label: "Downloads", icon: Download },
-  { href: "/bookmarks", label: "Bookmarks", icon: Bookmark },
-  { href: "/favorites", label: "Favorites", icon: Heart },
   { href: "/comments", label: "Comments", icon: MessageSquare },
   { href: "/billing", label: "Billing", icon: CreditCard },
   { href: "/notifications", label: "Notifications", icon: Bell },

@@ -172,6 +172,61 @@ export async function getArtistBySlug(slug: string) {
   }
 }
 
+export async function getDistinctGenres(): Promise<string[]> {
+  try {
+    const results = await db.music.findMany({
+      where: { genre: { not: null } },
+      distinct: ["genre"],
+      select: { genre: true },
+      orderBy: { genre: "asc" },
+    });
+    return results.map((r) => r.genre).filter(Boolean) as string[];
+  } catch {
+    return [];
+  }
+}
+
+export async function getMusicByGenre({
+  genre,
+  limit = 20,
+}: {
+  genre: string;
+  limit?: number;
+}): Promise<MusicCardData[]> {
+  return getLatestMusic({ limit, genre });
+}
+
+export async function getTopGenresWithTracks({
+  genreLimit = 3,
+  trackLimit = 20,
+}: { genreLimit?: number; trackLimit?: number } = {}): Promise<
+  { genre: string; tracks: MusicCardData[] }[]
+> {
+  try {
+    // Get genres sorted by track count
+    const genreCounts = await db.music.groupBy({
+      by: ["genre"],
+      where: { genre: { not: null } },
+      _count: { id: true },
+      orderBy: { _count: { id: "desc" } },
+      take: genreLimit,
+    });
+
+    const results = await Promise.all(
+      genreCounts
+        .filter((g) => g.genre)
+        .map(async (g) => ({
+          genre: g.genre!,
+          tracks: await getLatestMusic({ limit: trackLimit, genre: g.genre! }),
+        }))
+    );
+
+    return results.filter((r) => r.tracks.length > 0);
+  } catch {
+    return [];
+  }
+}
+
 export async function getAlbumBySlug(slug: string) {
   try {
     return await db.album.findUnique({

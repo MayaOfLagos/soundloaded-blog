@@ -1,13 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { storyUploadSchema } from "@/lib/validations/stories";
-import {
-  getPresignedUploadUrl,
-  getMediaUrl,
-  MEDIA_BUCKET,
-  MUSIC_BUCKET,
-  MUSIC_CDN_URL,
-} from "@/lib/r2";
+import { r2Client, getMediaUrl, MEDIA_BUCKET, MUSIC_BUCKET, MUSIC_CDN_URL } from "@/lib/r2";
+import { PutObjectCommand } from "@aws-sdk/client-s3";
+
+const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50 MB
 
 const ALLOWED_IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif"];
 const ALLOWED_VIDEO_TYPES = ["video/mp4", "video/webm", "video/quicktime"];
@@ -25,7 +21,13 @@ function getExtension(filename: string): string {
   return parts.length > 1 ? parts.pop()!.toLowerCase() : "bin";
 }
 
-/** POST — get presigned URL for story media upload */
+function getAllowedTypes(mediaType: string) {
+  if (mediaType === "image") return ALLOWED_IMAGE_TYPES;
+  if (mediaType === "video") return ALLOWED_VIDEO_TYPES;
+  return ALLOWED_AUDIO_TYPES;
+}
+
+/** POST — upload story media directly through server to R2 */
 export async function POST(request: NextRequest) {
   const session = await auth();
   if (!session?.user) {
@@ -33,40 +35,53 @@ export async function POST(request: NextRequest) {
   }
 
   const userId = (session.user as { id: string }).id;
-  const body = await request.json();
-  const parsed = storyUploadSchema.safeParse(body);
 
-  if (!parsed.success) {
-    return NextResponse.json({ error: parsed.error.flatten() }, { status: 400 });
+  const formData = await request.formData();
+  const file = formData.get("file") as File | null;
+  const mediaType = formData.get("mediaType") as string | null;
+  const purpose = (formData.get("purpose") as string | null) ?? "stories";
+
+  if (!file || !mediaType) {
+    return NextResponse.json({ error: "Missing file or mediaType" }, { status: 400 });
   }
 
-  const { filename, contentType, mediaType } = parsed.data;
+  if (!["image", "video", "audio"].includes(mediaType)) {
+    return NextResponse.json({ error: "Invalid mediaType" }, { status: 400 });
+  }
 
-  // Validate content type
-  const allowedTypes =
-    mediaType === "image"
-      ? ALLOWED_IMAGE_TYPES
-      : mediaType === "video"
-        ? ALLOWED_VIDEO_TYPES
-        : ALLOWED_AUDIO_TYPES;
+  if (file.size > MAX_FILE_SIZE) {
+    return NextResponse.json({ error: "File too large (max 50MB)" }, { status: 400 });
+  }
 
-  if (!allowedTypes.includes(contentType)) {
+  const allowedTypes = getAllowedTypes(mediaType);
+  if (!allowedTypes.includes(file.type)) {
     return NextResponse.json(
-      { error: `Invalid content type for ${mediaType}: ${contentType}` },
+      { error: `Invalid content type for ${mediaType}: ${file.type}` },
       { status: 400 }
     );
   }
 
-  const ext = getExtension(filename);
+  const ext = getExtension(file.name);
   const id = crypto.randomUUID();
 
   const isAudio = mediaType === "audio";
   const bucket = isAudio ? MUSIC_BUCKET : MEDIA_BUCKET;
-  const prefix = isAudio ? `stories/audio/${userId}` : `stories/${userId}`;
+  const folder = purpose === "posts" ? "posts" : "stories";
+  const prefix = isAudio ? `${folder}/audio/${userId}` : `${folder}/${userId}`;
   const key = `${prefix}/${id}.${ext}`;
 
-  const uploadUrl = await getPresignedUploadUrl(bucket, key, contentType);
+  const buffer = Buffer.from(await file.arrayBuffer());
+
+  await r2Client.send(
+    new PutObjectCommand({
+      Bucket: bucket,
+      Key: key,
+      Body: buffer,
+      ContentType: file.type,
+    })
+  );
+
   const url = isAudio ? `${MUSIC_CDN_URL}/${key}` : getMediaUrl(key);
 
-  return NextResponse.json({ uploadUrl, url, key });
+  return NextResponse.json({ url, key });
 }

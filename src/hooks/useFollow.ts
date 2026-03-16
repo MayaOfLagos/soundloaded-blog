@@ -30,6 +30,8 @@ export function useToggleFollow() {
       queryClient.invalidateQueries({ queryKey: ["follow-check", vars.userId] });
       queryClient.invalidateQueries({ queryKey: ["follow-suggestions"] });
       queryClient.invalidateQueries({ queryKey: ["stories"] });
+      queryClient.invalidateQueries({ queryKey: ["feed-posts", "foryou"] });
+      queryClient.invalidateQueries({ queryKey: ["feed-posts", "following"] });
       notify.success(result.following ? "Following" : "Unfollowed");
     },
     onError: () => {

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
 import {
   getExploreLatest,
   getExploreTop,
@@ -23,6 +24,10 @@ export async function GET(req: NextRequest) {
   }
 
   try {
+    // Get current user to exclude their own posts
+    const session = await auth();
+    const excludeUserId = (session?.user as { id: string } | undefined)?.id;
+
     const fetchers = {
       trending: getExploreTrending,
       latest: getExploreLatest,
@@ -30,7 +35,7 @@ export async function GET(req: NextRequest) {
       top: getExploreTop,
     } as const;
 
-    const result = await fetchers[mode as keyof typeof fetchers](page, limit, type);
+    const result = await fetchers[mode as keyof typeof fetchers](page, limit, type, excludeUserId);
     return NextResponse.json(result);
   } catch (err) {
     console.error("[GET /api/explore]", err);

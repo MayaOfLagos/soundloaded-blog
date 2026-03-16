@@ -641,10 +641,8 @@ const SidebarMenuSkeleton = React.forwardRef<
   }
 >(({ className, showIcon = false, ...props }, ref) => {
   // Random width between 50 to 90%.
-  // eslint-disable-next-line react-hooks/purity
   const width = React.useMemo(() => {
-    // eslint-disable-next-line no-restricted-syntax
-    return `${Math.floor(Math.random() * 40) + 50}%`; // shadcn generated
+    return `${Math.floor(Math.random() * 40) + 50}%`;
   }, []);
 
   return (

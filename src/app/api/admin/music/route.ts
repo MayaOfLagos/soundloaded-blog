@@ -32,6 +32,7 @@ const createSchema = z.object({
   isExclusive: z.boolean().default(false),
   price: z.number().int().min(0).optional().nullable(),
   enableDownload: z.boolean().default(true),
+  body: z.any().optional(),
 });
 
 export async function GET(req: NextRequest) {
@@ -77,24 +78,48 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const data = createSchema.parse(body);
 
+    // Find or create "Music" category for the companion post
+    const musicCategory = await db.category.upsert({
+      where: { slug: "music" },
+      update: {},
+      create: { name: "Music", slug: "music" },
+    });
+
+    // Ensure unique slug — append -2, -3, etc. if taken
+    let slug = data.slug;
+    const existing = await db.post.findUnique({ where: { slug }, select: { id: true } });
+    if (existing) {
+      let suffix = 2;
+      while (
+        await db.post.findUnique({
+          where: { slug: `${data.slug}-${suffix}` },
+          select: { id: true },
+        })
+      ) {
+        suffix++;
+      }
+      slug = `${data.slug}-${suffix}`;
+    }
+
     // Create a companion post for this music track
     const authorId = (session.user as { id?: string }).id!;
     const post = await db.post.create({
       data: {
         title: data.title,
-        slug: data.slug,
-        body: {},
+        slug,
+        body: data.body ?? {},
         status: "PUBLISHED",
         type: "MUSIC",
         publishedAt: new Date(),
         authorId,
+        categoryId: musicCategory.id,
       },
     });
 
     const music = await db.music.create({
       data: {
         title: data.title,
-        slug: data.slug,
+        slug,
         r2Key: data.r2Key,
         filename: data.filename,
         fileSize: BigInt(data.fileSize as string | number),

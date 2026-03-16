@@ -10,17 +10,22 @@ import { MobileNav } from "./MobileNav";
 import { useSettings } from "@/hooks/useSettings";
 import { cn } from "@/lib/utils";
 
-const NAV_LINKS = [
-  { href: "/", label: "Home", icon: Home },
-  { href: "/explore", label: "Explore", icon: Compass },
-  { href: "/favorites", label: "Favorites", icon: Heart },
-  { href: "/bookmarks", label: "Bookmarks", icon: Bookmark },
-  { href: "/library", label: "Library", icon: Library },
+const ALL_NAV_LINKS = [
+  { href: "/", label: "Home", icon: Home, settingsKey: null },
+  { href: "/explore", label: "Explore", icon: Compass, settingsKey: "enableExplore" as const },
+  { href: "/favorites", label: "Favorites", icon: Heart, settingsKey: null },
+  { href: "/bookmarks", label: "Bookmarks", icon: Bookmark, settingsKey: null },
+  { href: "/library", label: "Library", icon: Library, settingsKey: null },
 ];
 
 export function Navbar() {
   const pathname = usePathname();
   const { data: settings } = useSettings();
+
+  const NAV_LINKS = ALL_NAV_LINKS.filter((item) => {
+    if (!item.settingsKey) return true;
+    return !settings || settings[item.settingsKey] !== false;
+  });
 
   return (
     <header className="bg-background/95 supports-[backdrop-filter]:bg-background/80 sticky top-0 z-50 w-full backdrop-blur">

@@ -26,9 +26,19 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "postId is required" }, { status: 400 });
   }
 
+  // Get current user for like status
+  const session = await auth();
+  const currentUserId = (session?.user as { id?: string } | undefined)?.id;
+
   const settings = await getSettings();
   const limit = settings.commentsPerPage;
   const orderDir = settings.commentOrder === "newest" ? ("desc" as const) : ("asc" as const);
+
+  const likeSelect = {
+    likes: {
+      select: { type: true, userId: true },
+    },
+  };
 
   const [comments, total] = await Promise.all([
     db.comment.findMany({
@@ -43,6 +53,7 @@ export async function GET(req: NextRequest) {
         guestName: true,
         guestWebsite: true,
         author: { select: { id: true, name: true, image: true } },
+        ...likeSelect,
         replies: {
           where: { status: "APPROVED" },
           orderBy: { createdAt: "asc" },
@@ -53,6 +64,7 @@ export async function GET(req: NextRequest) {
             guestName: true,
             guestWebsite: true,
             author: { select: { id: true, name: true, image: true } },
+            ...likeSelect,
           },
         },
       },
@@ -62,7 +74,27 @@ export async function GET(req: NextRequest) {
     }),
   ]);
 
-  return NextResponse.json({ comments, total, commentsPerPage: limit });
+  // Map comments to include like/dislike counts and user's like status
+  const mapLikes = (
+    comment: (typeof comments)[number] | (typeof comments)[number]["replies"][number]
+  ) => {
+    const likes = "likes" in comment ? (comment.likes as { type: string; userId: string }[]) : [];
+    const likeCount = likes.filter((l) => l.type === "LIKE").length;
+    const dislikeCount = likes.filter((l) => l.type === "DISLIKE").length;
+    const userLike = currentUserId
+      ? (likes.find((l) => l.userId === currentUserId)?.type ?? null)
+      : null;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { likes: _likes, ...rest } = comment as (typeof comments)[number] & { likes: unknown };
+    return { ...rest, likeCount, dislikeCount, userLike };
+  };
+
+  const enrichedComments = comments.map((c) => ({
+    ...mapLikes(c),
+    replies: c.replies.map((r) => mapLikes(r)),
+  }));
+
+  return NextResponse.json({ comments: enrichedComments, total, commentsPerPage: limit });
 }
 
 // ── POST: Submit a comment (auth or guest) ───────────────────────────

@@ -8,12 +8,14 @@ export interface ExplorePost {
   title: string;
   excerpt: string | null;
   coverImage: string | null;
+  mediaAttachments: Array<{ url: string; key: string; type: string; mimeType: string }>;
+  isUserGenerated: boolean;
   publishedAt: Date;
   views: number;
   type: string;
   href: string;
   category: { name: string; slug: string } | null;
-  author: { name: string | null; avatar: string | null };
+  author: { id: string; name: string | null; avatar: string | null };
   commentCount: number;
   bookmarkCount: number;
   favoriteCount: number;
@@ -39,11 +41,14 @@ const EXPLORE_SELECT = {
   title: true,
   excerpt: true,
   coverImage: true,
+  mediaAttachments: true,
+  isUserGenerated: true,
   publishedAt: true,
+  createdAt: true,
   views: true,
   type: true,
   category: { select: { name: true, slug: true } },
-  author: { select: { name: true, image: true } },
+  author: { select: { id: true, name: true, image: true } },
   _count: { select: { comments: true, bookmarks: true, favorites: true, reactions: true } },
 } as const;
 
@@ -53,37 +58,47 @@ type RawExplorePost = {
   title: string;
   excerpt: string | null;
   coverImage: string | null;
+  mediaAttachments: unknown;
+  isUserGenerated: boolean;
   publishedAt: Date | null;
+  createdAt: Date;
   views: number;
   type: string;
   category: { name: string; slug: string } | null;
-  author: { name: string | null; image: string | null };
+  author: { id: string; name: string | null; image: string | null };
   _count: { comments: number; bookmarks: number; favorites: number; reactions: number };
 };
 
 function mapExplorePost(p: RawExplorePost, permalinkStructure?: string): ExplorePost {
+  const media = Array.isArray(p.mediaAttachments)
+    ? (p.mediaAttachments as Array<{ url: string; key: string; type: string; mimeType: string }>)
+    : [];
+
+  const effectiveCover = p.coverImage ?? media.find((m) => m.type === "IMAGE")?.url ?? null;
+
   return {
     id: p.id,
     slug: p.slug,
     title: p.title,
     excerpt: p.excerpt,
-    coverImage: p.coverImage,
+    coverImage: effectiveCover,
+    mediaAttachments: media,
+    isUserGenerated: p.isUserGenerated ?? false,
     publishedAt: p.publishedAt ?? new Date(),
     views: p.views,
     type: p.type,
-    href: permalinkStructure ? getPostUrl(p, permalinkStructure) : `/${p.slug}`,
+    href: p.isUserGenerated
+      ? ""
+      : permalinkStructure
+        ? getPostUrl(p, permalinkStructure)
+        : `/${p.slug}`,
     category: p.category,
-    author: { name: p.author.name, avatar: p.author.image },
+    author: { id: p.author.id, name: p.author.name, avatar: p.author.image },
     commentCount: p._count.comments,
     bookmarkCount: p._count.bookmarks,
     favoriteCount: p._count.favorites,
     reactionCount: p._count.reactions,
   };
-}
-
-function buildTypeFilter(type?: string) {
-  if (!type || type === "all") return {};
-  return { type: type.toUpperCase() as never };
 }
 
 function buildPagination(page: number, limit: number, total: number): ExplorePagination {
@@ -96,14 +111,110 @@ function buildPagination(page: number, limit: number, total: number): ExplorePag
   };
 }
 
-/** Latest posts, ordered by publishedAt desc */
+// ── Community-only base filter ──────────────────────────────────────────
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function buildBaseWhere(excludeUserId?: string, type?: string): any {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const where: any = {
+    status: "PUBLISHED" as const,
+    isUserGenerated: true,
+    type: "COMMUNITY" as const,
+  };
+
+  if (excludeUserId) {
+    where.authorId = { not: excludeUserId };
+  }
+
+  if (type && type !== "all") {
+    // For community posts, type filter applies to media type within the post
+    // but keep the post type as COMMUNITY
+    delete where.type;
+    where.type = type.toUpperCase() as never;
+  }
+
+  return where;
+}
+
+// ── Deterministic daily hash for stable randomization ───────────────────
+function simpleHash(str: string): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = (hash << 5) - hash + char;
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+  return Math.abs(hash);
+}
+
+// ── Algorithmic scoring ─────────────────────────────────────────────────
+function scorePost(p: RawExplorePost, followingIds: Set<string>, seed: number): number {
+  const now = Date.now();
+  const hoursAge = (now - new Date(p.createdAt).getTime()) / 3600000;
+
+  // Engagement score (weighted)
+  const engagement =
+    p._count.reactions * 3 +
+    p._count.comments * 5 +
+    p._count.bookmarks * 4 +
+    p._count.favorites * 4 +
+    p.views * 0.1;
+
+  // Follow boost
+  const followBoost = followingIds.has(p.author.id) ? 30 : 0;
+
+  // Time decay (gravity algorithm like Hacker News)
+  const decayFactor = 1 / Math.pow(hoursAge + 2, 1.2);
+
+  // Deterministic random factor (varies daily, stable within a day)
+  const postHash = simpleHash(p.id + seed);
+  const randomFactor = 0.7 + (postHash % 60) / 100; // 0.7 – 1.3
+
+  return (engagement + followBoost) * decayFactor * randomFactor;
+}
+
+// ── Author diversity (max 2 consecutive from same author) ───────────────
+function diversifyPosts(posts: ExplorePost[]): ExplorePost[] {
+  const result: ExplorePost[] = [];
+  const deferred: ExplorePost[] = [];
+  let lastAuthorId = "";
+  let consecutiveCount = 0;
+
+  for (const p of posts) {
+    if (p.author.id === lastAuthorId) {
+      consecutiveCount++;
+      if (consecutiveCount > 2) {
+        deferred.push(p);
+        continue;
+      }
+    } else {
+      lastAuthorId = p.author.id;
+      consecutiveCount = 1;
+    }
+    result.push(p);
+  }
+
+  return [...result, ...deferred];
+}
+
+// ── Get user's following list ───────────────────────────────────────────
+async function getFollowingIds(userId?: string): Promise<Set<string>> {
+  if (!userId) return new Set();
+  const follows = await db.follow.findMany({
+    where: { followerId: userId },
+    select: { followingId: true },
+  });
+  return new Set(follows.map((f) => f.followingId));
+}
+
+// ── Latest community posts ──────────────────────────────────────────────
 export async function getExploreLatest(
   page = 1,
   limit = 10,
-  type?: string
+  type?: string,
+  excludeUserId?: string
 ): Promise<ExploreResult> {
   const settings = await getSettings();
-  const where = { status: "PUBLISHED" as const, ...buildTypeFilter(type) };
+  const where = buildBaseWhere(excludeUserId, type);
 
   const [posts, total] = await Promise.all([
     db.post.findMany({
@@ -122,10 +233,15 @@ export async function getExploreLatest(
   };
 }
 
-/** Top posts of all time, ordered by views desc */
-export async function getExploreTop(page = 1, limit = 10, type?: string): Promise<ExploreResult> {
+// ── Top community posts (all time, by views) ────────────────────────────
+export async function getExploreTop(
+  page = 1,
+  limit = 10,
+  type?: string,
+  excludeUserId?: string
+): Promise<ExploreResult> {
   const settings = await getSettings();
-  const where = { status: "PUBLISHED" as const, ...buildTypeFilter(type) };
+  const where = buildBaseWhere(excludeUserId, type);
 
   const [posts, total] = await Promise.all([
     db.post.findMany({
@@ -144,18 +260,18 @@ export async function getExploreTop(page = 1, limit = 10, type?: string): Promis
   };
 }
 
-/** Trending: posts from last 7 days, ordered by views desc */
+// ── Trending community posts (last 7 days) ──────────────────────────────
 export async function getExploreTrending(
   page = 1,
   limit = 10,
-  type?: string
+  type?: string,
+  excludeUserId?: string
 ): Promise<ExploreResult> {
   const settings = await getSettings();
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
   const where = {
-    status: "PUBLISHED" as const,
+    ...buildBaseWhere(excludeUserId, type),
     publishedAt: { gte: sevenDaysAgo },
-    ...buildTypeFilter(type),
   };
 
   const [posts, total] = await Promise.all([
@@ -175,90 +291,52 @@ export async function getExploreTrending(
   };
 }
 
-/** Hot: posts with most bookmarks + favorites in the last 7 days */
-export async function getExploreHot(page = 1, limit = 10, type?: string): Promise<ExploreResult> {
+// ── Hot: algorithmic scoring with randomization ─────────────────────────
+export async function getExploreHot(
+  page = 1,
+  limit = 10,
+  type?: string,
+  excludeUserId?: string
+): Promise<ExploreResult> {
   const settings = await getSettings();
-  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-  const typeFilter = type && type !== "all" ? `AND p."type" = '${type.toUpperCase()}'` : "";
+  const where = buildBaseWhere(excludeUserId, type);
 
-  const countResult = await db.$queryRawUnsafe<[{ count: bigint }]>(
-    `SELECT COUNT(*) as count FROM "Post" p WHERE p."status" = 'PUBLISHED' ${typeFilter}`
-  );
-  const total = Number(countResult[0]?.count ?? 0);
+  // Daily seed for stable-within-a-day randomization
+  const today = new Date().toISOString().slice(0, 10);
+  const seed = simpleHash(today);
 
-  const rawPosts = await db.$queryRawUnsafe<
-    {
-      id: string;
-      slug: string;
-      title: string;
-      excerpt: string | null;
-      coverImage: string | null;
-      publishedAt: Date | null;
-      views: number;
-      type: string;
-      categoryName: string | null;
-      categorySlug: string | null;
-      authorName: string | null;
-      authorImage: string | null;
-      commentCount: bigint;
-      bookmarkCount: bigint;
-      favoriteCount: bigint;
-      reactionCount: bigint;
-      hotScore: bigint;
-    }[]
-  >(
-    `SELECT
-      p."id", p."slug", p."title", p."excerpt", p."coverImage",
-      p."publishedAt", p."views", p."type",
-      c."name" as "categoryName", c."slug" as "categorySlug",
-      u."name" as "authorName", u."image" as "authorImage",
-      (SELECT COUNT(*) FROM "Comment" cm WHERE cm."postId" = p."id") as "commentCount",
-      (SELECT COUNT(*) FROM "Bookmark" b WHERE b."postId" = p."id") as "bookmarkCount",
-      (SELECT COUNT(*) FROM "Favorite" f WHERE f."postId" = p."id") as "favoriteCount",
-      (SELECT COUNT(*) FROM "Reaction" r WHERE r."postId" = p."id") as "reactionCount",
-      (
-        (SELECT COUNT(*) FROM "Bookmark" b WHERE b."postId" = p."id" AND b."createdAt" >= $1) +
-        (SELECT COUNT(*) FROM "Favorite" f WHERE f."postId" = p."id" AND f."createdAt" >= $1)
-      ) as "hotScore"
-    FROM "Post" p
-    LEFT JOIN "Category" c ON c."id" = p."categoryId"
-    LEFT JOIN "User" u ON u."id" = p."authorId"
-    WHERE p."status" = 'PUBLISHED' ${typeFilter}
-    ORDER BY "hotScore" DESC, p."views" DESC
-    LIMIT $2 OFFSET $3`,
-    sevenDaysAgo,
-    limit,
-    (page - 1) * limit
-  );
+  // Get following IDs for boost
+  const followingIds = await getFollowingIds(excludeUserId);
 
-  const posts: ExplorePost[] = rawPosts.map((r) => ({
-    id: r.id,
-    slug: r.slug,
-    title: r.title,
-    excerpt: r.excerpt,
-    coverImage: r.coverImage,
-    publishedAt: r.publishedAt ?? new Date(),
-    views: r.views,
-    type: r.type,
-    href: settings.permalinkStructure
-      ? getPostUrl(
-          {
-            slug: r.slug,
-            id: r.id,
-            publishedAt: r.publishedAt,
-            category: r.categorySlug ? { slug: r.categorySlug } : null,
-            author: { name: r.authorName },
-          },
-          settings.permalinkStructure
-        )
-      : `/${r.slug}`,
-    category: r.categoryName ? { name: r.categoryName, slug: r.categorySlug! } : null,
-    author: { name: r.authorName, avatar: r.authorImage },
-    commentCount: Number(r.commentCount),
-    bookmarkCount: Number(r.bookmarkCount),
-    favoriteCount: Number(r.favoriteCount),
-    reactionCount: Number(r.reactionCount),
-  }));
+  // Fetch a larger pool for scoring (up to 200 posts from last 14 days)
+  const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
+  const pool = await db.post.findMany({
+    where: {
+      ...where,
+      publishedAt: { gte: fourteenDaysAgo },
+    },
+    orderBy: { publishedAt: "desc" },
+    take: 200,
+    select: EXPLORE_SELECT,
+  });
 
-  return { posts, pagination: buildPagination(page, limit, total) };
+  const total = await db.post.count({ where });
+
+  // Score and sort
+  const scored = (pool as RawExplorePost[])
+    .map((p) => ({ post: p, score: scorePost(p, followingIds, seed) }))
+    .sort((a, b) => b.score - a.score);
+
+  // Paginate from scored results
+  const start = (page - 1) * limit;
+  const paginated = scored.slice(start, start + limit);
+
+  // Map and diversify
+  const mapped = paginated.map((s) => mapExplorePost(s.post, settings.permalinkStructure));
+  const diversified = diversifyPosts(mapped);
+
+  return {
+    posts: diversified,
+    pagination: buildPagination(page, limit, total),
+  };
 }

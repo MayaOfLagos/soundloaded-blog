@@ -31,6 +31,9 @@ const createSchema = z.object({
   enableDownload: z.boolean().optional().default(false),
   downloadLabel: z.string().max(120).optional().nullable(),
   downloadMediaId: z.string().optional().nullable(),
+  metaTitle: z.string().max(70).optional().nullable(),
+  metaDescription: z.string().max(160).optional().nullable(),
+  focusKeyword: z.string().max(80).optional().nullable(),
 });
 
 export async function GET(req: NextRequest) {
@@ -118,6 +121,9 @@ export async function POST(req: NextRequest) {
         enableDownload: data.enableDownload && !!data.downloadMediaId,
         downloadLabel: data.downloadLabel?.trim() ? data.downloadLabel.trim() : null,
         downloadMediaId: data.downloadMediaId ?? null,
+        metaTitle: data.metaTitle?.trim() || null,
+        metaDescription: data.metaDescription?.trim() || null,
+        focusKeyword: data.focusKeyword?.trim() || null,
       },
     });
 

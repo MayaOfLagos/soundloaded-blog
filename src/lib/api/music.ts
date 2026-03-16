@@ -99,6 +99,7 @@ export async function getMusicBySlug(slug: string) {
       include: {
         artist: true,
         album: { include: { tracks: { orderBy: { trackNumber: "asc" } } } },
+        post: { select: { body: true } },
       },
     });
   } catch {
@@ -224,6 +225,85 @@ export async function getTopGenresWithTracks({
     return results.filter((r) => r.tracks.length > 0);
   } catch {
     return [];
+  }
+}
+
+/** More tracks by the same artist (excluding the current track) */
+export async function getMoreByArtist({
+  artistId,
+  excludeMusicId,
+  limit = 12,
+}: {
+  artistId: string;
+  excludeMusicId: string;
+  limit?: number;
+}): Promise<MusicCardData[]> {
+  try {
+    const tracks = await db.music.findMany({
+      where: { artistId, id: { not: excludeMusicId } },
+      orderBy: { downloadCount: "desc" },
+      take: limit,
+      include: { artist: { select: { name: true } }, album: { select: { title: true } } },
+    });
+    return tracks.map((t) => ({
+      id: t.id,
+      slug: t.slug,
+      title: t.title,
+      artistName: t.artist.name,
+      albumTitle: t.album?.title,
+      coverArt: t.coverArt,
+      genre: t.genre,
+      downloadCount: t.downloadCount,
+      enableDownload: t.enableDownload,
+      fileSize: t.fileSize,
+      releaseYear: t.year,
+    }));
+  } catch {
+    return [];
+  }
+}
+
+/** Related tracks from the same genre (excluding the current track) */
+export async function getRelatedByGenre({
+  genre,
+  excludeMusicId,
+  limit = 12,
+}: {
+  genre: string;
+  excludeMusicId: string;
+  limit?: number;
+}): Promise<MusicCardData[]> {
+  try {
+    const tracks = await db.music.findMany({
+      where: { genre, id: { not: excludeMusicId } },
+      orderBy: { downloadCount: "desc" },
+      take: limit,
+      include: { artist: { select: { name: true } }, album: { select: { title: true } } },
+    });
+    return tracks.map((t) => ({
+      id: t.id,
+      slug: t.slug,
+      title: t.title,
+      artistName: t.artist.name,
+      albumTitle: t.album?.title,
+      coverArt: t.coverArt,
+      genre: t.genre,
+      downloadCount: t.downloadCount,
+      enableDownload: t.enableDownload,
+      fileSize: t.fileSize,
+      releaseYear: t.year,
+    }));
+  } catch {
+    return [];
+  }
+}
+
+/** Count how many users have favorited this track */
+export async function getMusicFavoriteCount(musicId: string): Promise<number> {
+  try {
+    return await db.favorite.count({ where: { musicId } });
+  } catch {
+    return 0;
   }
 }
 

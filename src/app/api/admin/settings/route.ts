@@ -132,6 +132,19 @@ const settingsSchema = z
     enableDarkMode: z.boolean(),
     defaultTheme: z.enum(["light", "dark", "system"]),
     customCss: z.string().max(10000),
+    // Feature Toggles
+    enableStories: z.boolean(),
+    storyExpiryHours: z.number().int().min(1).max(8760),
+    enableFeed: z.boolean(),
+    enableExplore: z.boolean(),
+    enableMusic: z.boolean(),
+    enableNews: z.boolean(),
+    enableGist: z.boolean(),
+    enableLyrics: z.boolean(),
+    enableVideos: z.boolean(),
+    enableAlbums: z.boolean(),
+    enableArtists: z.boolean(),
+    enableSearch: z.boolean(),
   })
   .partial();
 

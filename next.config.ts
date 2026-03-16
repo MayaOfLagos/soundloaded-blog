@@ -4,6 +4,21 @@ import { withSentryConfig } from "@sentry/nextjs";
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Stub out react-native-fs — jsmediatags bundles a ReactNativeFileReader that requires it
+  serverExternalPackages: ["react-native-fs"],
+  turbopack: {
+    resolveAlias: {
+      "react-native-fs": "./src/lib/stubs/react-native-fs.js",
+      jsmediatags: "jsmediatags/dist/jsmediatags.js",
+    },
+  },
+  webpack: (config) => {
+    config.resolve.alias = {
+      ...config.resolve.alias,
+      "react-native-fs": false,
+    };
+    return config;
+  },
   // Allow phones/devices on the same LAN to access dev server without CORS warnings
   allowedDevOrigins: ["192.168.1.*", "192.168.0.*", "10.*"],
   transpilePackages: ["filepond", "react-filepond"],

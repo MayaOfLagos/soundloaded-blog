@@ -29,6 +29,9 @@ const updateSchema = z.object({
   enableDownload: z.boolean().optional(),
   downloadLabel: z.string().max(120).optional().nullable(),
   downloadMediaId: z.string().optional().nullable(),
+  metaTitle: z.string().max(70).optional().nullable(),
+  metaDescription: z.string().max(160).optional().nullable(),
+  focusKeyword: z.string().max(80).optional().nullable(),
 });
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -94,6 +97,16 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
     if (data.downloadLabel !== undefined) {
       updateData.downloadLabel = data.downloadLabel?.trim() ? data.downloadLabel.trim() : null;
+    }
+
+    if (data.metaTitle !== undefined) {
+      updateData.metaTitle = data.metaTitle?.trim() || null;
+    }
+    if (data.metaDescription !== undefined) {
+      updateData.metaDescription = data.metaDescription?.trim() || null;
+    }
+    if (data.focusKeyword !== undefined) {
+      updateData.focusKeyword = data.focusKeyword?.trim() || null;
     }
 
     if (data.downloadMediaId !== undefined || data.enableDownload !== undefined) {

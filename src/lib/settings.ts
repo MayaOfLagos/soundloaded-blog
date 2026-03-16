@@ -70,6 +70,20 @@ export interface PublicSettings {
   brandColor: string;
   enableDarkMode: boolean;
   defaultTheme: string;
+  // Feature Toggles — Stories
+  enableStories: boolean;
+  storyExpiryHours: number;
+  // Feature Toggles — Site Sections
+  enableFeed: boolean;
+  enableExplore: boolean;
+  enableMusic: boolean;
+  enableNews: boolean;
+  enableGist: boolean;
+  enableLyrics: boolean;
+  enableVideos: boolean;
+  enableAlbums: boolean;
+  enableArtists: boolean;
+  enableSearch: boolean;
 }
 
 const DEFAULTS: PublicSettings = {
@@ -131,6 +145,18 @@ const DEFAULTS: PublicSettings = {
   brandColor: "#e11d48",
   enableDarkMode: true,
   defaultTheme: "dark",
+  enableStories: true,
+  storyExpiryHours: 24,
+  enableFeed: true,
+  enableExplore: true,
+  enableMusic: true,
+  enableNews: true,
+  enableGist: true,
+  enableLyrics: true,
+  enableVideos: true,
+  enableAlbums: true,
+  enableArtists: true,
+  enableSearch: true,
 };
 
 function resolveImageUrl(r2Key: string | null | undefined): string | null {
@@ -228,6 +254,18 @@ export function buildPublicSettings(
     brandColor: str(raw, "brandColor", DEFAULTS.brandColor),
     enableDarkMode: bool(raw, "enableDarkMode", DEFAULTS.enableDarkMode),
     defaultTheme: str(raw, "defaultTheme", DEFAULTS.defaultTheme),
+    enableStories: bool(raw, "enableStories", DEFAULTS.enableStories),
+    storyExpiryHours: num(raw, "storyExpiryHours", DEFAULTS.storyExpiryHours),
+    enableFeed: bool(raw, "enableFeed", DEFAULTS.enableFeed),
+    enableExplore: bool(raw, "enableExplore", DEFAULTS.enableExplore),
+    enableMusic: bool(raw, "enableMusic", DEFAULTS.enableMusic),
+    enableNews: bool(raw, "enableNews", DEFAULTS.enableNews),
+    enableGist: bool(raw, "enableGist", DEFAULTS.enableGist),
+    enableLyrics: bool(raw, "enableLyrics", DEFAULTS.enableLyrics),
+    enableVideos: bool(raw, "enableVideos", DEFAULTS.enableVideos),
+    enableAlbums: bool(raw, "enableAlbums", DEFAULTS.enableAlbums),
+    enableArtists: bool(raw, "enableArtists", DEFAULTS.enableArtists),
+    enableSearch: bool(raw, "enableSearch", DEFAULTS.enableSearch),
   };
 }
 

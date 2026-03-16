@@ -6,27 +6,9 @@ import axios from "axios";
 import { X, Check, Loader2, Upload, ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { MediaGrid } from "@/app/admin/media/_components/MediaGrid";
-import { UppyUploader } from "@/app/admin/media/_components/UppyUploader";
+import { MediaGrid, type MediaItem } from "./MediaGrid";
+import { UppyUploader } from "./UppyUploader";
 import { useDebounce } from "@/hooks/useDebounce";
-
-interface MediaItem {
-  id: string;
-  filename: string;
-  r2Key: string;
-  url: string;
-  mimeType: string;
-  size: number;
-  width: number | null;
-  height: number | null;
-  alt: string;
-  title: string;
-  caption: string;
-  folder: string;
-  type: "IMAGE" | "AUDIO" | "VIDEO" | "DOCUMENT";
-  createdAt: string;
-  user?: { name: string | null; email: string } | null;
-}
 
 interface MediaPickerModalProps {
   open: boolean;

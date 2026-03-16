@@ -8,6 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { NewsletterForm } from "@/components/common/NewsletterForm";
 import { getLatestArtists } from "@/lib/api/music";
 import { getSettings } from "@/lib/settings";
+import { SectionDisabled } from "@/components/common/SectionDisabled";
 import { JsonLd } from "@/components/common/JsonLd";
 import { buildCollectionPageSchema } from "@/lib/structured-data";
 
@@ -30,6 +31,7 @@ export const revalidate = 300;
 
 export default async function ArtistsPage() {
   const settings = await getSettings();
+  if (!settings.enableArtists) return <SectionDisabled section="Artists" />;
   const schema = buildCollectionPageSchema(
     "Artists",
     `Browse Nigerian and African artists on ${settings.siteName}.`,

@@ -60,7 +60,7 @@ export async function getFeaturedPosts({
 }: { limit?: number; permalinkStructure?: string } = {}): Promise<PostCardData[]> {
   try {
     const posts = await db.post.findMany({
-      where: { status: "PUBLISHED" },
+      where: { status: "PUBLISHED", isUserGenerated: false },
       orderBy: { publishedAt: "desc" },
       take: limit,
       select: SELECT,
@@ -82,7 +82,7 @@ export async function getFeaturedPostsByType({
 }): Promise<PostCardData[]> {
   try {
     const posts = await db.post.findMany({
-      where: { status: "PUBLISHED", type: type as never },
+      where: { status: "PUBLISHED", isUserGenerated: false, type: type as never },
       orderBy: { publishedAt: "desc" },
       take: limit,
       select: SELECT,
@@ -110,6 +110,7 @@ export async function getLatestPosts({
     const posts = await db.post.findMany({
       where: {
         status: "PUBLISHED",
+        isUserGenerated: false,
         ...(categorySlug ? { category: { slug: categorySlug } } : {}),
         ...(type ? { type: type as never } : {}),
       },
@@ -130,7 +131,7 @@ export async function getTrendingPosts({
 }: { limit?: number; permalinkStructure?: string } = {}): Promise<PostCardData[]> {
   try {
     const posts = await db.post.findMany({
-      where: { status: "PUBLISHED" },
+      where: { status: "PUBLISHED", isUserGenerated: false },
       orderBy: { views: "desc" },
       take: limit,
       select: SELECT,

@@ -8,20 +8,38 @@ import { ExploreFeed } from "@/components/explore/ExploreFeed";
 import { ExploreCardSkeleton } from "@/components/explore/ExploreCardSkeleton";
 import { StoryTraySkeleton } from "@/components/stories/StoryTraySkeleton";
 import { getSettings } from "@/lib/settings";
+import { SectionDisabled } from "@/components/common/SectionDisabled";
 import { JsonLd } from "@/components/common/JsonLd";
 import { buildCollectionPageSchema } from "@/lib/structured-data";
 
 export async function generateMetadata(): Promise<Metadata> {
   const s = await getSettings();
+  const title = `Explore | ${s.siteName}`;
   const description = `Explore trending, latest, and hot content across music, news, gist, and more on ${s.siteName}.`;
+  const ogImage = s.defaultOgImage
+    ? [{ url: s.defaultOgImage, width: 1200, height: 630, alt: title }]
+    : [];
   return {
     title: "Explore",
     description,
     alternates: { canonical: "/explore" },
     openGraph: {
-      title: `Explore | ${s.siteName}`,
+      title,
       description,
-      images: s.defaultOgImage ? [{ url: s.defaultOgImage }] : [],
+      url: `${s.siteUrl}/explore`,
+      siteName: s.siteName,
+      type: "website",
+      images: ogImage,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      ...(s.defaultOgImage ? { images: [s.defaultOgImage] } : {}),
+    },
+    robots: {
+      index: true,
+      follow: true,
     },
   };
 }
@@ -30,6 +48,7 @@ export const revalidate = 60;
 
 export default async function ExplorePage() {
   const settings = await getSettings();
+  if (!settings.enableExplore) return <SectionDisabled section="Explore" />;
   const schema = buildCollectionPageSchema(
     "Explore",
     `Discover trending, latest, and hot content on ${settings.siteName}.`,
@@ -46,15 +65,8 @@ export default async function ExplorePage() {
           <LeftSidebar />
 
           <main className="min-w-0">
-            <div className="mb-5">
-              <h1 className="text-foreground text-2xl font-black">Explore</h1>
-              <p className="text-muted-foreground mt-1 text-sm">
-                Discover what&apos;s trending, latest, and hot in the community.
-              </p>
-            </div>
-
             <Suspense fallback={<ExploreFeedSkeleton />}>
-              <ExploreFeed />
+              <ExploreFeed enableStories={settings.enableStories} />
             </Suspense>
           </main>
 
@@ -85,15 +97,13 @@ export default async function ExplorePage() {
 
 function ExploreFeedSkeleton() {
   return (
-    <div className="space-y-4">
+    <div className="mx-auto w-full max-w-lg space-y-4 sm:max-w-xl">
       {/* Story tray skeleton */}
       <StoryTraySkeleton />
       {/* Cards skeleton */}
-      <div className="mt-2 space-y-4">
-        {Array.from({ length: 3 }).map((_, i) => (
-          <ExploreCardSkeleton key={i} />
-        ))}
-      </div>
+      {Array.from({ length: 3 }).map((_, i) => (
+        <ExploreCardSkeleton key={i} />
+      ))}
     </div>
   );
 }

@@ -3,7 +3,7 @@
 import { useRef, useEffect, useCallback } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import axios from "axios";
-import { ExploreCard } from "./ExploreCard";
+import { ExploreCard, VideoMuteProvider } from "./ExploreCard";
 import { ExploreCardSkeleton } from "./ExploreCardSkeleton";
 import { StoryTray } from "@/components/stories/StoryTray";
 import type { ExplorePost, ExploreResult } from "@/lib/api/explore";
@@ -18,7 +18,11 @@ async function fetchExplorePage({ pageParam }: { pageParam: number }): Promise<E
   return res.data;
 }
 
-export function ExploreFeed() {
+interface ExploreFeedProps {
+  enableStories?: boolean;
+}
+
+export function ExploreFeed({ enableStories = true }: ExploreFeedProps) {
   const sentinelRef = useRef<HTMLDivElement>(null);
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useInfiniteQuery({
@@ -56,12 +60,12 @@ export function ExploreFeed() {
     data?.pages.flatMap((page) => page.posts as unknown as ExplorePost[]) ?? [];
 
   return (
-    <div className="space-y-4">
-      {/* Story tray */}
-      <StoryTray />
+    <VideoMuteProvider>
+      <div className="mx-auto w-full max-w-lg space-y-4 sm:max-w-xl">
+        {/* Story tray */}
+        <StoryTray enableStories={enableStories} />
 
-      {/* Feed */}
-      <div className="mx-auto mt-2 max-w-sm space-y-4 sm:max-w-md">
+        {/* Feed */}
         {isLoading && Array.from({ length: 3 }).map((_, i) => <ExploreCardSkeleton key={i} />)}
 
         {!isLoading && allPosts.length === 0 && (
@@ -83,6 +87,6 @@ export function ExploreFeed() {
         {/* Sentinel for infinite scroll */}
         <div ref={sentinelRef} className="h-1" />
       </div>
-    </div>
+    </VideoMuteProvider>
   );
 }

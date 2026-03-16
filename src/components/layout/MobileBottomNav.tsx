@@ -11,27 +11,34 @@ import {
   HeadphonesIcon,
   News01Icon,
   BubbleChatIcon,
-  Mic01Icon,
+  RssIcon,
 } from "@hugeicons/core-free-icons";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { cn } from "@/lib/utils";
+import { useSettings } from "@/hooks/useSettings";
 
-const NAV_ITEMS = [
-  { href: "/", icon: Home01Icon, label: "Home" },
-  { href: "/music", icon: HeadphonesIcon, label: "Music" },
-  { href: "/news", icon: News01Icon, label: "News" },
-  { href: "/gist", icon: BubbleChatIcon, label: "Gist" },
-  { href: "/artists", icon: Mic01Icon, label: "Artists" },
-] as const;
+const ALL_NAV_ITEMS = [
+  { href: "/", icon: Home01Icon, label: "Home", settingsKey: null },
+  { href: "/feed", icon: RssIcon, label: "Feed", settingsKey: "enableFeed" as const },
+  { href: "/music", icon: HeadphonesIcon, label: "Music", settingsKey: "enableMusic" as const },
+  { href: "/news", icon: News01Icon, label: "News", settingsKey: "enableNews" as const },
+  { href: "/gist", icon: BubbleChatIcon, label: "Gist", settingsKey: "enableGist" as const },
+];
 
 const SPRING = { type: "spring", damping: 20, stiffness: 230, mass: 1.2 } as const;
 
 export function MobileBottomNav() {
   const pathname = usePathname();
   const router = useRouter();
+  const { data: settings } = useSettings();
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const [query, setQuery] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const NAV_ITEMS = ALL_NAV_ITEMS.filter((item) => {
+    if (!item.settingsKey) return true;
+    return !settings || settings[item.settingsKey] !== false;
+  });
 
   const openSearch = () => {
     setIsSearchExpanded(true);

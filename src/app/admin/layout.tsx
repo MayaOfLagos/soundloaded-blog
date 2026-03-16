@@ -1,12 +1,15 @@
 import type { ReactNode } from "react";
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { auth } from "@/lib/auth";
-import { AdminSidebar } from "@/components/admin/AdminSidebar";
-import { AdminTopbar } from "@/components/admin/AdminTopbar";
+import { getSettings } from "@/lib/settings";
 import { SessionProvider } from "next-auth/react";
+import { AdminSidebarProvider } from "@/components/admin/AdminSidebarContext";
+import { AdminShell } from "@/components/admin/AdminShell";
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
-  const session = await auth();
+  const [session, settings, cookieStore] = await Promise.all([auth(), getSettings(), cookies()]);
+  const sidebarCollapsed = cookieStore.get("admin-sidebar-collapsed")?.value === "true";
 
   if (!session?.user) {
     redirect("/login");
@@ -17,15 +20,17 @@ export default async function AdminLayout({ children }: { children: ReactNode })
     redirect("/login");
   }
 
+  const logo = {
+    light: settings.logoLight,
+    dark: settings.logoDark,
+    favicon: settings.favicon,
+  };
+
   return (
     <SessionProvider session={session}>
-      <div className="bg-background flex h-screen overflow-hidden">
-        <AdminSidebar />
-        <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
-          <AdminTopbar />
-          <main className="flex-1 overflow-y-auto p-6">{children}</main>
-        </div>
-      </div>
+      <AdminSidebarProvider defaultCollapsed={sidebarCollapsed}>
+        <AdminShell logo={logo}>{children}</AdminShell>
+      </AdminSidebarProvider>
     </SessionProvider>
   );
 }

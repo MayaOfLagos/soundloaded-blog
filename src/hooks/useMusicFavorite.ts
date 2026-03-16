@@ -24,17 +24,23 @@ export function useMusicFavorite(musicId: string) {
       return data;
     },
     enabled: isAuthenticated && !!musicId,
-    staleTime: 2 * 60 * 1000,
+    staleTime: 30_000,
+    refetchOnWindowFocus: true,
   });
 
   const toggleMutation = useMutation({
-    mutationFn: async () => {
-      if (data?.favorited && data.favoriteId) {
-        await axios.delete(`/api/user/favorites/${data.favoriteId}`);
-        return { favorited: false };
+    // Pass the pre-optimistic snapshot as a variable so mutationFn
+    // always knows the true state before onMutate flips the cache
+    mutationFn: async (snapshot: FavoriteCheckResponse) => {
+      if (snapshot.favorited && snapshot.favoriteId) {
+        await axios.delete(`/api/user/favorites/${snapshot.favoriteId}`);
+        return { favorited: false } as FavoriteCheckResponse;
       }
-      await axios.post("/api/user/favorites", { musicId });
-      return { favorited: true };
+      const { data: res } = await axios.post("/api/user/favorites", { musicId });
+      return {
+        favorited: true,
+        favoriteId: res.favorite.id as string,
+      } as FavoriteCheckResponse;
     },
     onMutate: async () => {
       await queryClient.cancelQueries({ queryKey });
@@ -46,6 +52,10 @@ export function useMusicFavorite(musicId: string) {
       }));
 
       return { prev };
+    },
+    onSuccess: (result) => {
+      // Immediately set cache with real server data (real favoriteId)
+      queryClient.setQueryData<FavoriteCheckResponse>(queryKey, result);
     },
     onError: (_err, _vars, context) => {
       if (context?.prev) {
@@ -64,7 +74,11 @@ export function useMusicFavorite(musicId: string) {
       notify.error("Sign in to save favorites");
       return;
     }
-    toggleMutation.mutate();
+    // Capture state BEFORE optimistic update flips it
+    const snapshot = queryClient.getQueryData<FavoriteCheckResponse>(queryKey) ?? {
+      favorited: false,
+    };
+    toggleMutation.mutate(snapshot);
   };
 
   return {

@@ -9,6 +9,7 @@ import { PopularMusicSidebar } from "@/components/music/PopularMusicSidebar";
 import { NewsletterForm } from "@/components/common/NewsletterForm";
 import { getLatestPosts } from "@/lib/api/posts";
 import { getSettings } from "@/lib/settings";
+import { SectionDisabled } from "@/components/common/SectionDisabled";
 import { JsonLd } from "@/components/common/JsonLd";
 import { buildCollectionPageSchema } from "@/lib/structured-data";
 
@@ -31,6 +32,7 @@ export const revalidate = 60;
 
 export default async function VideosPage() {
   const settings = await getSettings();
+  if (!settings.enableVideos) return <SectionDisabled section="Videos" />;
   const schema = buildCollectionPageSchema(
     "Videos",
     `Watch the latest Nigerian and African music videos on ${settings.siteName}.`,

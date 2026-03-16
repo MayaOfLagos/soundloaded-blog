@@ -8,6 +8,7 @@ import { PopularMusicSidebar } from "@/components/music/PopularMusicSidebar";
 import { PostCardSkeleton } from "@/components/blog/PostCardSkeleton";
 import { NewsletterForm } from "@/components/common/NewsletterForm";
 import { getSettings } from "@/lib/settings";
+import { SectionDisabled } from "@/components/common/SectionDisabled";
 import { JsonLd } from "@/components/common/JsonLd";
 import { buildCollectionPageSchema } from "@/lib/structured-data";
 
@@ -30,6 +31,7 @@ export const revalidate = 60;
 
 export default async function LyricsPage() {
   const settings = await getSettings();
+  if (!settings.enableLyrics) return <SectionDisabled section="Lyrics" />;
   const schema = buildCollectionPageSchema(
     "Lyrics",
     `Song lyrics for the latest Nigerian and African music on ${settings.siteName}.`,

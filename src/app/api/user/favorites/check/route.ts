@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(request: NextRequest) {
   const session = await auth();
   if (!session?.user) {
@@ -24,8 +26,13 @@ export async function GET(request: NextRequest) {
     },
   });
 
-  return NextResponse.json({
-    favorited: !!favorite,
-    ...(favorite && { favoriteId: favorite.id }),
-  });
+  return NextResponse.json(
+    {
+      favorited: !!favorite,
+      ...(favorite && { favoriteId: favorite.id }),
+    },
+    {
+      headers: { "Cache-Control": "no-store, max-age=0" },
+    }
+  );
 }

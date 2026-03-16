@@ -4,7 +4,7 @@ export function ExploreCardSkeleton() {
   return (
     <div className="bg-card/50 ring-border/40 overflow-hidden rounded-2xl ring-1 backdrop-blur-sm">
       <div className="relative">
-        <Skeleton className="aspect-[9/16] w-full" />
+        <Skeleton className="aspect-[3/4] w-full" />
 
         {/* Right-side floating buttons (bigger) */}
         <div className="absolute top-3 right-3 bottom-3 flex flex-col items-center justify-end gap-1.5">

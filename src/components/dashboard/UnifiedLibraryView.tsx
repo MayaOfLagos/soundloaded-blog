@@ -15,6 +15,7 @@ import {
   Grid3X3,
   List,
   BookOpen,
+  EyeOff,
 } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import {
@@ -25,6 +26,7 @@ import {
   useUserStats,
 } from "@/hooks/useUserDashboard";
 import { useToggleBookmark, useToggleFavorite } from "@/hooks/useUserMutations";
+import { useUserHiddenPosts, useToggleHiddenPost } from "@/hooks/useHiddenPosts";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -289,7 +291,7 @@ export function UnifiedLibraryView() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const urlTab = searchParams.get("tab") ?? "saved";
-  const activeTab = ["saved", "bookmarks", "favorites", "downloads"].includes(urlTab)
+  const activeTab = ["saved", "bookmarks", "favorites", "downloads", "hidden"].includes(urlTab)
     ? urlTab
     : "saved";
 
@@ -311,14 +313,18 @@ export function UnifiedLibraryView() {
 
   const [dlPage, setDlPage] = useState(1);
 
+  const [hiddenPage, setHiddenPage] = useState(1);
+
   // ── All hooks at top level ──
   const libraryQuery = useUserLibrary(savedPage, savedTab, savedSort);
   const bookmarksQuery = useUserBookmarks(bmPage, bmType || undefined, bmSort);
   const favoritesQuery = useUserFavorites(favPage, favType || undefined, favSort);
   const downloadsQuery = useUserDownloads(dlPage);
+  const hiddenPostsQuery = useUserHiddenPosts(hiddenPage);
   const statsQuery = useUserStats();
   const toggleBookmark = useToggleBookmark();
   const toggleFavorite = useToggleFavorite();
+  const toggleHiddenPost = useToggleHiddenPost();
 
   const handleTabChange = useCallback(
     (tab: string) => {
@@ -944,6 +950,92 @@ export function UnifiedLibraryView() {
     );
   };
 
+  const renderHiddenTab = () => {
+    if (hiddenPostsQuery.isLoading) return <ContentSkeleton />;
+
+    const items = (hiddenPostsQuery.data?.hiddenPosts ?? []) as Array<{
+      id: string;
+      postId: string;
+      createdAt: string;
+      post: {
+        id: string;
+        title: string;
+        slug: string;
+        coverImage: string | null;
+        type: string;
+      };
+    }>;
+    const totalPages = hiddenPostsQuery.data?.totalPages ?? 1;
+
+    return (
+      <div className="space-y-6">
+        {items.length === 0 ? (
+          <EmptyState
+            icon={EyeOff}
+            title="No hidden posts"
+            description="Posts you hide from your feed will appear here."
+            actionLabel="Browse Feed"
+            actionHref="/feed"
+          />
+        ) : (
+          <>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {items.map((item) => (
+                <div
+                  key={item.id}
+                  className="bg-card/50 ring-border/40 group overflow-hidden rounded-2xl ring-1 backdrop-blur-sm"
+                >
+                  <div className="bg-muted relative h-[150px] w-full overflow-hidden">
+                    {item.post.coverImage ? (
+                      <Image
+                        src={item.post.coverImage}
+                        alt={item.post.title}
+                        fill
+                        className="object-cover transition-transform group-hover:scale-105"
+                      />
+                    ) : (
+                      <div className="flex h-full items-center justify-center">
+                        <EyeOff className="text-muted-foreground h-8 w-8" />
+                      </div>
+                    )}
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      className="absolute top-2 right-2 opacity-0 transition-opacity group-hover:opacity-100"
+                      onClick={() =>
+                        toggleHiddenPost.mutate({
+                          postId: item.postId,
+                          isHidden: true,
+                        })
+                      }
+                      disabled={toggleHiddenPost.isPending}
+                    >
+                      Unhide
+                    </Button>
+                  </div>
+                  <div className="p-4">
+                    <Link href={`/${item.post.slug}`} className="hover:underline">
+                      <h3 className="line-clamp-2 font-medium">{item.post.title}</h3>
+                    </Link>
+                    <div className="mt-2 flex items-center gap-2">
+                      <Badge variant="outline" className="capitalize">
+                        {item.post.type}
+                      </Badge>
+                      <span className="text-muted-foreground text-xs">
+                        Hidden {format(new Date(item.createdAt), "MMM d, yyyy")}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <Pagination page={hiddenPage} totalPages={totalPages} onPageChange={setHiddenPage} />
+          </>
+        )}
+      </div>
+    );
+  };
+
   const renderActiveTab = () => {
     switch (activeTab) {
       case "saved":
@@ -954,6 +1046,8 @@ export function UnifiedLibraryView() {
         return renderFavoritesTab();
       case "downloads":
         return renderDownloadsTab();
+      case "hidden":
+        return renderHiddenTab();
       default:
         return renderSavedTab();
     }

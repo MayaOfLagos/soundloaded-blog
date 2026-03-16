@@ -4,7 +4,6 @@ import axios from "axios";
 import { notify } from "@/hooks/useToast";
 
 interface UploadResult {
-  uploadUrl: string;
   url: string;
   key: string;
 }
@@ -22,16 +21,11 @@ export function useStoryUpload() {
     }) => {
       setProgress(0);
 
-      // 1. Get presigned URL
-      const { data } = await axios.post<UploadResult>("/api/stories/upload", {
-        filename: file.name,
-        contentType: file.type,
-        mediaType,
-      });
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("mediaType", mediaType);
 
-      // 2. Upload to R2
-      await axios.put(data.uploadUrl, file, {
-        headers: { "Content-Type": file.type },
+      const { data } = await axios.post<UploadResult>("/api/stories/upload", formData, {
         onUploadProgress: (e) => {
           if (e.total) {
             setProgress(Math.round((e.loaded / e.total) * 100));

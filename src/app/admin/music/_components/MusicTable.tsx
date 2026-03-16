@@ -1,0 +1,307 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import Image from "next/image";
+import { Trash2, Loader2, X, Music, TrendingUp } from "lucide-react";
+import { useMutation } from "@tanstack/react-query";
+import axios from "axios";
+import toast from "react-hot-toast";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { formatFileSize } from "@/lib/utils";
+
+interface Track {
+  id: string;
+  title: string;
+  slug: string;
+  coverArt: string | null;
+  genre: string | null;
+  format: string;
+  fileSize: string; // BigInt serialized
+  downloadCount: number;
+  artist: { id: string; name: string; slug: string };
+  album: { id: string; title: string; slug: string } | null;
+}
+
+interface MusicTableProps {
+  tracks: Track[];
+}
+
+export function MusicTable({ tracks }: MusicTableProps) {
+  const router = useRouter();
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+
+  const allSelected = tracks.length > 0 && selected.size === tracks.length;
+  const someSelected = selected.size > 0 && selected.size < tracks.length;
+
+  function toggleAll() {
+    setSelected(allSelected ? new Set() : new Set(tracks.map((t) => t.id)));
+  }
+
+  function toggleOne(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  const { mutate: deleteOne, isPending: isDeleting } = useMutation({
+    mutationFn: (id: string) => axios.delete(`/api/admin/music/${id}`),
+    onSuccess: () => {
+      toast.success("Track deleted");
+      setDeleteId(null);
+      router.refresh();
+    },
+    onError: () => toast.error("Failed to delete track"),
+  });
+
+  const { mutate: bulkDelete, isPending: isBulkDeleting } = useMutation({
+    mutationFn: () => axios.post("/api/admin/music/bulk-delete", { ids: Array.from(selected) }),
+    onSuccess: (res) => {
+      const count = res.data.deleted ?? selected.size;
+      toast.success(`${count} track${count !== 1 ? "s" : ""} deleted`);
+      setSelected(new Set());
+      setBulkDeleteOpen(false);
+      router.refresh();
+    },
+    onError: () => toast.error("Failed to delete tracks"),
+  });
+
+  const deleteTarget = deleteId ? tracks.find((t) => t.id === deleteId) : null;
+
+  return (
+    <>
+      {/* Bulk action bar */}
+      {selected.size > 0 && (
+        <div className="border-destructive/20 bg-destructive/5 flex items-center justify-between gap-3 rounded-lg border px-4 py-2.5">
+          <div className="flex items-center gap-3">
+            <span className="text-sm font-medium">
+              {selected.size} track{selected.size !== 1 ? "s" : ""} selected
+            </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-muted-foreground h-7 gap-1.5 text-xs"
+              onClick={() => setSelected(new Set())}
+            >
+              <X className="h-3 w-3" /> Clear
+            </Button>
+          </div>
+          <Button
+            variant="destructive"
+            size="sm"
+            className="gap-1.5"
+            onClick={() => setBulkDeleteOpen(true)}
+          >
+            <Trash2 className="h-3.5 w-3.5" /> Delete Selected
+          </Button>
+        </div>
+      )}
+
+      {/* Table */}
+      <div className="border-border bg-card overflow-hidden rounded-xl border">
+        <div className="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow className="border-border hover:bg-transparent">
+                <TableHead className="w-12">
+                  <Checkbox
+                    checked={allSelected ? true : someSelected ? "indeterminate" : false}
+                    onCheckedChange={toggleAll}
+                    aria-label="Select all tracks"
+                  />
+                </TableHead>
+                <TableHead className="w-12" />
+                <TableHead className="w-[30%]">Title</TableHead>
+                <TableHead>Artist</TableHead>
+                <TableHead className="hidden md:table-cell">Genre</TableHead>
+                <TableHead className="hidden md:table-cell">Format</TableHead>
+                <TableHead className="hidden text-right lg:table-cell">Size</TableHead>
+                <TableHead className="text-right">Downloads</TableHead>
+                <TableHead className="w-20 text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {tracks.map((track) => {
+                const isSelected = selected.has(track.id);
+                return (
+                  <TableRow
+                    key={track.id}
+                    className={`border-border ${isSelected ? "bg-muted/50" : ""}`}
+                  >
+                    <TableCell>
+                      <Checkbox
+                        checked={isSelected}
+                        onCheckedChange={() => toggleOne(track.id)}
+                        aria-label={`Select "${track.title}"`}
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <div className="bg-muted relative h-10 w-10 overflow-hidden rounded-md">
+                        {track.coverArt ? (
+                          <Image
+                            src={track.coverArt}
+                            alt={track.title}
+                            fill
+                            className="object-cover"
+                            sizes="40px"
+                          />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center">
+                            <Music className="text-muted-foreground/50 h-5 w-5" />
+                          </div>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div>
+                        <p className="text-foreground line-clamp-1 text-sm font-semibold">
+                          {track.title}
+                        </p>
+                        {track.album && (
+                          <p className="text-muted-foreground mt-0.5 line-clamp-1 text-xs">
+                            {track.album.title}
+                          </p>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-muted-foreground text-sm">{track.artist.name}</span>
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell">
+                      {track.genre ? (
+                        <Badge variant="outline" className="text-[10px] tracking-wide uppercase">
+                          {track.genre}
+                        </Badge>
+                      ) : (
+                        <span className="text-muted-foreground text-sm">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="hidden md:table-cell">
+                      <Badge variant="secondary" className="text-[10px] tracking-wide uppercase">
+                        {track.format}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="hidden text-right lg:table-cell">
+                      <span className="text-muted-foreground text-sm">
+                        {formatFileSize(Number(track.fileSize))}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <TrendingUp className="h-3 w-3 text-green-500" />
+                        <span className="text-sm font-medium">
+                          {track.downloadCount.toLocaleString()}
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center justify-end">
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="text-destructive hover:text-destructive h-8 w-8"
+                          onClick={() => setDeleteId(track.id)}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                          <span className="sr-only">Delete</span>
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </div>
+      </div>
+
+      {/* Single delete dialog */}
+      <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete &ldquo;{deleteTarget?.title}&rdquo;?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This track will be permanently deleted and its companion post will be archived. This
+              action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              disabled={isDeleting}
+              onClick={(e) => {
+                e.preventDefault();
+                if (deleteId) deleteOne(deleteId);
+              }}
+            >
+              {isDeleting ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Trash2 className="mr-2 h-4 w-4" />
+              )}
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Bulk delete dialog */}
+      <AlertDialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Delete {selected.size} track{selected.size !== 1 ? "s" : ""}?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              These tracks will be permanently deleted and their companion posts will be archived.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isBulkDeleting}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              disabled={isBulkDeleting}
+              onClick={(e) => {
+                e.preventDefault();
+                bulkDelete();
+              }}
+            >
+              {isBulkDeleting ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Trash2 className="mr-2 h-4 w-4" />
+              )}
+              Delete {selected.size} Track{selected.size !== 1 ? "s" : ""}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  );
+}

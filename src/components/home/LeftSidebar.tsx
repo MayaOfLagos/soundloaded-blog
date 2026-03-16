@@ -14,6 +14,7 @@ import {
   Facebook,
   Send,
   Phone,
+  Rss,
   icons,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -104,10 +105,29 @@ export function LeftSidebar() {
   const copyrightName =
     settings?.copyrightText?.replace(". All rights reserved.", "") || "Soundloaded Nigeria";
 
+  // Map slug → settings key for section toggles
+  const slugToToggle: Record<string, string> = {
+    news: "enableNews",
+    gist: "enableGist",
+    lyrics: "enableLyrics",
+    videos: "enableVideos",
+    music: "enableMusic",
+    albums: "enableAlbums",
+    artists: "enableArtists",
+  };
+
+  // Filter dynamic categories based on feature toggles
+  const filteredCategories = categories.filter((cat) => {
+    const toggleKey = slugToToggle[cat.slug];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if (toggleKey && settings && !(settings as any)[toggleKey]) return false;
+    return true;
+  });
+
   return (
     <aside className="sticky top-16 hidden h-[calc(100vh-4rem)] flex-col xl:flex">
       {/* ── Quick Nav (scrollable) ── */}
-      <nav className="min-h-0 flex-1 space-y-1 overflow-y-auto pr-1">
+      <nav className="scrollbar-auto-hide min-h-0 flex-1 space-y-1 overflow-y-auto pr-1">
         {/* Home link */}
         <Link
           href="/"
@@ -131,31 +151,58 @@ export function LeftSidebar() {
           Home
           {pathname === "/" && <span className="bg-brand ml-auto h-2 w-2 rounded-full" />}
         </Link>
-        {/* Explore link */}
-        <Link
-          href="/explore"
-          className={cn(
-            "group flex items-center gap-3.5 rounded-xl px-3 py-3 text-[15px] font-semibold transition-all duration-200",
-            pathname === "/explore"
-              ? "bg-brand/10 text-brand font-bold"
-              : "text-muted-foreground hover:bg-muted hover:text-foreground"
-          )}
-        >
-          <div
+        {/* Feed link */}
+        {(!settings || settings.enableFeed) && (
+          <Link
+            href="/feed"
             className={cn(
-              "flex h-9 w-9 items-center justify-center rounded-lg transition-colors",
-              pathname === "/explore"
-                ? "bg-brand/15 text-brand"
-                : "bg-muted text-muted-foreground group-hover:bg-muted group-hover:text-foreground"
+              "group flex items-center gap-3.5 rounded-xl px-3 py-3 text-[15px] font-semibold transition-all duration-200",
+              pathname === "/feed"
+                ? "bg-brand/10 text-brand font-bold"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground"
             )}
           >
-            <Compass className="h-[18px] w-[18px]" />
-          </div>
-          Explore
-          {pathname === "/explore" && <span className="bg-brand ml-auto h-2 w-2 rounded-full" />}
-        </Link>
+            <div
+              className={cn(
+                "flex h-9 w-9 items-center justify-center rounded-lg transition-colors",
+                pathname === "/feed"
+                  ? "bg-brand/15 text-brand"
+                  : "bg-muted text-muted-foreground group-hover:bg-muted group-hover:text-foreground"
+              )}
+            >
+              <Rss className="h-[18px] w-[18px]" />
+            </div>
+            Feed
+            {pathname === "/feed" && <span className="bg-brand ml-auto h-2 w-2 rounded-full" />}
+          </Link>
+        )}
+        {/* Explore link */}
+        {(!settings || settings.enableExplore) && (
+          <Link
+            href="/explore"
+            className={cn(
+              "group flex items-center gap-3.5 rounded-xl px-3 py-3 text-[15px] font-semibold transition-all duration-200",
+              pathname === "/explore"
+                ? "bg-brand/10 text-brand font-bold"
+                : "text-muted-foreground hover:bg-muted hover:text-foreground"
+            )}
+          >
+            <div
+              className={cn(
+                "flex h-9 w-9 items-center justify-center rounded-lg transition-colors",
+                pathname === "/explore"
+                  ? "bg-brand/15 text-brand"
+                  : "bg-muted text-muted-foreground group-hover:bg-muted group-hover:text-foreground"
+              )}
+            >
+              <Compass className="h-[18px] w-[18px]" />
+            </div>
+            Explore
+            {pathname === "/explore" && <span className="bg-brand ml-auto h-2 w-2 rounded-full" />}
+          </Link>
+        )}
         {/* Dynamic categories */}
-        {categories.map((cat) => {
+        {filteredCategories.map((cat) => {
           const href = `/${cat.slug}`;
           const isActive = pathname.startsWith(href);
           return (

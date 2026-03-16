@@ -41,15 +41,21 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const settings = await getSettings();
   const post = await resolvePost(segments, settings.permalinkStructure);
 
-  if (!post) return { title: "Post Not Found" };
+  if (!post || post.isUserGenerated) return { title: "Post Not Found" };
 
   const canonicalPath = getPostUrl(post, settings.permalinkStructure);
   const music = post.music;
 
   // Type-specific title and OG type
-  let title = post.title;
+  // Per-post SEO overrides take priority over auto-generated values
+  const seo = post as {
+    metaTitle?: string | null;
+    metaDescription?: string | null;
+    focusKeyword?: string | null;
+  };
+  let title = seo.metaTitle || post.title;
   let ogType: "article" | "music.song" | "music.album" | "video.other" = "article";
-  let description = post.excerpt ?? undefined;
+  let description = seo.metaDescription || post.excerpt || undefined;
   let images = post.coverImage ? [{ url: post.coverImage }] : [];
 
   switch (post.type) {
@@ -77,6 +83,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title,
     description,
+    ...(seo.focusKeyword ? { keywords: seo.focusKeyword.split(",").map((k) => k.trim()) } : {}),
     openGraph: {
       title,
       description,
@@ -102,6 +109,9 @@ export default async function PostPage({ params }: Props) {
   const post = await resolvePost(segments, settings.permalinkStructure);
 
   if (!post) notFound();
+
+  // User-generated feed/community posts don't have detail pages
+  if (post.isUserGenerated) notFound();
 
   const currentPath = "/" + segments.join("/");
 

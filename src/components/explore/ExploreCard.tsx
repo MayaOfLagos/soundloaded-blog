@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback, createContext, useContext } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { motion } from "motion/react";
 import {
   MessageCircle,
@@ -11,19 +12,63 @@ import {
   Flag,
   EyeOff,
   Link2,
-  Bell,
   UserPlus,
   Code,
   ExternalLink,
   MoreHorizontal,
+  Volume2,
+  VolumeX,
+  Play,
+  Pause,
 } from "lucide-react";
 import useMeasure from "react-use-measure";
+import { useSession } from "next-auth/react";
+import { ExploreCommentSheet } from "@/components/explore/ExploreCommentSheet";
 import { BookmarkButton } from "@/components/common/BookmarkButton";
 import { ReactionButton } from "@/components/explore/ReactionButton";
 import { HoverCard, HoverCardTrigger, HoverCardContent } from "@/components/ui/hover-card";
+import { useToggleBookmark } from "@/hooks/useUserMutations";
+import { useBookmarkCheck } from "@/hooks/useUserDashboard";
+import { useFollowCheck, useToggleFollow } from "@/hooks/useFollow";
+import { useToggleHiddenPost, useHiddenPostCheck } from "@/hooks/useHiddenPosts";
+import { useFileReport } from "@/hooks/useReports";
+import { usePostView } from "@/hooks/usePostView";
 import { cn } from "@/lib/utils";
 import toast from "react-hot-toast";
 import type { ExplorePost } from "@/lib/api/explore";
+
+// ── Global mute state shared across all video cards ──
+const MuteContext = createContext<{
+  muted: boolean;
+  setMuted: (muted: boolean) => void;
+}>({ muted: true, setMuted: () => {} });
+
+export function VideoMuteProvider({ children }: { children: React.ReactNode }) {
+  const [muted, setMuted] = useState(true);
+  return <MuteContext.Provider value={{ muted, setMuted }}>{children}</MuteContext.Provider>;
+}
+
+async function copyToClipboard(text: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    // Fallback for non-secure contexts (mobile HTTP, iframe, etc.)
+    try {
+      const textarea = document.createElement("textarea");
+      textarea.value = text;
+      textarea.style.position = "fixed";
+      textarea.style.opacity = "0";
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textarea);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+}
 
 function formatCount(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
@@ -45,32 +90,59 @@ const TYPE_COLORS: Record<string, string> = {
   LYRICS: "bg-amber-500/20 text-amber-400",
 };
 
-// ── Options menu items (Facebook-style) ──
-const OPTION_ITEMS = [
-  { id: "save", label: "Save post", icon: Link2 },
-  { id: "follow", label: "Follow author", icon: UserPlus },
-  { id: "notifications", label: "Turn on notifications", icon: Bell },
-  { id: "divider1", label: "", icon: null },
-  { id: "embed", label: "Embed post", icon: Code },
-  { id: "open", label: "Open in new tab", icon: ExternalLink },
-  { id: "divider2", label: "", icon: null },
-  { id: "hide", label: "Hide this post", icon: EyeOff },
-  { id: "report", label: "Report post", icon: Flag },
+const REPORT_REASONS = [
+  { value: "spam", label: "Spam" },
+  { value: "harassment", label: "Harassment" },
+  { value: "misinformation", label: "Misinformation" },
+  { value: "hate_speech", label: "Hate speech" },
+  { value: "violence", label: "Violence" },
+  { value: "other", label: "Other" },
 ];
 
 const easeOutQuint: [number, number, number, number] = [0.23, 1, 0.32, 1];
 
-// ── Smooth Options Dropdown (uselayout pattern) ──
 function OptionsDropdown({ post }: { post: ExplorePost }) {
+  const router = useRouter();
+  const { status } = useSession();
+  const isAuthenticated = status === "authenticated";
+
   const [isOpen, setIsOpen] = useState(false);
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
+  const [showReportMenu, setShowReportMenu] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const [contentRef, contentBounds] = useMeasure();
+
+  // Hooks for real functionality
+  const { data: bookmarkData } = useBookmarkCheck(post.id);
+  const toggleBookmark = useToggleBookmark();
+  const { data: followData } = useFollowCheck(post.author.id);
+  const toggleFollow = useToggleFollow();
+  const { data: hiddenData } = useHiddenPostCheck(post.id);
+  const toggleHidden = useToggleHiddenPost();
+  const fileReport = useFileReport();
+
+  const isBookmarked = bookmarkData?.bookmarked ?? false;
+  const isFollowing = followData?.following ?? false;
+  const isHidden = hiddenData?.hidden ?? false;
+
+  // Dynamic menu items based on state
+  const optionItems = [
+    { id: "save", label: isBookmarked ? "Unsave post" : "Save post", icon: Link2 },
+    { id: "share", label: "Share post", icon: Share2 },
+    { id: "follow", label: isFollowing ? "Unfollow author" : "Follow author", icon: UserPlus },
+    { id: "divider1", label: "", icon: null },
+    { id: "embed", label: "Embed post", icon: Code },
+    { id: "open", label: "Open in new tab", icon: ExternalLink },
+    { id: "divider2", label: "", icon: null },
+    { id: "hide", label: isHidden ? "Unhide this post" : "Hide this post", icon: EyeOff },
+    { id: "report", label: "Report post", icon: Flag },
+  ];
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
         setIsOpen(false);
+        setShowReportMenu(false);
       }
     };
     if (isOpen) document.addEventListener("mousedown", handleClickOutside);
@@ -78,32 +150,57 @@ function OptionsDropdown({ post }: { post: ExplorePost }) {
   }, [isOpen]);
 
   const handleItemClick = (id: string) => {
+    if (!isAuthenticated && ["save", "follow", "hide", "report"].includes(id)) {
+      router.push("/login");
+      return;
+    }
+
     switch (id) {
       case "save":
-        toast.success("Post saved!");
+        toggleBookmark.mutate({
+          postId: post.id,
+          bookmarkId: isBookmarked ? bookmarkData?.bookmarkId : undefined,
+        });
         break;
       case "follow":
-        toast.success(`Following ${post.author.name ?? "author"}`);
+        toggleFollow.mutate({ userId: post.author.id, isFollowing });
         break;
-      case "notifications":
-        toast.success("Notifications turned on");
+      case "share": {
+        const shareUrl = `${window.location.origin}${post.href}`;
+        if (navigator.share) {
+          navigator.share({ title: post.title, url: shareUrl }).catch(() => {});
+        } else {
+          copyToClipboard(shareUrl).then((ok) => {
+            if (ok) toast.success("Link copied!");
+            else toast.error("Could not copy link");
+          });
+        }
         break;
+      }
       case "embed":
-        navigator.clipboard
-          .writeText(`<iframe src="${window.location.origin}${post.href}" />`)
-          .then(() => toast.success("Embed code copied!"));
+        copyToClipboard(`<iframe src="${window.location.origin}${post.href}" />`).then((ok) => {
+          if (ok) toast.success("Embed code copied!");
+          else toast.error("Could not copy code");
+        });
         break;
       case "open":
         window.open(post.href, "_blank");
         break;
       case "hide":
-        toast.success("Post hidden from your feed");
+        toggleHidden.mutate({ postId: post.id, isHidden });
         break;
       case "report":
-        toast.success("Post reported. Thanks for helping keep the community safe.");
-        break;
+        setShowReportMenu(true);
+        return; // don't close menu
     }
     setIsOpen(false);
+    setShowReportMenu(false);
+  };
+
+  const handleReport = (reason: string) => {
+    fileReport.mutate({ postId: post.id, reason });
+    setIsOpen(false);
+    setShowReportMenu(false);
   };
 
   const openHeight = Math.max(44, Math.ceil(contentBounds.height));
@@ -124,7 +221,10 @@ function OptionsDropdown({ post }: { post: ExplorePost }) {
           stiffness: 380,
           mass: 0.8,
         }}
-        className="bg-popover/95 border-border absolute right-0 bottom-0 origin-bottom-right cursor-pointer overflow-hidden border shadow-xl backdrop-blur-md"
+        className={cn(
+          "absolute right-0 bottom-0 origin-bottom-right cursor-pointer overflow-hidden border shadow-xl backdrop-blur-md",
+          isOpen ? "bg-popover/95 border-border" : "border-transparent bg-black/40"
+        )}
         onClick={() => !isOpen && setIsOpen(true)}
       >
         {/* Closed state — icon */}
@@ -148,82 +248,109 @@ function OptionsDropdown({ post }: { post: ExplorePost }) {
             className="p-1.5"
             style={{ pointerEvents: isOpen ? "auto" : "none" }}
           >
-            <ul className="flex flex-col gap-0.5">
-              {OPTION_ITEMS.map((item, index) => {
-                if (item.id.startsWith("divider")) {
-                  return (
-                    <motion.hr
-                      key={item.id}
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: isOpen ? 1 : 0 }}
-                      transition={{ delay: isOpen ? 0.12 + index * 0.015 : 0 }}
-                      className="border-border my-1"
-                    />
-                  );
-                }
-
-                const Icon = item.icon!;
-                const isReport = item.id === "report";
-                const isHovered = hoveredItem === item.id;
-
-                return (
-                  <motion.li
-                    key={item.id}
-                    initial={{ opacity: 0, x: 8 }}
-                    animate={{ opacity: isOpen ? 1 : 0, x: isOpen ? 0 : 8 }}
-                    transition={{
-                      delay: isOpen ? 0.06 + index * 0.02 : 0,
-                      duration: 0.15,
-                      ease: easeOutQuint,
-                    }}
-                    onClick={() => handleItemClick(item.id)}
-                    onMouseEnter={() => setHoveredItem(item.id)}
-                    onMouseLeave={() => setHoveredItem(null)}
-                    className={cn(
-                      "relative flex cursor-pointer list-none items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition-colors",
-                      isReport && isHovered
-                        ? "text-red-500"
-                        : isReport
-                          ? "text-muted-foreground hover:text-red-500"
-                          : "text-muted-foreground hover:text-foreground"
-                    )}
+            {showReportMenu ? (
+              <div className="flex flex-col gap-0.5">
+                <button
+                  type="button"
+                  onClick={() => setShowReportMenu(false)}
+                  className="text-muted-foreground hover:text-foreground mb-1 flex items-center gap-1.5 px-2 py-1 text-xs font-medium"
+                >
+                  ← Back
+                </button>
+                <p className="text-foreground px-2.5 pb-1 text-xs font-semibold">
+                  Why are you reporting?
+                </p>
+                {REPORT_REASONS.map((reason) => (
+                  <button
+                    key={reason.value}
+                    type="button"
+                    onClick={() => handleReport(reason.value)}
+                    disabled={fileReport.isPending}
+                    className="text-muted-foreground hover:text-foreground hover:bg-muted w-full rounded-lg px-2.5 py-2 text-left text-sm font-medium transition-colors"
                   >
-                    {isHovered && (
-                      <motion.div
-                        layoutId="explore-option-indicator"
-                        className={cn(
-                          "absolute inset-0 rounded-lg",
-                          isReport ? "bg-red-500/10" : "bg-muted"
-                        )}
-                        transition={{
-                          type: "spring",
-                          damping: 30,
-                          stiffness: 520,
-                          mass: 0.8,
-                        }}
-                      />
-                    )}
-                    {isHovered && (
-                      <motion.div
-                        layoutId="explore-option-bar"
-                        className={cn(
-                          "absolute top-0 bottom-0 left-0 my-auto h-4 w-[3px] rounded-full",
-                          isReport ? "bg-red-500" : "bg-foreground"
-                        )}
-                        transition={{
-                          type: "spring",
-                          damping: 30,
-                          stiffness: 520,
-                          mass: 0.8,
-                        }}
-                      />
-                    )}
-                    <Icon className="relative z-10 h-4 w-4" />
-                    <span className="relative z-10 font-medium">{item.label}</span>
-                  </motion.li>
-                );
-              })}
-            </ul>
+                    {reason.label}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <ul className="flex flex-col gap-0.5">
+                {optionItems.map((item, index) => {
+                  if (item.id.startsWith("divider")) {
+                    return (
+                      <li key={item.id} className="list-none" aria-hidden>
+                        <motion.hr
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: isOpen ? 1 : 0 }}
+                          transition={{ delay: isOpen ? 0.12 + index * 0.015 : 0 }}
+                          className="border-border my-1"
+                        />
+                      </li>
+                    );
+                  }
+
+                  const Icon = item.icon!;
+                  const isReport = item.id === "report";
+                  const isHovered = hoveredItem === item.id;
+
+                  return (
+                    <motion.li
+                      key={item.id}
+                      initial={{ opacity: 0, x: 8 }}
+                      animate={{ opacity: isOpen ? 1 : 0, x: isOpen ? 0 : 8 }}
+                      transition={{
+                        delay: isOpen ? 0.06 + index * 0.02 : 0,
+                        duration: 0.15,
+                        ease: easeOutQuint,
+                      }}
+                      onClick={() => handleItemClick(item.id)}
+                      onMouseEnter={() => setHoveredItem(item.id)}
+                      onMouseLeave={() => setHoveredItem(null)}
+                      className={cn(
+                        "relative flex cursor-pointer list-none items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition-colors",
+                        isReport && isHovered
+                          ? "text-red-500"
+                          : isReport
+                            ? "text-muted-foreground hover:text-red-500"
+                            : "text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      {isHovered && (
+                        <motion.div
+                          layoutId="explore-option-indicator"
+                          className={cn(
+                            "absolute inset-0 rounded-lg",
+                            isReport ? "bg-red-500/10" : "bg-muted"
+                          )}
+                          transition={{
+                            type: "spring",
+                            damping: 30,
+                            stiffness: 520,
+                            mass: 0.8,
+                          }}
+                        />
+                      )}
+                      {isHovered && (
+                        <motion.div
+                          layoutId="explore-option-bar"
+                          className={cn(
+                            "absolute top-0 bottom-0 left-0 my-auto h-4 w-[3px] rounded-full",
+                            isReport ? "bg-red-500" : "bg-foreground"
+                          )}
+                          transition={{
+                            type: "spring",
+                            damping: 30,
+                            stiffness: 520,
+                            mass: 0.8,
+                          }}
+                        />
+                      )}
+                      <Icon className="relative z-10 h-4 w-4" />
+                      <span className="relative z-10 font-medium">{item.label}</span>
+                    </motion.li>
+                  );
+                })}
+              </ul>
+            )}
           </motion.div>
         </div>
       </motion.div>
@@ -237,6 +364,7 @@ function AuthorHoverCard({ post }: { post: ExplorePost }) {
     <HoverCard openDelay={300} closeDelay={150}>
       <HoverCardTrigger asChild>
         <button
+          type="button"
           onClick={(e) => e.stopPropagation()}
           className="relative flex h-12 w-12 items-center justify-center rounded-full bg-black/40 ring-2 ring-white/20 backdrop-blur-sm transition-all hover:ring-white/40"
           aria-label={`View ${post.author.name ?? "author"} profile`}
@@ -296,10 +424,16 @@ function AuthorHoverCard({ post }: { post: ExplorePost }) {
           </div>
 
           <div className="mt-3 flex gap-2">
-            <button className="bg-brand hover:bg-brand/90 flex-1 rounded-lg px-3 py-1.5 text-xs font-semibold text-white transition-colors">
+            <button
+              type="button"
+              className="bg-brand hover:bg-brand/90 flex-1 rounded-lg px-3 py-1.5 text-xs font-semibold text-white transition-colors"
+            >
               Follow
             </button>
-            <button className="bg-muted text-foreground hover:bg-muted/80 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors">
+            <button
+              type="button"
+              className="bg-muted text-foreground hover:bg-muted/80 rounded-lg px-3 py-1.5 text-xs font-semibold transition-colors"
+            >
               Message
             </button>
           </div>
@@ -309,63 +443,155 @@ function AuthorHoverCard({ post }: { post: ExplorePost }) {
   );
 }
 
+function PostCoverMedia({ post }: { post: ExplorePost }) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const { muted, setMuted } = useContext(MuteContext);
+  const [manualPause, setManualPause] = useState(false);
+  const [visible, setVisible] = useState(false);
+
+  const videoAttachment = post.mediaAttachments.find(
+    (m) => m.type === "VIDEO" || m.mimeType.startsWith("video/")
+  );
+
+  // Auto play/pause based on viewport visibility
+  useEffect(() => {
+    if (!videoAttachment) return;
+    const el = containerRef.current;
+    if (!el) return;
+
+    const observer = new IntersectionObserver(([entry]) => setVisible(entry.isIntersecting), {
+      threshold: 0.5,
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [videoAttachment]);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    if (visible && !manualPause) {
+      video.play().catch(() => {});
+    } else {
+      video.pause();
+    }
+  }, [visible, manualPause]);
+
+  const togglePlay = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const video = videoRef.current;
+      if (!video) return;
+      if (manualPause) {
+        video.play().catch(() => {});
+        setManualPause(false);
+      } else {
+        video.pause();
+        setManualPause(true);
+      }
+    },
+    [manualPause]
+  );
+
+  const toggleMute = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setMuted(!muted);
+    },
+    [muted, setMuted]
+  );
+
+  if (videoAttachment) {
+    const showPaused = manualPause || !visible;
+    return (
+      <div ref={containerRef} className="h-full w-full">
+        <video
+          ref={videoRef}
+          src={videoAttachment.url}
+          loop
+          muted={muted}
+          playsInline
+          className="h-full w-full object-cover object-center transition-transform duration-500 group-hover:scale-105"
+        />
+        <div className="absolute top-3 left-3 z-20 flex gap-2 sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100">
+          <button
+            type="button"
+            onClick={togglePlay}
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-sm transition-colors hover:bg-black/70"
+            aria-label={showPaused ? "Play" : "Pause"}
+          >
+            {showPaused ? <Play className="h-4 w-4" /> : <Pause className="h-4 w-4" />}
+          </button>
+          <button
+            type="button"
+            onClick={toggleMute}
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-sm transition-colors hover:bg-black/70"
+            aria-label={muted ? "Unmute" : "Mute"}
+          >
+            {muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (post.coverImage) {
+    return (
+      <Image
+        src={post.coverImage}
+        alt={post.title}
+        fill
+        className="object-cover object-center transition-transform duration-500 group-hover:scale-105"
+        sizes="(max-width: 768px) 100vw, 576px"
+      />
+    );
+  }
+
+  return (
+    <div className="bg-muted flex h-full items-center justify-center">
+      <Eye className="text-muted-foreground/30 h-12 w-12" />
+    </div>
+  );
+}
+
 // ── Main ExploreCard ──
 interface ExploreCardProps {
   post: ExplorePost;
 }
 
 export function ExploreCard({ post }: ExploreCardProps) {
-  const handleShare = async (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
+  const [commentSheetOpen, setCommentSheetOpen] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
 
-    const shareData = {
-      title: post.title,
-      url: `${window.location.origin}${post.href}`,
-    };
-
-    if (navigator.share) {
-      try {
-        await navigator.share(shareData);
-      } catch {
-        // User cancelled share
-      }
-    } else {
-      try {
-        await navigator.clipboard.writeText(shareData.url);
-        toast.success("Link copied!");
-      } catch {
-        toast.error("Could not copy link");
-      }
-    }
-  };
+  // Facebook-style view tracking: 1s for images, 3s for video
+  const hasVideo = post.mediaAttachments.some(
+    (m) => m.type === "VIDEO" || m.mimeType.startsWith("video/")
+  );
+  usePostView(post.id, cardRef, { isVideo: hasVideo });
 
   return (
     <motion.div
+      ref={cardRef}
       initial={{ opacity: 0, y: 20 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-50px" }}
       transition={{ duration: 0.4, ease: "easeOut" }}
-      className="bg-card/50 ring-border/40 group relative overflow-hidden rounded-2xl ring-1 backdrop-blur-sm"
+      className="bg-card/50 ring-border/40 group relative overflow-hidden rounded-2xl ring-1 backdrop-blur-sm select-none"
+      style={{ WebkitTouchCallout: "none" }}
     >
-      {/* Clickable card overlay */}
-      <Link href={post.href} className="absolute inset-0 z-0" aria-label={post.title} />
+      {/* Clickable card overlay — no link for user-generated posts */}
+      {post.href ? (
+        <Link href={post.href} className="absolute inset-0 z-0" aria-label={post.title} />
+      ) : (
+        <div className="absolute inset-0 z-0" />
+      )}
 
-      {/* Cover image — full card is the image */}
-      <div className="relative aspect-[9/16] overflow-hidden">
-        {post.coverImage ? (
-          <Image
-            src={post.coverImage}
-            alt={post.title}
-            fill
-            className="object-cover object-center transition-transform duration-500 group-hover:scale-105"
-            sizes="(max-width: 768px) 100vw, 480px"
-          />
-        ) : (
-          <div className="bg-muted flex h-full items-center justify-center">
-            <Eye className="text-muted-foreground/30 h-12 w-12" />
-          </div>
-        )}
+      {/* Cover media */}
+      <div className="relative aspect-[3/4] overflow-hidden">
+        <PostCoverMedia post={post} />
 
         {/* Gradient overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-black/10" />
@@ -390,26 +616,21 @@ export function ExploreCard({ post }: ExploreCardProps) {
           </div>
 
           {/* Comments */}
-          <Link
-            href={`${post.href}#comments`}
-            onClick={(e) => e.stopPropagation()}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              e.preventDefault();
+              setCommentSheetOpen(true);
+            }}
             className="flex h-12 w-12 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-sm transition-colors hover:bg-black/60"
             aria-label="Comments"
           >
             <MessageCircle className="h-5 w-5" />
-          </Link>
+          </button>
           <span className="text-center text-[11px] font-semibold text-white/90">
             {formatCount(post.commentCount)}
           </span>
-
-          {/* Share */}
-          <button
-            onClick={handleShare}
-            className="flex h-12 w-12 items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-sm transition-colors hover:bg-black/60"
-            aria-label="Share"
-          >
-            <Share2 className="h-5 w-5" />
-          </button>
 
           {/* Views */}
           <div className="flex h-12 w-12 flex-col items-center justify-center rounded-full bg-black/40 text-white backdrop-blur-sm">
@@ -476,6 +697,13 @@ export function ExploreCard({ post }: ExploreCardProps) {
           )}
         </div>
       </div>
+
+      {/* Comment sheet */}
+      <ExploreCommentSheet
+        postId={post.id}
+        open={commentSheetOpen}
+        onOpenChange={setCommentSheetOpen}
+      />
     </motion.div>
   );
 }

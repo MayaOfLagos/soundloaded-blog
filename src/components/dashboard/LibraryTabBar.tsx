@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "motion/react";
-import { Library, Bookmark, Heart, Download, type LucideIcon } from "lucide-react";
+import { Library, Bookmark, Heart, Download, EyeOff, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const snappySpring = {
@@ -16,6 +16,7 @@ const LIBRARY_TABS: { id: string; label: string; icon: LucideIcon }[] = [
   { id: "bookmarks", label: "Bookmarks", icon: Bookmark },
   { id: "favorites", label: "Favorites", icon: Heart },
   { id: "downloads", label: "Downloads", icon: Download },
+  { id: "hidden", label: "Hidden", icon: EyeOff },
 ];
 
 interface LibraryTabBarProps {

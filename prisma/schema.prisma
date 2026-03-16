@@ -42,6 +42,10 @@ model User {
   storyViews        StoryView[]
   notifications     Notification[]
   preferences       UserPreferences?
+  hiddenPosts       HiddenPost[]
+  reports           Report[]
+  commentLikes      CommentLike[]
+  postViews         PostView[]
 }
 
 enum UserRole {
@@ -83,10 +87,23 @@ model Post {
   favorites  Favorite[]
   reactions  Reaction[]
 
+  // SEO overrides (optional — auto-generated from title/excerpt if empty)
+  metaTitle       String?
+  metaDescription String?
+  focusKeyword    String?
+
+  // User-generated content (feed posts by contributors)
+  isUserGenerated  Boolean  @default(false)
+  mediaAttachments Json     @default("[]")  // Array of { url, type, key } for feed post media
+  hiddenBy     HiddenPost[]
+  reports      Report[]
+  postViews    PostView[]
+
   @@index([slug])
   @@index([status, publishedAt])
   @@index([type, publishedAt])
   @@index([downloadMediaId])
+  @@index([isUserGenerated, status, createdAt])
 }
 
 enum PostStatus {
@@ -103,6 +120,7 @@ enum PostType {
   ALBUM
   VIDEO
   LYRICS
+  COMMUNITY
 }
 
 
@@ -265,9 +283,24 @@ model Comment {
   parentId String?
   parent   Comment?  @relation("CommentReplies", fields: [parentId], references: [id])
   replies  Comment[] @relation("CommentReplies")
+  likes    CommentLike[]
 
   @@index([postId, status])
   @@index([authorId])
+}
+
+// ── Comment Likes ────────────────────────────────────────────────────
+model CommentLike {
+  id        String   @id @default(cuid())
+  type      String   // "LIKE" | "DISLIKE"
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  commentId String
+  comment   Comment  @relation(fields: [commentId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, commentId])
+  @@index([commentId, type])
 }
 
 enum CommentStatus {
@@ -460,6 +493,22 @@ model SiteSettings {
   enableDarkMode Boolean @default(true)
   defaultTheme   String  @default("dark")
   customCss      String  @default("") @db.Text
+
+  // Feature Toggles — Stories
+  enableStories    Boolean @default(true)
+  storyExpiryHours Int     @default(24)
+
+  // Feature Toggles — Site Sections
+  enableFeed    Boolean @default(true)
+  enableExplore Boolean @default(true)
+  enableMusic   Boolean @default(true)
+  enableNews    Boolean @default(true)
+  enableGist    Boolean @default(true)
+  enableLyrics  Boolean @default(true)
+  enableVideos  Boolean @default(true)
+  enableAlbums  Boolean @default(true)
+  enableArtists Boolean @default(true)
+  enableSearch  Boolean @default(true)
 }
 
 // ── Media Library ────────────────────────────────────────────────────
@@ -631,6 +680,8 @@ enum NotificationType {
   SUBSCRIPTION_REMINDER
   SYSTEM
   DOWNLOAD_READY
+  REPORT_FILED
+  REPORT_UPDATE
 }
 
 // ── User Preferences ──────────────────────────────────────────────────
@@ -719,4 +770,59 @@ model StoryView {
 
   @@unique([storyItemId, viewerId])
   @@index([storyItemId])
+}
+
+// ── Hidden Posts ──────────────────────────────────────────────────────
+model HiddenPost {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, postId])
+  @@index([userId, createdAt])
+}
+
+// ── Post Views (Facebook-style: deduped per user, 24h window) ────────
+model PostView {
+  id        String   @id @default(cuid())
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  viewerId  String
+  viewer    User     @relation(fields: [viewerId], references: [id], onDelete: Cascade)
+  viewedAt  DateTime @default(now())
+
+  @@unique([postId, viewerId])
+  @@index([postId])
+  @@index([viewerId, viewedAt])
+}
+
+// ── Reports ──────────────────────────────────────────────────────────
+model Report {
+  id         String       @id @default(cuid())
+  userId     String
+  user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  postId     String
+  post       Post         @relation(fields: [postId], references: [id], onDelete: Cascade)
+  reason     String       // "spam" | "harassment" | "misinformation" | "hate_speech" | "violence" | "other"
+  details    String?      @db.Text
+  status     ReportStatus @default(PENDING)
+  adminNote  String?      @db.Text
+  reviewedBy String?
+  reviewedAt DateTime?
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  @@index([status, createdAt])
+  @@index([postId])
+  @@index([userId])
+}
+
+enum ReportStatus {
+  PENDING
+  REVIEWED
+  DISMISSED
+  ACTION_TAKEN
 }

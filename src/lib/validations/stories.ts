@@ -59,9 +59,3 @@ export const createStorySchema = z
       }
     });
   });
-
-export const storyUploadSchema = z.object({
-  filename: z.string().min(1),
-  contentType: z.string().min(1),
-  mediaType: z.enum(["image", "video", "audio"]),
-});

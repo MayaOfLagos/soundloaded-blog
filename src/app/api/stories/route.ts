@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { getSettings } from "@/lib/settings";
 import { createStorySchema } from "@/lib/validations/stories";
 
 export interface StoryItemResponse {
@@ -27,6 +28,11 @@ export interface StoryGroupResponse {
 
 /** GET — fetch active stories grouped by author */
 export async function GET() {
+  const settings = await getSettings();
+  if (!settings.enableStories) {
+    return NextResponse.json({ storyGroups: [] });
+  }
+
   const session = await auth();
   const userId = session?.user ? (session.user as { id: string }).id : null;
 
@@ -132,7 +138,12 @@ export async function POST(request: NextRequest) {
   }
 
   const { items } = parsed.data;
-  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+  const settings = await getSettings();
+  if (!settings.enableStories) {
+    return NextResponse.json({ error: "Stories are disabled" }, { status: 403 });
+  }
+  const expiryMs = (settings.storyExpiryHours ?? 24) * 60 * 60 * 1000;
+  const expiresAt = new Date(Date.now() + expiryMs);
 
   const story = await db.story.create({
     data: {

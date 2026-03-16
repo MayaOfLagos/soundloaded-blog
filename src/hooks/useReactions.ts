@@ -64,6 +64,7 @@ export function useSetReaction() {
       queryClient.invalidateQueries({ queryKey: ["reaction-check", vars.postId] });
       queryClient.invalidateQueries({ queryKey: ["reaction-batch-check"] });
       queryClient.invalidateQueries({ queryKey: ["explore"] });
+      queryClient.invalidateQueries({ queryKey: ["feed-posts"] });
     },
   });
 }
@@ -101,6 +102,7 @@ export function useRemoveReaction() {
       queryClient.invalidateQueries({ queryKey: ["reaction-check", vars.postId] });
       queryClient.invalidateQueries({ queryKey: ["reaction-batch-check"] });
       queryClient.invalidateQueries({ queryKey: ["explore"] });
+      queryClient.invalidateQueries({ queryKey: ["feed-posts"] });
     },
   });
 }

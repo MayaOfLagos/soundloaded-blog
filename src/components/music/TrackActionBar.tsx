@@ -1,10 +1,11 @@
 "use client";
 
-import { Play } from "lucide-react";
+import { useState, useRef } from "react";
+import { Play, Download, Heart } from "lucide-react";
+import { motion } from "motion/react";
 import { usePlayerStore } from "@/store/player.store";
 import type { Track } from "@/store/player.store";
-import { DownloadButton } from "./DownloadButton";
-import { HeartButton } from "./HeartButton";
+import { useMusicFavorite } from "@/hooks/useMusicFavorite";
 import { ShareButton } from "./ShareButton";
 import { MusicActionMenu } from "./MusicActionMenu";
 import type { MusicCardData } from "@/lib/api/music";
@@ -32,6 +33,13 @@ interface TrackActionBarProps {
   enableDownloads: boolean;
 }
 
+const springTransition = {
+  type: "spring" as const,
+  damping: 20,
+  stiffness: 230,
+  mass: 1.2,
+};
+
 function EqualizerBars() {
   return (
     <div className="flex h-3.5 items-end gap-[2px]">
@@ -42,13 +50,112 @@ function EqualizerBars() {
   );
 }
 
+/** Discrete-tab style pill button with expand/collapse animation */
+function DiscreteAction({
+  id,
+  label,
+  icon: Icon,
+  isActive,
+  onClick,
+  className,
+  activeClassName,
+  children,
+}: {
+  id: string;
+  label: string;
+  icon?: React.ComponentType<{ className?: string }>;
+  isActive: boolean;
+  onClick: () => void;
+  className?: string;
+  activeClassName?: string;
+  children?: React.ReactNode;
+}) {
+  const [isLoaded, setIsLoaded] = useState(false);
+  const shineTimerRef = useRef<ReturnType<typeof setTimeout>>(null);
+  const [showShine, setShowShine] = useState(false);
+
+  // Trigger shine on activation via callback, not effect
+  const triggerShine = () => {
+    if (shineTimerRef.current) clearTimeout(shineTimerRef.current);
+    setShowShine(true);
+    shineTimerRef.current = setTimeout(() => setShowShine(false), 800);
+  };
+
+  return (
+    <motion.div
+      layoutId={`track-action-${id}`}
+      transition={{ layout: springTransition }}
+      style={{ willChange: "transform" }}
+      className="flex h-fit w-fit"
+    >
+      <motion.button
+        type="button"
+        layout
+        transition={{ layout: springTransition }}
+        onClick={() => {
+          onClick();
+          if (!isLoaded) setIsLoaded(true);
+          if (isLoaded) triggerShine();
+        }}
+        className={cn(
+          "outline-background relative flex cursor-pointer items-center gap-1.5 overflow-hidden rounded-full p-2.5 text-sm font-semibold shadow-md outline outline-2 transition-colors duration-75 ease-out",
+          isActive ? "px-4" : "px-2.5",
+          isActive
+            ? (activeClassName ?? "bg-brand text-brand-foreground")
+            : "bg-muted text-foreground hover:bg-muted/80",
+          className
+        )}
+        aria-label={label}
+      >
+        {/* Shine effect on activation */}
+        {showShine && (
+          <motion.span
+            className="absolute inset-0 bg-white/15"
+            initial={{ x: "-120%" }}
+            animate={{ x: "120%" }}
+            transition={{ duration: 0.6, ease: "linear" }}
+          />
+        )}
+
+        {/* Icon */}
+        <motion.span
+          layoutId={`track-action-icon-${id}`}
+          className="relative z-10 shrink-0"
+          style={{ willChange: "transform" }}
+        >
+          {children ?? (Icon && <Icon className="h-[18px] w-[18px]" />)}
+        </motion.span>
+
+        {/* Expanding label */}
+        {isActive && (
+          <motion.span
+            className="relative z-10 text-sm font-semibold whitespace-nowrap"
+            initial={isLoaded ? { opacity: 0, filter: "blur(4px)" } : false}
+            animate={{ opacity: 1, filter: "blur(0px)" }}
+            transition={{
+              duration: isLoaded ? 0.2 : 0,
+              ease: [0.86, 0, 0.07, 1],
+            }}
+          >
+            {label}
+          </motion.span>
+        )}
+      </motion.button>
+    </motion.div>
+  );
+}
+
 export function TrackActionBar({ track, siteUrl, enableDownloads }: TrackActionBarProps) {
   const { currentTrack, isPlaying, setTrack, togglePlay } = usePlayerStore();
+  const { isFavorited, toggleFavorite } = useMusicFavorite(track.id);
+  const [activeAction, setActiveAction] = useState<string>("play");
+  const [downloadState, setDownloadState] = useState<"idle" | "loading" | "done">("idle");
 
   const isCurrentTrack = currentTrack?.id === track.id;
   const isActivelyPlaying = isCurrentTrack && isPlaying;
 
   const handlePlay = () => {
+    setActiveAction("play");
     if (isCurrentTrack) {
       togglePlay();
       return;
@@ -65,6 +172,37 @@ export function TrackActionBar({ track, siteUrl, enableDownloads }: TrackActionB
     setTrack(playerTrack);
   };
 
+  const handleDownload = async () => {
+    setActiveAction("download");
+    if (downloadState !== "idle") return;
+
+    setDownloadState("loading");
+    try {
+      const res = await fetch(`/api/music/${track.id}/download`, { method: "POST" });
+      if (!res.ok) {
+        setDownloadState("idle");
+        return;
+      }
+      const { url, filename } = await res.json();
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      a.rel = "noopener noreferrer";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setDownloadState("done");
+      setTimeout(() => setDownloadState("idle"), 3000);
+    } catch {
+      setDownloadState("idle");
+    }
+  };
+
+  const handleFavorite = () => {
+    setActiveAction("favorite");
+    toggleFavorite();
+  };
+
   const musicCardData: MusicCardData = {
     id: track.id,
     slug: track.slug,
@@ -79,65 +217,65 @@ export function TrackActionBar({ track, siteUrl, enableDownloads }: TrackActionB
     releaseYear: track.releaseYear,
   };
 
+  const playLabel = isActivelyPlaying ? "Playing" : isCurrentTrack ? "Resume" : "Play";
+  const downloadLabel =
+    downloadState === "loading" ? "Getting..." : downloadState === "done" ? "Done!" : "Download";
+  const favoriteLabel = isFavorited ? "Saved" : "Save";
+
   return (
-    <div className="flex flex-wrap items-center gap-3">
-      {/* Play / Pause — primary CTA */}
-      <button
-        type="button"
+    <div className="flex flex-wrap items-center gap-2">
+      {/* Play / Pause */}
+      <DiscreteAction
+        id="play"
+        label={playLabel}
+        isActive={activeAction === "play"}
         onClick={handlePlay}
-        className={cn(
-          "flex h-11 min-w-[120px] items-center justify-center gap-2 rounded-full px-5 text-sm font-semibold transition-all duration-150 hover:scale-105 hover:brightness-110",
-          "bg-brand text-brand-foreground shadow-lg"
-        )}
-        aria-label={isActivelyPlaying ? `Pause ${track.title}` : `Play ${track.title}`}
+        activeClassName="bg-brand text-brand-foreground"
       >
         {isActivelyPlaying ? (
-          <>
-            <EqualizerBars />
-            <span>Playing</span>
-          </>
-        ) : isCurrentTrack ? (
-          <>
-            <Play className="ml-0.5 h-4 w-4" />
-            <span>Resume</span>
-          </>
+          <EqualizerBars />
         ) : (
-          <>
-            <Play className="ml-0.5 h-4 w-4" />
-            <span>Play</span>
-          </>
+          <Play className="h-[18px] w-[18px] fill-current" />
         )}
-      </button>
+      </DiscreteAction>
 
       {/* Download */}
       {enableDownloads && track.enableDownload && (
-        <DownloadButton
-          musicId={track.id}
-          title={track.title}
-          enabled={track.enableDownload}
-          isExclusive={track.isExclusive}
-          price={track.price ?? undefined}
-          size="default"
-          className="h-11 rounded-full"
+        <DiscreteAction
+          id="download"
+          label={downloadLabel}
+          icon={Download}
+          isActive={activeAction === "download"}
+          onClick={handleDownload}
+          activeClassName="bg-brand text-brand-foreground"
         />
       )}
 
-      {/* Heart / Like */}
-      <div className="bg-muted hover:bg-muted/80 flex h-11 w-11 items-center justify-center rounded-full transition-colors">
-        <HeartButton musicId={track.id} size={22} />
-      </div>
+      {/* Favorite / Save */}
+      <DiscreteAction
+        id="favorite"
+        label={favoriteLabel}
+        isActive={activeAction === "favorite"}
+        onClick={handleFavorite}
+        activeClassName={isFavorited ? "bg-red-500 text-white" : "bg-brand text-brand-foreground"}
+      >
+        <Heart
+          className={cn("h-[18px] w-[18px] transition-colors", isFavorited && "fill-current")}
+        />
+      </DiscreteAction>
 
-      {/* Share */}
+      {/* Share — keeps its dropdown behavior, styled as discrete pill */}
       <ShareButton
         title={track.title}
         artist={track.artistName}
         url={`${siteUrl}/music/${track.slug}`}
-        size={20}
+        size={18}
+        className="bg-muted hover:bg-muted/80 outline-background h-[38px] w-[38px] shadow-md outline outline-2"
       />
 
       {/* More options */}
-      <div className="bg-muted hover:bg-muted/80 flex h-11 w-11 items-center justify-center rounded-full transition-colors">
-        <MusicActionMenu track={musicCardData} size={20} className="text-foreground" />
+      <div className="bg-muted hover:bg-muted/80 outline-background flex h-[38px] w-[38px] items-center justify-center rounded-full shadow-md outline outline-2 transition-colors">
+        <MusicActionMenu track={musicCardData} size={18} className="text-foreground" />
       </div>
     </div>
   );

@@ -137,15 +137,17 @@ function TrackRow({
         <HeartButton musicId={track.id} size={14} />
       </div>
 
-      {/* Download */}
+      {/* Download — always visible on mobile, hover on desktop */}
       {track.enableDownload && (
-        <DownloadButton
-          musicId={track.id}
-          title={track.title}
-          enabled={track.enableDownload}
-          size="sm"
-          variant="ghost"
-        />
+        <div className="flex-shrink-0 sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100">
+          <DownloadButton
+            musicId={track.id}
+            title={track.title}
+            enabled={track.enableDownload}
+            size="sm"
+            variant="ghost"
+          />
+        </div>
       )}
     </div>
   );

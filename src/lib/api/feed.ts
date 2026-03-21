@@ -25,6 +25,7 @@ export interface FeedPost {
     id: string;
     name: string | null;
     image: string | null;
+    username: string | null;
   };
   category: {
     name: string;

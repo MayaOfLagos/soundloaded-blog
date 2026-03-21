@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import {
   Home,
   Music,
@@ -13,25 +13,77 @@ import {
   ListMusic,
   Radio,
   Headphones,
-  Library,
   Upload,
+  Download,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePlayerStore } from "@/store/player.store";
 
-const NAV_ITEMS = [
-  { href: "/", label: "Home", icon: Home },
-  { href: "/music", label: "Browse", icon: Music, exact: true },
-  { href: "/music?sort=latest", label: "New Releases", icon: Clock },
-  { href: "/music?sort=popular", label: "Trending", icon: TrendingUp },
+interface NavItem {
+  href: string;
+  label: string;
+  icon: typeof Home;
+  match?: (pathname: string, searchParams: URLSearchParams) => boolean;
+}
+
+const NAV_ITEMS: NavItem[] = [
+  {
+    href: "/",
+    label: "Home",
+    icon: Home,
+    match: (p) => p === "/",
+  },
+  {
+    href: "/music",
+    label: "Browse",
+    icon: Music,
+    match: (p, sp) => p === "/music" && !sp.get("sort"),
+  },
+  {
+    href: "/music?sort=latest",
+    label: "New Releases",
+    icon: Clock,
+    match: (p, sp) => p === "/music" && sp.get("sort") === "latest",
+  },
+  {
+    href: "/music?sort=popular",
+    label: "Trending",
+    icon: TrendingUp,
+    match: (p, sp) => p === "/music" && sp.get("sort") === "popular",
+  },
 ];
 
-const LIBRARY_ITEMS = [
-  { href: "/albums", label: "Albums", icon: Disc3 },
-  { href: "/artists", label: "Artists", icon: Mic2 },
-  { href: "/library?tab=music", label: "My Library", icon: Library },
-  { href: "/favorites", label: "Favorites", icon: Heart },
-  { href: "/library?tab=playlists", label: "Playlists", icon: ListMusic },
+const LIBRARY_ITEMS: NavItem[] = [
+  {
+    href: "/albums",
+    label: "Albums",
+    icon: Disc3,
+    match: (p) => p.startsWith("/albums"),
+  },
+  {
+    href: "/artists",
+    label: "Artists",
+    icon: Mic2,
+    match: (p) => p.startsWith("/artists"),
+  },
+  {
+    href: "/library/downloads",
+    label: "Downloads",
+    icon: Download,
+    match: (p) => p === "/library/downloads",
+  },
+  {
+    href: "/favorites",
+    label: "Favorites",
+    icon: Heart,
+    match: (p) => p === "/favorites",
+  },
+  {
+    href: "/library/playlists",
+    label: "Playlists",
+    icon: ListMusic,
+    match: (p) => p.startsWith("/library/playlists"),
+  },
 ];
 
 const GENRE_TAGS = [
@@ -49,41 +101,44 @@ const GENRE_TAGS = [
 
 export function MusicLeftSidebar() {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const { currentTrack, queue } = usePlayerStore();
+
+  const renderItem = ({ href, label, icon: Icon, match }: NavItem) => {
+    const isActive = match ? match(pathname, searchParams) : pathname === href;
+    return (
+      <Link
+        key={href}
+        href={href}
+        className={cn(
+          "group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-all duration-200",
+          isActive
+            ? "bg-brand/10 text-brand"
+            : "text-muted-foreground hover:bg-muted hover:text-foreground"
+        )}
+      >
+        <div
+          className={cn(
+            "flex h-8 w-8 items-center justify-center rounded-lg transition-colors",
+            isActive
+              ? "bg-brand/15 text-brand"
+              : "bg-muted text-muted-foreground group-hover:text-foreground"
+          )}
+        >
+          <Icon className="h-4 w-4" />
+        </div>
+        {label}
+        {isActive && <span className="bg-brand ml-auto h-1.5 w-1.5 rounded-full" />}
+      </Link>
+    );
+  };
 
   return (
     <aside className="sticky top-16 hidden h-[calc(100vh-4rem)] flex-col xl:flex">
       {/* Navigation */}
       <nav className="scrollbar-auto-hide min-h-0 flex-1 space-y-1 overflow-y-auto pr-1">
         {/* Main nav */}
-        {NAV_ITEMS.map(({ href, label, icon: Icon, exact }) => {
-          const isActive = exact ? pathname === href : pathname.startsWith(href);
-          return (
-            <Link
-              key={href}
-              href={href}
-              className={cn(
-                "group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-all duration-200",
-                isActive
-                  ? "bg-brand/10 text-brand"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
-              )}
-            >
-              <div
-                className={cn(
-                  "flex h-8 w-8 items-center justify-center rounded-lg transition-colors",
-                  isActive
-                    ? "bg-brand/15 text-brand"
-                    : "bg-muted text-muted-foreground group-hover:text-foreground"
-                )}
-              >
-                <Icon className="h-4 w-4" />
-              </div>
-              {label}
-              {isActive && <span className="bg-brand ml-auto h-1.5 w-1.5 rounded-full" />}
-            </Link>
-          );
-        })}
+        {NAV_ITEMS.map(renderItem)}
 
         {/* Divider */}
         <div className="border-border/40 mx-3 border-t pt-1" />
@@ -92,33 +147,7 @@ export function MusicLeftSidebar() {
         <p className="text-muted-foreground/60 px-3 pt-2 pb-1 text-[10px] font-bold tracking-[0.2em] uppercase">
           Your Library
         </p>
-        {LIBRARY_ITEMS.map(({ href, label, icon: Icon }) => {
-          const isActive = pathname === href || pathname.startsWith(href.split("?")[0]);
-          return (
-            <Link
-              key={href}
-              href={href}
-              className={cn(
-                "group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-all duration-200",
-                isActive
-                  ? "bg-brand/10 text-brand"
-                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
-              )}
-            >
-              <div
-                className={cn(
-                  "flex h-8 w-8 items-center justify-center rounded-lg transition-colors",
-                  isActive
-                    ? "bg-brand/15 text-brand"
-                    : "bg-muted text-muted-foreground group-hover:text-foreground"
-                )}
-              >
-                <Icon className="h-4 w-4" />
-              </div>
-              {label}
-            </Link>
-          );
-        })}
+        {LIBRARY_ITEMS.map(renderItem)}
 
         {/* Divider */}
         <div className="border-border/40 mx-3 border-t pt-1" />

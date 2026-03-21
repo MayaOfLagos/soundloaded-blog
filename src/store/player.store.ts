@@ -15,6 +15,7 @@ interface PlayerState {
   currentTrack: Track | null;
   queue: Track[];
   isPlaying: boolean;
+  isBuffering: boolean;
   volume: number;
   isMuted: boolean;
   currentTime: number;
@@ -29,6 +30,7 @@ interface PlayerState {
   playPrev: () => void;
   togglePlay: () => void;
   setPlaying: (playing: boolean) => void;
+  setBuffering: (buffering: boolean) => void;
   setVolume: (volume: number) => void;
   toggleMute: () => void;
   setCurrentTime: (time: number) => void;
@@ -43,6 +45,7 @@ export const usePlayerStore = create<PlayerState>()(
       currentTrack: null,
       queue: [],
       isPlaying: false,
+      isBuffering: false,
       volume: 0.8,
       isMuted: false,
       currentTime: 0,
@@ -55,6 +58,7 @@ export const usePlayerStore = create<PlayerState>()(
         set({
           currentTrack: track,
           isPlaying: true,
+          isBuffering: true,
           currentTime: 0,
           queue: alreadyInQueue ? queue : [track, ...queue],
         });
@@ -74,7 +78,7 @@ export const usePlayerStore = create<PlayerState>()(
         if (!currentTrack || queue.length === 0) return;
         const idx = queue.findIndex((t) => t.id === currentTrack.id);
         const next = queue[idx + 1];
-        if (next) set({ currentTrack: next, isPlaying: true, currentTime: 0 });
+        if (next) set({ currentTrack: next, isPlaying: true, isBuffering: true, currentTime: 0 });
       },
 
       playPrev: () => {
@@ -86,17 +90,25 @@ export const usePlayerStore = create<PlayerState>()(
         }
         const idx = queue.findIndex((t) => t.id === currentTrack.id);
         const prev = queue[idx - 1];
-        if (prev) set({ currentTrack: prev, isPlaying: true, currentTime: 0 });
+        if (prev) set({ currentTrack: prev, isPlaying: true, isBuffering: true, currentTime: 0 });
       },
 
       togglePlay: () => set((s) => ({ isPlaying: !s.isPlaying })),
       setPlaying: (playing) => set({ isPlaying: playing }),
+      setBuffering: (buffering) => set({ isBuffering: buffering }),
       setVolume: (volume) => set({ volume, isMuted: volume === 0 }),
       toggleMute: () => set((s) => ({ isMuted: !s.isMuted })),
       setCurrentTime: (time) => set({ currentTime: time }),
       setDuration: (duration) => set({ duration }),
       toggleMinimize: () => set((s) => ({ isMinimized: !s.isMinimized })),
-      clearPlayer: () => set({ currentTrack: null, queue: [], isPlaying: false, currentTime: 0 }),
+      clearPlayer: () =>
+        set({
+          currentTrack: null,
+          queue: [],
+          isPlaying: false,
+          isBuffering: false,
+          currentTime: 0,
+        }),
     }),
     {
       name: "soundloadedblog-player",

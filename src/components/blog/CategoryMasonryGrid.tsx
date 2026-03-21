@@ -1,6 +1,8 @@
 import { getLatestPosts } from "@/lib/api/posts";
 import { getSettings } from "@/lib/settings";
 import { PostCard } from "./PostCard";
+import { Newspaper } from "lucide-react";
+import { EmptyState } from "@/components/common/EmptyState";
 
 interface CategoryMasonryGridProps {
   type: string;
@@ -28,10 +30,13 @@ export async function CategoryMasonryGrid({
 
   if (!gridPosts.length) {
     return (
-      <div className="py-20 text-center">
-        <p className="text-xl font-bold">{emptyTitle}</p>
-        <p className="text-muted-foreground mt-2">{emptyMessage}</p>
-      </div>
+      <EmptyState
+        icon={Newspaper}
+        title={emptyTitle}
+        description={emptyMessage}
+        actionLabel="Go Home"
+        actionHref="/"
+      />
     );
   }
 

@@ -2,7 +2,18 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
+import { Ratelimit } from "@upstash/ratelimit";
+import { Redis } from "@upstash/redis";
 import type { UserRole } from "@prisma/client";
+
+const ratelimit =
+  process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN
+    ? new Ratelimit({
+        redis: Redis.fromEnv(),
+        limiter: Ratelimit.slidingWindow(5, "1 h"),
+        prefix: "ratelimit:register",
+      })
+    : null;
 
 const baseSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters").max(100),
@@ -14,6 +25,18 @@ const strongPasswordRegex =
   /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).{8,}$/;
 
 export async function POST(req: NextRequest) {
+  // Rate limit by IP
+  if (ratelimit) {
+    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+    const { success } = await ratelimit.limit(ip);
+    if (!success) {
+      return NextResponse.json(
+        { error: "Too many registration attempts. Please try again later." },
+        { status: 429 }
+      );
+    }
+  }
+
   try {
     const body = await req.json();
     const parsed = baseSchema.safeParse(body);
@@ -62,12 +85,22 @@ export async function POST(req: NextRequest) {
 
     const hashed = await bcrypt.hash(password, 12);
 
+    // Generate a default username from the name (slug-ified + random suffix)
+    const baseSlug = name
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "")
+      .slice(0, 20);
+    const suffix = crypto.randomUUID().slice(0, 6);
+    const username = `${baseSlug}-${suffix}`;
+
     await db.user.create({
       data: {
         name,
         email: email.toLowerCase(),
         password: hashed,
         role: defaultUserRole,
+        username,
       },
     });
 

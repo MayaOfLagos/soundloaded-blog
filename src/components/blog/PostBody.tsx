@@ -99,6 +99,10 @@ function renderTiptap(node: unknown): string {
       }
       return "";
     }
+    case "htmlBlock": {
+      const attrs = n.attrs as Record<string, string> | undefined;
+      return attrs?.html ?? "";
+    }
     case "horizontalRule":
       return "<hr />";
     case "hardBreak":

@@ -51,8 +51,14 @@ prisma/dev.db-journal
 # Generated Payload types (regenerate with pnpm payload:generate)
 src/payload/payload-types.ts
 
+# WordPress import parsed data (large JSON files)
+scripts/wp-data/
+
 # vercel
 .vercel
+
+# IDE
+.vscode/
 
 # typescript
 *.tsbuildinfo

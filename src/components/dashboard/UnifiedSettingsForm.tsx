@@ -45,6 +45,14 @@ import { AvatarUploadField } from "./AvatarUploadField";
 
 const profileSchema = z.object({
   name: z.string().min(2).max(80),
+  username: z
+    .string()
+    .min(3, "Username must be at least 3 characters")
+    .max(30, "Username must be at most 30 characters")
+    .regex(
+      /^[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?$/,
+      "Lowercase letters, numbers, dots, hyphens, underscores only"
+    ),
   bio: z.string().max(500).optional(),
   location: z.string().max(100).optional(),
   twitter: z.string().max(50).optional(),
@@ -157,7 +165,7 @@ export function UnifiedSettingsForm() {
   // ── Profile form (kept at top level so state persists across tab switches) ──
   const profileForm = useForm<ProfileValues>({
     resolver: zodResolver(profileSchema),
-    defaultValues: { name: "", bio: "", location: "", twitter: "", instagram: "" },
+    defaultValues: { name: "", username: "", bio: "", location: "", twitter: "", instagram: "" },
   });
 
   const passwordForm = useForm<PasswordValues>({
@@ -178,6 +186,7 @@ export function UnifiedSettingsForm() {
     if (user) {
       profileForm.reset({
         name: user.name ?? "",
+        username: user.username ?? "",
         bio: user.bio ?? "",
         location: user.location ?? "",
         twitter: user.socialLinks?.twitter ?? "",
@@ -190,6 +199,7 @@ export function UnifiedSettingsForm() {
   const onProfileSubmit = (values: ProfileValues) => {
     updateProfile.mutate({
       name: values.name,
+      username: values.username,
       bio: values.bio,
       location: values.location,
       socialLinks: { twitter: values.twitter, instagram: values.instagram },
@@ -243,7 +253,10 @@ export function UnifiedSettingsForm() {
               <h3 className="text-foreground truncate text-lg font-black">
                 {user?.name ?? "User"}
               </h3>
-              <p className="text-muted-foreground truncate text-sm">{user?.email}</p>
+              {user?.username && (
+                <p className="text-muted-foreground truncate text-sm">@{user.username}</p>
+              )}
+              <p className="text-muted-foreground truncate text-xs">{user?.email}</p>
               {user?.location && (
                 <p className="text-muted-foreground mt-0.5 flex items-center gap-1 text-xs">
                   <MapPin className="h-3 w-3" />
@@ -279,13 +292,31 @@ export function UnifiedSettingsForm() {
                 )}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="location">Location</Label>
+                <Label htmlFor="username">Username</Label>
                 <Input
-                  id="location"
-                  placeholder="e.g. Lagos, Nigeria"
-                  {...profileForm.register("location")}
+                  id="username"
+                  placeholder="e.g. johndoe"
+                  {...profileForm.register("username")}
                 />
+                {profileForm.formState.errors.username ? (
+                  <p className="text-destructive text-sm">
+                    {profileForm.formState.errors.username.message}
+                  </p>
+                ) : (
+                  <p className="text-muted-foreground text-xs">
+                    Your public profile will be at /author/your-username
+                  </p>
+                )}
               </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="location">Location</Label>
+              <Input
+                id="location"
+                placeholder="e.g. Lagos, Nigeria"
+                {...profileForm.register("location")}
+              />
             </div>
 
             <div className="space-y-2">

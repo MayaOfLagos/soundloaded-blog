@@ -20,6 +20,7 @@ import {
   VolumeX,
   Play,
   Pause,
+  Ban,
 } from "lucide-react";
 import useMeasure from "react-use-measure";
 import { useSession } from "next-auth/react";
@@ -32,6 +33,7 @@ import { useBookmarkCheck } from "@/hooks/useUserDashboard";
 import { useFollowCheck, useToggleFollow } from "@/hooks/useFollow";
 import { useToggleHiddenPost, useHiddenPostCheck } from "@/hooks/useHiddenPosts";
 import { useFileReport } from "@/hooks/useReports";
+import { useBlockCheck, useToggleBlock } from "@/hooks/useUserBlock";
 import { usePostView } from "@/hooks/usePostView";
 import { cn } from "@/lib/utils";
 import toast from "react-hot-toast";
@@ -120,10 +122,13 @@ function OptionsDropdown({ post }: { post: ExplorePost }) {
   const { data: hiddenData } = useHiddenPostCheck(post.id);
   const toggleHidden = useToggleHiddenPost();
   const fileReport = useFileReport();
+  const { data: blockData } = useBlockCheck(post.author.id);
+  const toggleBlock = useToggleBlock();
 
   const isBookmarked = bookmarkData?.bookmarked ?? false;
   const isFollowing = followData?.following ?? false;
   const isHidden = hiddenData?.hidden ?? false;
+  const isBlocked = blockData?.blocked ?? false;
 
   // Dynamic menu items based on state
   const optionItems = [
@@ -135,6 +140,7 @@ function OptionsDropdown({ post }: { post: ExplorePost }) {
     { id: "open", label: "Open in new tab", icon: ExternalLink },
     { id: "divider2", label: "", icon: null },
     { id: "hide", label: isHidden ? "Unhide this post" : "Hide this post", icon: EyeOff },
+    { id: "block", label: isBlocked ? "Unblock author" : "Block author", icon: Ban },
     { id: "report", label: "Report post", icon: Flag },
   ];
 
@@ -150,7 +156,7 @@ function OptionsDropdown({ post }: { post: ExplorePost }) {
   }, [isOpen]);
 
   const handleItemClick = (id: string) => {
-    if (!isAuthenticated && ["save", "follow", "hide", "report"].includes(id)) {
+    if (!isAuthenticated && ["save", "follow", "hide", "report", "block"].includes(id)) {
       router.push("/login");
       return;
     }
@@ -188,6 +194,16 @@ function OptionsDropdown({ post }: { post: ExplorePost }) {
         break;
       case "hide":
         toggleHidden.mutate({ postId: post.id, isHidden });
+        break;
+      case "block":
+        toggleBlock.mutate(
+          { userId: post.author.id, isBlocked, type: "BLOCK" },
+          {
+            onSuccess: () => {
+              toast.success(isBlocked ? "User unblocked" : "User blocked");
+            },
+          }
+        );
         break;
       case "report":
         setShowReportMenu(true);
@@ -363,8 +379,8 @@ function AuthorHoverCard({ post }: { post: ExplorePost }) {
   return (
     <HoverCard openDelay={300} closeDelay={150}>
       <HoverCardTrigger asChild>
-        <button
-          type="button"
+        <Link
+          href={post.author.username ? `/author/${post.author.username}` : "#"}
           onClick={(e) => e.stopPropagation()}
           className="relative flex h-12 w-12 items-center justify-center rounded-full bg-black/40 ring-2 ring-white/20 backdrop-blur-sm transition-all hover:ring-white/40"
           aria-label={`View ${post.author.name ?? "author"} profile`}
@@ -382,7 +398,7 @@ function AuthorHoverCard({ post }: { post: ExplorePost }) {
               {post.author.name?.[0]?.toUpperCase() ?? "?"}
             </span>
           )}
-        </button>
+        </Link>
       </HoverCardTrigger>
       <HoverCardContent
         side="left"
@@ -557,12 +573,145 @@ function PostCoverMedia({ post }: { post: ExplorePost }) {
   );
 }
 
+// ── Editorial Article Card ──
+function EditorialCard({ post }: { post: ExplorePost }) {
+  const [commentSheetOpen, setCommentSheetOpen] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
+  usePostView(post.id, cardRef);
+
+  return (
+    <motion.div
+      ref={cardRef}
+      initial={{ opacity: 0, y: 20 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: "-50px" }}
+      transition={{ duration: 0.4, ease: "easeOut" }}
+      className="bg-card ring-border/40 group relative overflow-hidden rounded-2xl ring-1"
+    >
+      {post.href && (
+        <Link href={post.href} className="absolute inset-0 z-0" aria-label={post.title} />
+      )}
+
+      {/* Cover image */}
+      {post.coverImage && (
+        <div className="relative aspect-[16/9] overflow-hidden">
+          <Image
+            src={post.coverImage}
+            alt={post.title}
+            fill
+            className="object-cover transition-transform duration-500 group-hover:scale-105"
+            sizes="(max-width: 768px) 100vw, 576px"
+          />
+        </div>
+      )}
+
+      {/* Content */}
+      <div className="p-4">
+        {/* Pills */}
+        <div className="flex items-center gap-2">
+          {post.category && (
+            <span className="bg-muted rounded-full px-2.5 py-0.5 text-[11px] font-semibold">
+              {post.category.name}
+            </span>
+          )}
+          <span
+            className={cn(
+              "rounded-full px-2.5 py-0.5 text-[11px] font-semibold",
+              TYPE_COLORS[post.type] ?? "bg-muted text-muted-foreground"
+            )}
+          >
+            {post.type}
+          </span>
+        </div>
+
+        <h3 className="text-foreground mt-2 line-clamp-2 text-lg leading-tight font-bold">
+          {post.title}
+        </h3>
+        {post.excerpt && (
+          <p className="text-muted-foreground mt-1.5 line-clamp-2 text-sm leading-relaxed">
+            {post.excerpt}
+          </p>
+        )}
+
+        {/* Author + stats row */}
+        <div className="mt-3 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            {post.author.avatar ? (
+              <Image
+                src={post.author.avatar}
+                alt={post.author.name ?? "Author"}
+                width={24}
+                height={24}
+                className="rounded-full"
+              />
+            ) : (
+              <div className="bg-muted flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-bold">
+                {post.author.name?.[0]?.toUpperCase() ?? "?"}
+              </div>
+            )}
+            {post.author.username ? (
+              <Link
+                href={`/author/${post.author.username}`}
+                className="text-muted-foreground text-xs font-medium hover:underline"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {post.author.name ?? "Author"}
+              </Link>
+            ) : (
+              <span className="text-muted-foreground text-xs font-medium">
+                {post.author.name ?? "Author"}
+              </span>
+            )}
+            <span className="text-muted-foreground text-xs">·</span>
+            <span className="text-muted-foreground text-xs">{formatDate(post.publishedAt)}</span>
+          </div>
+
+          <div className="text-muted-foreground flex items-center gap-3 text-xs">
+            <span className="flex items-center gap-1">
+              <Eye className="h-3.5 w-3.5" />
+              {formatCount(post.views)}
+            </span>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                setCommentSheetOpen(true);
+              }}
+              className="flex items-center gap-1 hover:underline"
+            >
+              <MessageCircle className="h-3.5 w-3.5" />
+              {formatCount(post.commentCount)}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <ExploreCommentSheet
+        postId={post.id}
+        open={commentSheetOpen}
+        onOpenChange={setCommentSheetOpen}
+      />
+    </motion.div>
+  );
+}
+
 // ── Main ExploreCard ──
 interface ExploreCardProps {
   post: ExplorePost;
 }
 
 export function ExploreCard({ post }: ExploreCardProps) {
+  // Editorial content gets a different card layout
+  if (!post.isUserGenerated) {
+    return <EditorialCard post={post} />;
+  }
+
+  return <CommunityCard post={post} />;
+}
+
+// ── Community Card (original TikTok-style vertical card) ──
+function CommunityCard({ post }: { post: ExplorePost }) {
   const [commentSheetOpen, setCommentSheetOpen] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
 
@@ -662,9 +811,19 @@ export function ExploreCard({ post }: ExploreCardProps) {
               </div>
             )}
             <div className="flex flex-col">
-              <span className="text-[13px] font-semibold text-white">
-                {post.author.name ?? "Author"}
-              </span>
+              {post.author.username ? (
+                <Link
+                  href={`/author/${post.author.username}`}
+                  className="text-[13px] font-semibold text-white hover:underline"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {post.author.name ?? "Author"}
+                </Link>
+              ) : (
+                <span className="text-[13px] font-semibold text-white">
+                  {post.author.name ?? "Author"}
+                </span>
+              )}
               <span className="text-[11px] text-white/60">{formatDate(post.publishedAt)}</span>
             </div>
           </div>

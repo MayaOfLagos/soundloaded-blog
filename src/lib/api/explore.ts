@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { getPostUrl } from "@/lib/urls";
 import { getSettings } from "@/lib/settings";
+import { getExcludedUserIds } from "@/lib/services/blocks";
 
 export interface ExplorePost {
   id: string;
@@ -15,7 +16,7 @@ export interface ExplorePost {
   type: string;
   href: string;
   category: { name: string; slug: string } | null;
-  author: { id: string; name: string | null; avatar: string | null };
+  author: { id: string; name: string | null; avatar: string | null; username: string | null };
   commentCount: number;
   bookmarkCount: number;
   favoriteCount: number;
@@ -48,7 +49,7 @@ const EXPLORE_SELECT = {
   views: true,
   type: true,
   category: { select: { name: true, slug: true } },
-  author: { select: { id: true, name: true, image: true } },
+  author: { select: { id: true, name: true, image: true, username: true } },
   _count: { select: { comments: true, bookmarks: true, favorites: true, reactions: true } },
 } as const;
 
@@ -65,7 +66,7 @@ type RawExplorePost = {
   views: number;
   type: string;
   category: { name: string; slug: string } | null;
-  author: { id: string; name: string | null; image: string | null };
+  author: { id: string; name: string | null; image: string | null; username: string | null };
   _count: { comments: number; bookmarks: number; favorites: number; reactions: number };
 };
 
@@ -93,7 +94,12 @@ function mapExplorePost(p: RawExplorePost, permalinkStructure?: string): Explore
         ? getPostUrl(p, permalinkStructure)
         : `/${p.slug}`,
     category: p.category,
-    author: { id: p.author.id, name: p.author.name, avatar: p.author.image },
+    author: {
+      id: p.author.id,
+      name: p.author.name,
+      avatar: p.author.image,
+      username: p.author.username,
+    },
     commentCount: p._count.comments,
     bookmarkCount: p._count.bookmarks,
     favoriteCount: p._count.favorites,
@@ -111,25 +117,30 @@ function buildPagination(page: number, limit: number, total: number): ExplorePag
   };
 }
 
-// ── Community-only base filter ──────────────────────────────────────────
+// ── Base filter for explore (all published content, excludes music track pages) ──
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function buildBaseWhere(excludeUserId?: string, type?: string): any {
+async function buildBaseWhere(excludeUserId?: string, type?: string): Promise<any> {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const where: any = {
     status: "PUBLISHED" as const,
-    isUserGenerated: true,
-    type: "COMMUNITY" as const,
+    music: null, // exclude auto-created music track pages
   };
 
   if (excludeUserId) {
-    where.authorId = { not: excludeUserId };
+    const blockedIds = await getExcludedUserIds(excludeUserId);
+    const allExcluded = [excludeUserId, ...blockedIds];
+    where.authorId = { notIn: allExcluded };
   }
 
   if (type && type !== "all") {
-    // For community posts, type filter applies to media type within the post
-    // but keep the post type as COMMUNITY
-    delete where.type;
-    where.type = type.toUpperCase() as never;
+    if (type === "community") {
+      where.isUserGenerated = true;
+      where.type = "COMMUNITY" as const;
+    } else if (type === "editorial") {
+      where.isUserGenerated = false;
+    } else {
+      where.type = type.toUpperCase() as never;
+    }
   }
 
   return where;
@@ -214,7 +225,7 @@ export async function getExploreLatest(
   excludeUserId?: string
 ): Promise<ExploreResult> {
   const settings = await getSettings();
-  const where = buildBaseWhere(excludeUserId, type);
+  const where = await buildBaseWhere(excludeUserId, type);
 
   const [posts, total] = await Promise.all([
     db.post.findMany({
@@ -241,7 +252,7 @@ export async function getExploreTop(
   excludeUserId?: string
 ): Promise<ExploreResult> {
   const settings = await getSettings();
-  const where = buildBaseWhere(excludeUserId, type);
+  const where = await buildBaseWhere(excludeUserId, type);
 
   const [posts, total] = await Promise.all([
     db.post.findMany({
@@ -269,8 +280,9 @@ export async function getExploreTrending(
 ): Promise<ExploreResult> {
   const settings = await getSettings();
   const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const baseWhere = await buildBaseWhere(excludeUserId, type);
   const where = {
-    ...buildBaseWhere(excludeUserId, type),
+    ...baseWhere,
     publishedAt: { gte: sevenDaysAgo },
   };
 
@@ -299,7 +311,7 @@ export async function getExploreHot(
   excludeUserId?: string
 ): Promise<ExploreResult> {
   const settings = await getSettings();
-  const where = buildBaseWhere(excludeUserId, type);
+  const where = await buildBaseWhere(excludeUserId, type);
 
   // Daily seed for stable-within-a-day randomization
   const today = new Date().toISOString().slice(0, 10);

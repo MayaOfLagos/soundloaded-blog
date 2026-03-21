@@ -20,6 +20,7 @@ interface PostsPageProps {
 
 async function getPosts({ page, status, q }: { page: number; status?: string; q?: string }) {
   const where = {
+    type: { not: "COMMUNITY" as const },
     ...(status && status !== "ALL" ? { status: status as never } : {}),
     ...(q
       ? {
@@ -59,6 +60,7 @@ async function getPosts({ page, status, q }: { page: number; status?: string; q?
 async function getStatusCounts() {
   const counts = await db.post.groupBy({
     by: ["status"],
+    where: { type: { not: "COMMUNITY" } },
     _count: { _all: true },
   });
   const map: Record<string, number> = {};

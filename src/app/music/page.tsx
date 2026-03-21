@@ -14,6 +14,9 @@ import { JsonLd } from "@/components/common/JsonLd";
 import { buildCollectionPageSchema } from "@/lib/structured-data";
 import { MusicLeftSidebar } from "@/components/music/MusicLeftSidebar";
 import { MusicPageClient } from "./MusicPageClient";
+import { MusicSortedGrid } from "./MusicSortedGrid";
+import { Music2 } from "lucide-react";
+import { EmptyState } from "@/components/common/EmptyState";
 
 export async function generateMetadata(): Promise<Metadata> {
   const s = await getSettings();
@@ -32,14 +35,21 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export const revalidate = 60;
 
-export default async function MusicPage() {
+interface MusicPageProps {
+  searchParams: Promise<{ sort?: string }>;
+}
+
+export default async function MusicPage({ searchParams }: MusicPageProps) {
+  const { sort } = await searchParams;
   const settings = await getSettings();
   if (!settings.enableMusic) return <SectionDisabled section="Music" />;
 
+  const isSorted = sort === "latest" || sort === "popular";
+
   const schema = buildCollectionPageSchema(
-    "Music",
+    isSorted ? (sort === "latest" ? "New Releases" : "Trending Music") : "Music",
     `Stream and download the latest Afrobeats and Nigerian music on ${settings.siteName}.`,
-    "/music",
+    isSorted ? `/music?sort=${sort}` : "/music",
     settings.siteUrl,
     settings.siteName
   );
@@ -54,9 +64,13 @@ export default async function MusicPage() {
 
           {/* Main content */}
           <main className="min-w-0">
-            <Suspense fallback={<MusicPageSkeleton />}>
-              <MusicShelves />
-            </Suspense>
+            {isSorted ? (
+              <MusicSortedGrid sort={sort as "latest" | "popular"} />
+            ) : (
+              <Suspense fallback={<MusicPageSkeleton />}>
+                <MusicShelves />
+              </Suspense>
+            )}
           </main>
 
           {/* Right sidebar — trending & popular (server-rendered) */}
@@ -70,7 +84,7 @@ export default async function MusicPage() {
 }
 
 async function MusicShelves() {
-  const [newReleases, trending, albums, artists, genres, genreShelves] = await Promise.all([
+  const [newReleases, trending, albumsResult, artists, genres, genreShelves] = await Promise.all([
     getLatestMusic({ limit: 20 }),
     getPopularMusic({ limit: 20 }),
     getLatestAlbums({ limit: 15 }),
@@ -78,15 +92,15 @@ async function MusicShelves() {
     getDistinctGenres(),
     getTopGenresWithTracks({ genreLimit: 3, trackLimit: 20 }),
   ]);
+  const albums = albumsResult.albums;
 
   if (!newReleases.length && !trending.length) {
     return (
-      <div className="py-20 text-center">
-        <p className="text-xl font-bold">No music uploaded yet</p>
-        <p className="text-muted-foreground mt-2">
-          Music will appear here once uploaded from the admin panel.
-        </p>
-      </div>
+      <EmptyState
+        icon={Music2}
+        title="No music uploaded yet"
+        description="Tracks, singles, and albums will appear here once uploaded. Fresh music is on the way!"
+      />
     );
   }
 

@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import sanitizeHtml from "sanitize-html";
 import { createUserPostSchema } from "@/lib/validations/post";
+import { getExcludedUserIds } from "@/lib/services/blocks";
 
 // ── Role hierarchy ────────────────────────────────────────────────────
 const ROLE_LEVELS: Record<string, number> = {
@@ -188,14 +189,20 @@ export async function GET(req: NextRequest) {
         type: "COMMUNITY" as const,
       };
 
-      // Exclude hidden posts for logged-in users
+      // Exclude hidden posts and blocked users for logged-in users
       if (userId) {
-        const hiddenPosts = await db.hiddenPost.findMany({
-          where: { userId },
-          select: { postId: true },
-        });
+        const [hiddenPosts, excludedUserIds] = await Promise.all([
+          db.hiddenPost.findMany({
+            where: { userId },
+            select: { postId: true },
+          }),
+          getExcludedUserIds(userId),
+        ]);
         if (hiddenPosts.length > 0) {
           where.id = { notIn: hiddenPosts.map((hp) => hp.postId) };
+        }
+        if (excludedUserIds.length > 0) {
+          where.authorId = { ...(where.authorId ?? {}), notIn: excludedUserIds };
         }
       }
 
@@ -210,7 +217,7 @@ export async function GET(req: NextRequest) {
       }
 
       const includeFields = {
-        author: { select: { id: true, name: true, image: true } },
+        author: { select: { id: true, name: true, image: true, username: true } },
         category: { select: { name: true, slug: true } },
         _count: { select: { comments: true, reactions: true } },
       };
@@ -358,7 +365,7 @@ export async function GET(req: NextRequest) {
         cursor: { id: cursor },
         skip: 1,
         include: {
-          author: { select: { id: true, name: true, image: true } },
+          author: { select: { id: true, name: true, image: true, username: true } },
           category: { select: { name: true, slug: true } },
           _count: { select: { comments: true, reactions: true } },
         },
@@ -441,11 +448,8 @@ export async function POST(request: NextRequest) {
     const userId = (session.user as { id: string }).id;
     const userRole = (session.user as { role?: string }).role;
 
-    if (!hasMinRole(userRole, "CONTRIBUTOR")) {
-      return NextResponse.json(
-        { error: "You need Contributor access to create posts" },
-        { status: 403 }
-      );
+    if (!hasMinRole(userRole, "READER")) {
+      return NextResponse.json({ error: "You need an account to create posts" }, { status: 403 });
     }
 
     const json = await request.json();
@@ -495,7 +499,7 @@ export async function POST(request: NextRequest) {
         authorId: userId,
       },
       include: {
-        author: { select: { id: true, name: true, image: true } },
+        author: { select: { id: true, name: true, image: true, username: true } },
       },
     });
 

@@ -10,12 +10,12 @@ interface AlbumCardProps {
 
 export function AlbumCard({ album }: AlbumCardProps) {
   return (
-    <Link
-      href={`/albums/${album.slug}`}
-      className="group border-border bg-card hover:border-brand/30 flex flex-col overflow-hidden rounded-xl border transition-all hover:shadow-sm"
-    >
+    <div className="group border-border bg-card hover:border-brand/30 flex flex-col overflow-hidden rounded-xl border transition-all hover:shadow-sm">
       {/* Cover */}
-      <div className="bg-muted relative aspect-square overflow-hidden">
+      <Link
+        href={`/albums/${album.slug}`}
+        className="bg-muted relative block aspect-square overflow-hidden"
+      >
         {album.coverArt ? (
           <Image
             src={album.coverArt}
@@ -29,13 +29,20 @@ export function AlbumCard({ album }: AlbumCardProps) {
             <Disc className="text-muted-foreground/40 h-12 w-12" />
           </div>
         )}
-      </div>
+      </Link>
 
       <div className="p-3">
-        <p className="text-foreground group-hover:text-brand line-clamp-1 text-sm font-bold transition-colors">
-          {album.title}
-        </p>
-        <p className="text-muted-foreground mt-0.5 text-xs">{album.artistName}</p>
+        <Link href={`/albums/${album.slug}`}>
+          <p className="text-foreground group-hover:text-brand line-clamp-1 text-sm font-bold transition-colors">
+            {album.title}
+          </p>
+        </Link>
+        <Link
+          href={`/artists/${album.artistSlug}`}
+          className="text-muted-foreground hover:text-brand mt-0.5 block text-xs transition-colors"
+        >
+          {album.artistName}
+        </Link>
 
         <div className="text-muted-foreground mt-2 flex items-center justify-between text-[11px]">
           <div className="flex items-center gap-2">
@@ -52,6 +59,6 @@ export function AlbumCard({ album }: AlbumCardProps) {
           )}
         </div>
       </div>
-    </Link>
+    </div>
   );
 }

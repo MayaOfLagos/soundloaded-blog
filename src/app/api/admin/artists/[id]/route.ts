@@ -5,7 +5,7 @@ import { artistSchema } from "@/lib/validations/artist";
 import { indexArtist, removeFromIndex, INDEXES } from "@/lib/meilisearch";
 import { z } from "zod";
 
-const ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN", "EDITOR"];
+const ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN"];
 
 async function requireAdmin() {
   const session = await auth();
@@ -45,6 +45,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
         slug: data.slug,
         bio: data.bio ?? null,
         photo: data.photo || null,
+        coverImage: data.coverImage || null,
         country: data.country || "Nigeria",
         genre: data.genre ?? null,
         instagram: data.instagram ?? null,
@@ -52,6 +53,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
         facebook: data.facebook ?? null,
         spotify: data.spotify ?? null,
         appleMusic: data.appleMusic ?? null,
+        verified: data.verified ?? false,
       },
     });
 

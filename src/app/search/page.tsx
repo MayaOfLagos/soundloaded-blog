@@ -40,7 +40,13 @@ function SearchContent() {
     setHasSearched(true);
     fetch(`/api/search?q=${encodeURIComponent(q)}&full=1`)
       .then((r) => r.json())
-      .then((data) => setResults(data.results ?? { posts: [], music: [], artists: [] }))
+      .then((data) =>
+        setResults({
+          posts: data.posts ?? [],
+          music: data.music ?? [],
+          artists: data.artists ?? [],
+        })
+      )
       .catch(() => {})
       .finally(() => setLoading(false));
   }, [q]);
@@ -204,27 +210,29 @@ function SearchContent() {
           </TabsList>
 
           {/* All tab */}
-          <TabsContent value="all" className="space-y-8">
+          <TabsContent value="all" className="space-y-6">
             {results.posts.length > 0 && (
               <section>
-                <h2 className="text-foreground mb-3 flex items-center gap-2 text-base font-bold">
+                <h2 className="text-foreground mb-2 flex items-center gap-2 text-sm font-bold">
                   <FileText className="text-muted-foreground h-4 w-4" />
                   News &amp; Articles
                 </h2>
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
                   {results.posts.map((post) => (
-                    <PostCard key={post.id} post={post} />
+                    <div key={post.id} className="bg-card/50 ring-border/40 rounded-xl px-3 ring-1">
+                      <PostCard post={post} variant="compact" />
+                    </div>
                   ))}
                 </div>
               </section>
             )}
             {results.music.length > 0 && (
               <section>
-                <h2 className="text-foreground mb-3 flex items-center gap-2 text-base font-bold">
+                <h2 className="text-foreground mb-2 flex items-center gap-2 text-sm font-bold">
                   <Music className="text-muted-foreground h-4 w-4" />
                   Music
                 </h2>
-                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
                   {results.music.map((track) => (
                     <MusicCard key={track.id} track={track} />
                   ))}
@@ -233,11 +241,11 @@ function SearchContent() {
             )}
             {results.artists.length > 0 && (
               <section>
-                <h2 className="text-foreground mb-3 flex items-center gap-2 text-base font-bold">
+                <h2 className="text-foreground mb-2 flex items-center gap-2 text-sm font-bold">
                   <Mic2 className="text-muted-foreground h-4 w-4" />
                   Artists
                 </h2>
-                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
+                <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
                   {results.artists.map((a) => (
                     <ArtistCard key={a.id} artist={a} />
                   ))}
@@ -248,16 +256,16 @@ function SearchContent() {
 
           {/* News tab */}
           <TabsContent value="posts">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
               {results.posts.map((post) => (
-                <PostCard key={post.id} post={post} />
+                <PostCard key={post.id} post={post} hideExcerpt />
               ))}
             </div>
           </TabsContent>
 
           {/* Music tab */}
           <TabsContent value="music">
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
               {results.music.map((track) => (
                 <MusicCard key={track.id} track={track} />
               ))}
@@ -266,7 +274,7 @@ function SearchContent() {
 
           {/* Artists tab */}
           <TabsContent value="artists">
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
+            <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
               {results.artists.map((a) => (
                 <ArtistCard key={a.id} artist={a} />
               ))}

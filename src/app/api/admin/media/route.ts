@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { getPresignedUploadUrl, MEDIA_BUCKET, MUSIC_BUCKET, CDN_URL } from "@/lib/r2";
 import crypto from "crypto";
 
-const ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN", "EDITOR"];
+const ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN"];
 
 async function requireAdmin() {
   const session = await auth();
@@ -123,12 +123,23 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: `Unsupported file type: ${contentType}` }, { status: 400 });
     }
 
+    // Validate folder to prevent path traversal
+    const safeFolder = (folder || "uploads")
+      .replace(/\.\./g, "")
+      .replace(/^\/+/, "")
+      .replace(/[^a-zA-Z0-9_\-/]/g, "");
+
+    // Validate file size (100MB max for admin media)
+    if (size && size > 100 * 1024 * 1024) {
+      return NextResponse.json({ error: "File too large (max 100MB)" }, { status: 400 });
+    }
+
     const mediaType = getMediaType(contentType);
     const bucket = getBucket(mediaType);
     const ext = filename.split(".").pop() || "bin";
     const id = crypto.randomUUID().replace(/-/g, "").slice(0, 16);
     const prefix = mediaType === "AUDIO" ? "music" : "media";
-    const r2Key = `${prefix}/${folder || "uploads"}/${id}.${ext}`;
+    const r2Key = `${prefix}/${safeFolder}/${id}.${ext}`;
     const url = resolveUrl(r2Key, mediaType);
 
     // Get presigned URL

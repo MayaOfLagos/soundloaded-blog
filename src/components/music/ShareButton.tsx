@@ -28,10 +28,12 @@ export function ShareButton({ title, artist, url, size = 20, className }: ShareB
   const handleShare = async () => {
     if (navigator.share) {
       try {
-        await navigator.share({ title: `${title} — ${artist}`, text: shareText, url });
+        // Only pass title + url — passing both text and url duplicates the link on some devices
+        await navigator.share({ title: `${title} — ${artist}`, url });
       } catch (err) {
         if (err instanceof DOMException && err.name === "AbortError") return;
-        notify.error("Failed to share");
+        // Native share failed — fall back to dropdown
+        setShowDropdown((prev) => !prev);
       }
       return;
     }
@@ -58,7 +60,20 @@ export function ShareButton({ title, artist, url, size = 20, className }: ShareB
 
   const handleCopy = async () => {
     try {
-      await navigator.clipboard.writeText(url);
+      // clipboard.writeText can fail on mobile without secure context
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(url);
+      } else {
+        // Fallback: hidden textarea + execCommand
+        const ta = document.createElement("textarea");
+        ta.value = url;
+        ta.style.position = "fixed";
+        ta.style.left = "-9999px";
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+      }
       notify.success("Link copied!");
     } catch {
       notify.error("Failed to copy link");
@@ -84,7 +99,7 @@ export function ShareButton({ title, artist, url, size = 20, className }: ShareB
         type="button"
         onClick={handleShare}
         className={cn(
-          "bg-muted hover:bg-muted/80 flex h-11 w-11 items-center justify-center rounded-full transition-colors",
+          "bg-muted hover:bg-muted/80 flex items-center justify-center rounded-full p-2.5 transition-colors",
           className
         )}
         aria-label="Share"

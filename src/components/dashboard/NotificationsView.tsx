@@ -14,15 +14,25 @@ import {
   AlertCircle,
   Check,
   CheckCheck,
+  UserPlus,
+  Heart,
+  MessageCircle,
+  Flag,
 } from "lucide-react";
 import Link from "next/link";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const NOTIFICATION_ICONS: Record<string, React.ElementType> = {
-  COMMENT_REPLY: MessageSquare,
+  COMMENT_REPLY: MessageCircle,
   NEW_MUSIC: Music,
   SUBSCRIPTION_REMINDER: CreditCard,
   SYSTEM: AlertCircle,
   DOWNLOAD_READY: Check,
+  NEW_FOLLOWER: UserPlus,
+  REACTION: Heart,
+  NEW_COMMENT: MessageSquare,
+  REPORT_FILED: Flag,
+  REPORT_UPDATE: Flag,
 };
 
 function getNotificationIcon(type: string, className: string) {
@@ -50,8 +60,15 @@ interface Notification {
   title: string;
   body?: string;
   link?: string;
+  read?: boolean;
   readAt?: string | null;
   createdAt: string;
+  actor?: {
+    id: string;
+    name: string | null;
+    image: string | null;
+    username: string | null;
+  } | null;
 }
 
 function groupNotifications(notifications: Notification[]) {
@@ -99,7 +116,7 @@ function NotificationItem({
   notification: Notification;
   onMarkRead: (id: string) => void;
 }) {
-  const isUnread = !notification.readAt;
+  const isUnread = notification.read === false || (!notification.read && !notification.readAt);
 
   const content = (
     <div
@@ -108,14 +125,31 @@ function NotificationItem({
       }`}
     >
       <div className="flex items-start gap-3 p-4">
-        <div
-          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${
-            isUnread
-              ? "bg-blue-100 text-blue-600 dark:bg-blue-950 dark:text-blue-400"
-              : "bg-muted text-muted-foreground"
-          }`}
-        >
-          {getNotificationIcon(notification.type, "h-4 w-4")}
+        {/* Actor avatar or fallback icon */}
+        <div className="relative shrink-0">
+          {notification.actor?.image ? (
+            <Avatar className="h-9 w-9">
+              <AvatarImage src={notification.actor.image} />
+              <AvatarFallback className="text-xs">
+                {notification.actor.name?.charAt(0)?.toUpperCase() || "?"}
+              </AvatarFallback>
+            </Avatar>
+          ) : (
+            <div
+              className={`flex h-9 w-9 items-center justify-center rounded-full ${
+                isUnread
+                  ? "bg-blue-100 text-blue-600 dark:bg-blue-950 dark:text-blue-400"
+                  : "bg-muted text-muted-foreground"
+              }`}
+            >
+              {getNotificationIcon(notification.type, "h-4 w-4")}
+            </div>
+          )}
+          {notification.actor?.image && (
+            <div className="bg-card absolute -right-1 -bottom-1 flex h-5 w-5 items-center justify-center rounded-full shadow-sm">
+              {getNotificationIcon(notification.type, "h-3 w-3 text-muted-foreground")}
+            </div>
+          )}
         </div>
         <div className="min-w-0 flex-1">
           <p className={`text-sm ${isUnread ? "font-semibold" : "font-medium"}`}>

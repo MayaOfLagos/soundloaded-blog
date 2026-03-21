@@ -4,6 +4,17 @@ import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { initializeTransaction, PRICES } from "@/lib/paystack";
+import { Ratelimit } from "@upstash/ratelimit";
+import { Redis } from "@upstash/redis";
+
+const ratelimit =
+  process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN
+    ? new Ratelimit({
+        redis: Redis.fromEnv(),
+        limiter: Ratelimit.slidingWindow(10, "1 h"),
+        prefix: "ratelimit:payment",
+      })
+    : null;
 
 const schema = z.object({
   type: z.enum(["subscription", "download"]),
@@ -18,6 +29,18 @@ export async function POST(req: NextRequest) {
   }
 
   const user = session.user as { id: string; email?: string | null };
+
+  // Rate limit per user
+  if (ratelimit) {
+    const { success } = await ratelimit.limit(user.id);
+    if (!success) {
+      return NextResponse.json(
+        { error: "Too many payment requests. Please try again later." },
+        { status: 429 }
+      );
+    }
+  }
+
   if (!user.email) {
     return NextResponse.json({ error: "Email required" }, { status: 400 });
   }

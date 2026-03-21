@@ -20,7 +20,9 @@ export interface ArtistCardData {
   name: string;
   photo?: string | null;
   genre?: string | null;
+  verified: boolean;
   songCount: number;
+  followerCount: number;
 }
 
 export interface AlbumCardData {
@@ -28,6 +30,7 @@ export interface AlbumCardData {
   slug: string;
   title: string;
   artistName: string;
+  artistSlug: string;
   coverArt?: string | null;
   releaseYear?: number | null;
   trackCount: number;
@@ -114,7 +117,7 @@ export async function getLatestArtists({ limit = 12 }: { limit?: number } = {}):
     const artists = await db.artist.findMany({
       take: limit,
       orderBy: { createdAt: "desc" },
-      include: { _count: { select: { music: true } } },
+      include: { _count: { select: { music: true, artistFollows: true } } },
     });
     return artists.map((a) => ({
       id: a.id,
@@ -122,37 +125,55 @@ export async function getLatestArtists({ limit = 12 }: { limit?: number } = {}):
       name: a.name,
       photo: a.photo,
       genre: a.genre,
+      verified: a.verified,
       songCount: a._count.music,
+      followerCount: a._count.artistFollows,
     }));
   } catch {
     return [];
   }
 }
 
-export async function getLatestAlbums({ limit = 12 }: { limit?: number } = {}): Promise<
-  AlbumCardData[]
-> {
+export async function getLatestAlbums({
+  limit = 12,
+  cursor,
+}: { limit?: number; cursor?: string } = {}): Promise<{
+  albums: AlbumCardData[];
+  nextCursor: string | null;
+}> {
   try {
     const albums = await db.album.findMany({
-      take: limit,
+      take: limit + 1,
+      ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
       orderBy: { releaseDate: "desc" },
       include: {
-        artist: { select: { name: true } },
+        artist: { select: { name: true, slug: true } },
         _count: { select: { tracks: true } },
       },
     });
-    return albums.map((a) => ({
-      id: a.id,
-      slug: a.slug,
-      title: a.title,
-      artistName: a.artist.name,
-      coverArt: a.coverArt,
-      releaseYear: a.releaseDate ? new Date(a.releaseDate).getFullYear() : null,
-      trackCount: a._count.tracks,
-      totalDownloads: 0,
-    }));
+
+    let nextCursor: string | null = null;
+    if (albums.length > limit) {
+      const next = albums.pop();
+      nextCursor = next!.id;
+    }
+
+    return {
+      albums: albums.map((a) => ({
+        id: a.id,
+        slug: a.slug,
+        title: a.title,
+        artistName: a.artist.name,
+        artistSlug: a.artist.slug,
+        coverArt: a.coverArt,
+        releaseYear: a.releaseDate ? new Date(a.releaseDate).getFullYear() : null,
+        trackCount: a._count.tracks,
+        totalDownloads: 0,
+      })),
+      nextCursor,
+    };
   } catch {
-    return [];
+    return { albums: [], nextCursor: null };
   }
 }
 
@@ -161,11 +182,18 @@ export async function getArtistBySlug(slug: string) {
     return await db.artist.findUnique({
       where: { slug },
       include: {
+        _count: { select: { music: true, albums: true } },
         music: {
           orderBy: { createdAt: "desc" },
           include: { album: { select: { title: true } } },
         },
-        albums: { orderBy: { releaseDate: "desc" } },
+        albums: {
+          orderBy: { releaseDate: "desc" },
+          include: {
+            _count: { select: { tracks: true } },
+            tracks: { select: { downloadCount: true } },
+          },
+        },
       },
     });
   } catch {
@@ -313,7 +341,10 @@ export async function getAlbumBySlug(slug: string) {
       where: { slug },
       include: {
         artist: true,
-        tracks: { orderBy: { trackNumber: "asc" } },
+        tracks: {
+          orderBy: { trackNumber: "asc" },
+          include: { artist: { select: { name: true } } },
+        },
       },
     });
   } catch {

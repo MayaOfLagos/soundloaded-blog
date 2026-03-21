@@ -2,15 +2,17 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import { LeftSidebar } from "@/components/home/LeftSidebar";
 import { CategoryHero } from "@/components/blog/CategoryHero";
-import { CategoryMasonryGrid } from "@/components/blog/CategoryMasonryGrid";
+import { LyricsInfiniteList } from "./LyricsInfiniteList";
 import { TrendingSidebar } from "@/components/blog/TrendingSidebar";
 import { PopularMusicSidebar } from "@/components/music/PopularMusicSidebar";
-import { PostCardSkeleton } from "@/components/blog/PostCardSkeleton";
+import { Skeleton } from "@/components/ui/skeleton";
 import { NewsletterForm } from "@/components/common/NewsletterForm";
+import { getLatestPosts } from "@/lib/api/posts";
 import { getSettings } from "@/lib/settings";
 import { SectionDisabled } from "@/components/common/SectionDisabled";
 import { JsonLd } from "@/components/common/JsonLd";
 import { buildCollectionPageSchema } from "@/lib/structured-data";
+import type { PostCardData } from "@/components/blog/PostCard";
 
 export async function generateMetadata(): Promise<Metadata> {
   const s = await getSettings();
@@ -48,6 +50,7 @@ export default async function LyricsPage() {
           <LeftSidebar />
 
           <main className="min-w-0">
+            {/* Hero */}
             <section className="mb-6">
               <Suspense fallback={<HeroSkeleton />}>
                 <CategoryHero
@@ -57,6 +60,7 @@ export default async function LyricsPage() {
               </Suspense>
             </section>
 
+            {/* Title */}
             <div className="mb-5">
               <h1 className="text-foreground text-2xl font-black">Lyrics</h1>
               <p className="text-muted-foreground mt-1 text-sm">
@@ -64,15 +68,12 @@ export default async function LyricsPage() {
               </p>
             </div>
 
-            <Suspense fallback={<MasonrySkeleton />}>
-              <CategoryMasonryGrid
-                type="LYRICS"
-                heroCount={3}
-                emptyTitle="No lyrics yet"
-                emptyMessage="Lyrics will appear here once published!"
-              />
+            {/* Two-column list with infinite scroll */}
+            <Suspense fallback={<ListSkeleton />}>
+              <LyricsListLoader permalinkStructure={settings.permalinkStructure} />
             </Suspense>
 
+            {/* Mobile sidebars */}
             <div className="mt-8 space-y-5 lg:hidden">
               <Suspense fallback={<SidebarBlockSkeleton />}>
                 <TrendingSidebar />
@@ -84,6 +85,7 @@ export default async function LyricsPage() {
             </div>
           </main>
 
+          {/* Right sidebar */}
           <aside className="sticky top-16 hidden h-[calc(100vh-4rem)] space-y-5 overflow-y-auto pb-8 lg:block">
             <Suspense fallback={<SidebarBlockSkeleton />}>
               <TrendingSidebar />
@@ -109,18 +111,50 @@ export default async function LyricsPage() {
   );
 }
 
+/* ━━━ Server loader ━━━ */
+
+async function LyricsListLoader({ permalinkStructure }: { permalinkStructure: string }) {
+  const heroCount = 3;
+  const initialLimit = 20 + heroCount;
+  const posts = await getLatestPosts({
+    type: "LYRICS",
+    limit: initialLimit,
+    permalinkStructure,
+  });
+
+  const listPosts: PostCardData[] = posts.slice(heroCount);
+  const hasNext = posts.length >= initialLimit;
+
+  return (
+    <LyricsInfiniteList
+      initialPosts={listPosts}
+      initialHasNext={hasNext}
+      permalinkStructure={permalinkStructure}
+    />
+  );
+}
+
+/* ━━━ Skeletons ━━━ */
+
 function HeroSkeleton() {
   return (
     <div className="bg-muted ring-border/20 aspect-[16/9] animate-pulse rounded-3xl ring-1 sm:aspect-[21/9]" />
   );
 }
 
-function MasonrySkeleton() {
+function ListSkeleton() {
   return (
-    <div className="columns-1 gap-4 sm:columns-2 lg:columns-3">
-      {Array.from({ length: 9 }).map((_, i) => (
-        <div key={i} className="mb-4 break-inside-avoid">
-          <PostCardSkeleton />
+    <div className="grid grid-cols-1 gap-x-6 sm:grid-cols-2">
+      {Array.from({ length: 10 }).map((_, i) => (
+        <div key={i} className="border-border/40 border-b px-3 py-3">
+          <div className="flex items-center gap-3">
+            <Skeleton className="h-14 w-14 flex-shrink-0 rounded-lg" />
+            <div className="min-w-0 flex-1 space-y-2">
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-3 w-24" />
+              <Skeleton className="h-3 w-32" />
+            </div>
+          </div>
         </div>
       ))}
     </div>

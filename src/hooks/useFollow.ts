@@ -40,14 +40,17 @@ export function useToggleFollow() {
   });
 }
 
-export function useFollowSuggestions() {
+export function useFollowSuggestions(enabled = true) {
   return useQuery({
     queryKey: ["follow-suggestions"],
+    enabled,
+    retry: false,
     queryFn: async () => {
       const { data } = await axios.get<{
         suggestions: {
           id: string;
           name: string | null;
+          username: string | null;
           image: string | null;
           bio: string | null;
           followerCount: number;

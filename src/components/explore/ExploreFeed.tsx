@@ -1,16 +1,22 @@
 "use client";
 
-import { useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import axios from "axios";
 import { ExploreCard, VideoMuteProvider } from "./ExploreCard";
 import { ExploreCardSkeleton } from "./ExploreCardSkeleton";
-import { StoryTray } from "@/components/stories/StoryTray";
+import { ExploreTabBar } from "./ExploreTabBar";
 import type { ExplorePost, ExploreResult } from "@/lib/api/explore";
 
-async function fetchExplorePage({ pageParam }: { pageParam: number }): Promise<ExploreResult> {
+async function fetchExplorePage({
+  pageParam,
+  mode,
+}: {
+  pageParam: number;
+  mode: string;
+}): Promise<ExploreResult> {
   const params = new URLSearchParams({
-    mode: "latest",
+    mode,
     page: String(pageParam),
     limit: "10",
   });
@@ -18,16 +24,13 @@ async function fetchExplorePage({ pageParam }: { pageParam: number }): Promise<E
   return res.data;
 }
 
-interface ExploreFeedProps {
-  enableStories?: boolean;
-}
-
-export function ExploreFeed({ enableStories = true }: ExploreFeedProps) {
+export function ExploreFeed() {
+  const [activeTab, setActiveTab] = useState("trending");
   const sentinelRef = useRef<HTMLDivElement>(null);
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useInfiniteQuery({
-    queryKey: ["explore", "latest"],
-    queryFn: ({ pageParam }) => fetchExplorePage({ pageParam }),
+    queryKey: ["explore", activeTab],
+    queryFn: ({ pageParam }) => fetchExplorePage({ pageParam, mode: activeTab }),
     initialPageParam: 1,
     getNextPageParam: (lastPage) =>
       lastPage.pagination.hasNext ? lastPage.pagination.page + 1 : undefined,
@@ -62,8 +65,8 @@ export function ExploreFeed({ enableStories = true }: ExploreFeedProps) {
   return (
     <VideoMuteProvider>
       <div className="mx-auto w-full max-w-lg space-y-4 sm:max-w-xl">
-        {/* Story tray */}
-        <StoryTray enableStories={enableStories} />
+        {/* Tab bar */}
+        <ExploreTabBar activeTab={activeTab} onTabChange={setActiveTab} />
 
         {/* Feed */}
         {isLoading && Array.from({ length: 3 }).map((_, i) => <ExploreCardSkeleton key={i} />)}

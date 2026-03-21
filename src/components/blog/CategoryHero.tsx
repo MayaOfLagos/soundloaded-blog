@@ -1,6 +1,7 @@
 import { getFeaturedPostsByType } from "@/lib/api/posts";
 import { getSettings } from "@/lib/settings";
 import { HeroSlider } from "./HeroSlider";
+import { Sparkles } from "lucide-react";
 
 interface CategoryHeroProps {
   type: string;
@@ -11,7 +12,7 @@ interface CategoryHeroProps {
 export async function CategoryHero({
   type,
   limit = 3,
-  emptyMessage = "No featured posts yet. Check back soon!",
+  emptyMessage = "Featured content will appear here once published. Stay tuned!",
 }: CategoryHeroProps) {
   const settings = await getSettings();
   const posts = await getFeaturedPostsByType({
@@ -22,8 +23,13 @@ export async function CategoryHero({
 
   if (!posts.length) {
     return (
-      <div className="border-border bg-card rounded-2xl border p-12 text-center">
-        <p className="text-muted-foreground">{emptyMessage}</p>
+      <div className="border-border bg-card flex aspect-[21/9] items-center justify-center rounded-2xl border">
+        <div className="text-center">
+          <div className="bg-muted/50 mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-xl">
+            <Sparkles className="text-muted-foreground h-6 w-6" />
+          </div>
+          <p className="text-muted-foreground text-sm">{emptyMessage}</p>
+        </div>
       </div>
     );
   }

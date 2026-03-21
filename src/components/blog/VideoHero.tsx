@@ -1,7 +1,7 @@
 import { getFeaturedPostsByType } from "@/lib/api/posts";
 import { getSettings } from "@/lib/settings";
 import { VideoHeroSlider } from "./VideoHeroSlider";
-import { Play } from "lucide-react";
+import { PlaySquare } from "lucide-react";
 
 export async function VideoHero() {
   const settings = await getSettings();
@@ -15,8 +15,13 @@ export async function VideoHero() {
     return (
       <div className="border-border bg-card flex aspect-video items-center justify-center rounded-2xl border">
         <div className="text-center">
-          <Play className="text-muted-foreground/30 mx-auto mb-3 h-12 w-12" />
-          <p className="text-muted-foreground">No videos yet. Check back soon!</p>
+          <div className="bg-muted/50 mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl">
+            <PlaySquare className="text-muted-foreground h-7 w-7" />
+          </div>
+          <p className="text-foreground text-sm font-semibold">No featured videos yet</p>
+          <p className="text-muted-foreground mt-1 text-xs">
+            Videos will appear here once published.
+          </p>
         </div>
       </div>
     );

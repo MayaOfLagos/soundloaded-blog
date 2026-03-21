@@ -13,12 +13,10 @@ import {
   ChevronUp,
   X,
   Music,
-  ListMusic,
 } from "lucide-react";
 import { usePlayerStore } from "@/store/player.store";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 import { formatDuration } from "@/lib/utils";
 import { MiniPlayer } from "./MiniPlayer";
 
@@ -33,6 +31,7 @@ export function MusicPlayer() {
     isMinimized,
     setCurrentTime,
     setDuration,
+    setBuffering,
     togglePlay,
     playNext,
     playPrev,
@@ -44,7 +43,7 @@ export function MusicPlayer() {
 
   const howlRef = useRef<Howl | null>(null);
   const animFrameRef = useRef<number>(0);
-  const [seeking, setSeeking] = useState(false);
+  const [, setSeeking] = useState(false);
 
   // Load and play track when currentTrack changes
   useEffect(() => {
@@ -65,6 +64,7 @@ export function MusicPlayer() {
         setDuration(howlRef.current?.duration() ?? 0);
       },
       onplay: () => {
+        setBuffering(false);
         const tick = () => {
           if (howlRef.current?.playing()) {
             setCurrentTime(howlRef.current.seek() as number);

@@ -2,26 +2,13 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  Home,
-  Compass,
-  Upload,
-  Music,
-  Tag,
-  Instagram,
-  Twitter,
-  Youtube,
-  Facebook,
-  Send,
-  Phone,
-  Rss,
-  icons,
-} from "lucide-react";
+import { Home, Upload, Tag, icons } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSettings } from "@/hooks/useSettings";
 import { useQuery } from "@tanstack/react-query";
 import { useIsMounted } from "@/hooks/useIsMounted";
 import axios from "axios";
+import { SOCIAL_ICON_MAP } from "@/components/common/SocialIcons";
 
 interface Category {
   id: string;
@@ -56,16 +43,6 @@ const TRENDING_TAGS = [
   "Freestyle",
   "Mixtape",
 ];
-
-const SOCIAL_ICON_MAP: Record<string, typeof Instagram> = {
-  instagram: Instagram,
-  twitter: Twitter,
-  youtube: Youtube,
-  facebook: Facebook,
-  tiktok: Music,
-  telegram: Send,
-  whatsapp: Phone,
-};
 
 const SOCIAL_URL_MAP: Record<string, (handle: string) => string> = {
   instagram: (h) => `https://instagram.com/${h}`,
@@ -151,56 +128,6 @@ export function LeftSidebar() {
           Home
           {pathname === "/" && <span className="bg-brand ml-auto h-2 w-2 rounded-full" />}
         </Link>
-        {/* Feed link */}
-        {(!settings || settings.enableFeed) && (
-          <Link
-            href="/feed"
-            className={cn(
-              "group flex items-center gap-3.5 rounded-xl px-3 py-3 text-[15px] font-semibold transition-all duration-200",
-              pathname === "/feed"
-                ? "bg-brand/10 text-brand font-bold"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground"
-            )}
-          >
-            <div
-              className={cn(
-                "flex h-9 w-9 items-center justify-center rounded-lg transition-colors",
-                pathname === "/feed"
-                  ? "bg-brand/15 text-brand"
-                  : "bg-muted text-muted-foreground group-hover:bg-muted group-hover:text-foreground"
-              )}
-            >
-              <Rss className="h-[18px] w-[18px]" />
-            </div>
-            Feed
-            {pathname === "/feed" && <span className="bg-brand ml-auto h-2 w-2 rounded-full" />}
-          </Link>
-        )}
-        {/* Explore link */}
-        {(!settings || settings.enableExplore) && (
-          <Link
-            href="/explore"
-            className={cn(
-              "group flex items-center gap-3.5 rounded-xl px-3 py-3 text-[15px] font-semibold transition-all duration-200",
-              pathname === "/explore"
-                ? "bg-brand/10 text-brand font-bold"
-                : "text-muted-foreground hover:bg-muted hover:text-foreground"
-            )}
-          >
-            <div
-              className={cn(
-                "flex h-9 w-9 items-center justify-center rounded-lg transition-colors",
-                pathname === "/explore"
-                  ? "bg-brand/15 text-brand"
-                  : "bg-muted text-muted-foreground group-hover:bg-muted group-hover:text-foreground"
-              )}
-            >
-              <Compass className="h-[18px] w-[18px]" />
-            </div>
-            Explore
-            {pathname === "/explore" && <span className="bg-brand ml-auto h-2 w-2 rounded-full" />}
-          </Link>
-        )}
         {/* Dynamic categories */}
         {filteredCategories.map((cat) => {
           const href = `/${cat.slug}`;
@@ -294,7 +221,24 @@ export function LeftSidebar() {
               </a>
             ))}
           </div>
-          <p className="text-muted-foreground/50 mt-3 text-[10px]" suppressHydrationWarning>
+          <div className="text-muted-foreground/60 mt-3 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10px]">
+            <Link href="/about" className="hover:text-foreground transition-colors">
+              About
+            </Link>
+            <span className="text-muted-foreground/30">·</span>
+            <Link href="/contact" className="hover:text-foreground transition-colors">
+              Contact
+            </Link>
+            <span className="text-muted-foreground/30">·</span>
+            <Link href="/privacy" className="hover:text-foreground transition-colors">
+              Privacy
+            </Link>
+            <span className="text-muted-foreground/30">·</span>
+            <Link href="/terms" className="hover:text-foreground transition-colors">
+              Terms
+            </Link>
+          </div>
+          <p className="text-muted-foreground/40 mt-1.5 text-[10px]" suppressHydrationWarning>
             &copy; {new Date().getFullYear()} {copyrightName}
           </p>
         </div>

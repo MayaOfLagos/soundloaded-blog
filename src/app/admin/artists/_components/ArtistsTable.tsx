@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { Pencil, Trash2, Loader2, X, Mic2 } from "lucide-react";
+import { Pencil, Trash2, Loader2, X, Mic2, BadgeCheck } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import axios from "axios";
 import toast from "react-hot-toast";
@@ -36,6 +36,7 @@ interface Artist {
   slug: string;
   bio: string | null;
   photo: string | null;
+  coverImage: string | null;
   country: string | null;
   genre: string | null;
   instagram: string | null;
@@ -43,6 +44,7 @@ interface Artist {
   facebook: string | null;
   spotify: string | null;
   appleMusic: string | null;
+  verified: boolean;
   _count: { music: number; albums: number };
 }
 
@@ -195,8 +197,11 @@ export function ArtistsTable({ artists }: ArtistsTableProps) {
                     </TableCell>
                     <TableCell>
                       <div>
-                        <p className="text-foreground line-clamp-1 text-sm font-semibold">
-                          {artist.name}
+                        <p className="text-foreground flex items-center gap-1 text-sm font-semibold">
+                          <span className="line-clamp-1">{artist.name}</span>
+                          {artist.verified && (
+                            <BadgeCheck className="h-4 w-4 flex-shrink-0 fill-blue-500 text-white" />
+                          )}
                         </p>
                         <p className="text-muted-foreground mt-0.5 text-xs">/{artist.slug}</p>
                       </div>

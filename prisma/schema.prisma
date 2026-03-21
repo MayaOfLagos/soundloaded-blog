@@ -11,6 +11,7 @@ datasource db {
 model User {
   id            String    @id @default(cuid())
   name          String?
+  username      String?   @unique
   email         String    @unique
   emailVerified DateTime?
   password      String?
@@ -38,14 +39,22 @@ model User {
   reactions         Reaction[]
   following         Follow[]    @relation("UserFollowing")
   followers         Follow[]    @relation("UserFollowers")
+  artistFollows     ArtistFollow[]
   stories           Story[]
   storyViews        StoryView[]
-  notifications     Notification[]
+  notifications          Notification[] @relation("NotificationsReceived")
+  triggeredNotifications Notification[] @relation("NotificationsTriggered")
   preferences       UserPreferences?
   hiddenPosts       HiddenPost[]
   reports           Report[]
   commentLikes      CommentLike[]
   postViews         PostView[]
+  blocking          UserBlock[]  @relation("UserBlocking")
+  blockedBy         UserBlock[]  @relation("UserBlocked")
+  artistProfile        Artist?              @relation("UserArtistProfile")
+  labelProfile         Label?               @relation("UserLabelProfile")
+  creatorApplications  CreatorApplication[]
+  reviewedApplications CreatorApplication[] @relation("ApplicationReviewer")
 }
 
 enum UserRole {
@@ -172,6 +181,7 @@ model Artist {
   slug       String   @unique
   bio        String?
   photo      String?
+  coverImage String?
   country    String?  @default("Nigeria")
   genre      String?
   instagram  String?
@@ -179,13 +189,86 @@ model Artist {
   facebook   String?
   spotify    String?
   appleMusic String?
+  verified   Boolean  @default(false)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  music  Music[]
-  albums Album[]
+  ownerId   String?  @unique
+  owner     User?    @relation("UserArtistProfile", fields: [ownerId], references: [id], onDelete: SetNull)
+  labelId   String?
+  label     Label?   @relation(fields: [labelId], references: [id], onDelete: SetNull)
+
+  music         Music[]
+  albums        Album[]
+  artistFollows ArtistFollow[]
 
   @@index([slug])
+  @@index([ownerId])
+  @@index([labelId])
+}
+
+// ── Labels ────────────────────────────────────────────────────────────
+model Label {
+  id         String   @id @default(cuid())
+  name       String
+  slug       String   @unique
+  bio        String?
+  logo       String?
+  coverImage String?
+  country    String?  @default("Nigeria")
+  website    String?
+  instagram  String?
+  twitter    String?
+  facebook   String?
+  spotify    String?
+  appleMusic String?
+  verified   Boolean  @default(false)
+  ownerId    String?  @unique
+  owner      User?    @relation("UserLabelProfile", fields: [ownerId], references: [id], onDelete: SetNull)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  artists    Artist[]
+
+  @@index([slug])
+  @@index([ownerId])
+}
+
+// ── Creator Applications ──────────────────────────────────────────────
+enum CreatorType {
+  ARTIST
+  LABEL
+}
+
+enum ApplicationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model CreatorApplication {
+  id           String            @id @default(cuid())
+  userId       String
+  user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type         CreatorType
+  status       ApplicationStatus @default(PENDING)
+  displayName  String
+  slug         String
+  bio          String?           @db.Text
+  genre        String?
+  country      String?           @default("Nigeria")
+  photo        String?
+  socialLinks  Json?
+  proofUrls    Json?
+  reviewedById String?
+  reviewedBy   User?             @relation("ApplicationReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  reviewNote   String?           @db.Text
+  reviewedAt   DateTime?
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+
+  @@index([status, createdAt])
+  @@index([userId])
 }
 
 // ── Albums ────────────────────────────────────────────────────────────
@@ -240,9 +323,11 @@ model Category {
   description String?
   color       String?
   icon        String?
+  sortOrder   Int      @default(0)
   posts       Post[]
 
   @@index([slug])
+  @@index([sortOrder])
 }
 
 model Tag {
@@ -662,7 +747,9 @@ model Reaction {
 model Notification {
   id        String           @id @default(cuid())
   userId    String
-  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User             @relation("NotificationsReceived", fields: [userId], references: [id], onDelete: Cascade)
+  actorId   String?
+  actor     User?            @relation("NotificationsTriggered", fields: [actorId], references: [id], onDelete: SetNull)
   type      NotificationType
   title     String
   body      String
@@ -672,6 +759,7 @@ model Notification {
   createdAt DateTime         @default(now())
 
   @@index([userId, read, createdAt])
+  @@index([actorId])
 }
 
 enum NotificationType {
@@ -682,6 +770,12 @@ enum NotificationType {
   DOWNLOAD_READY
   REPORT_FILED
   REPORT_UPDATE
+  NEW_FOLLOWER
+  REACTION
+  NEW_COMMENT
+  APPLICATION_SUBMITTED
+  APPLICATION_APPROVED
+  APPLICATION_REJECTED
 }
 
 // ── User Preferences ──────────────────────────────────────────────────
@@ -714,6 +808,19 @@ model Follow {
   @@unique([followerId, followingId])
   @@index([followerId])
   @@index([followingId])
+}
+
+model ArtistFollow {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  artistId  String
+  artist    Artist   @relation(fields: [artistId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, artistId])
+  @@index([userId])
+  @@index([artistId])
 }
 
 // ── Stories ───────────────────────────────────────────────────────────
@@ -825,4 +932,24 @@ enum ReportStatus {
   REVIEWED
   DISMISSED
   ACTION_TAKEN
+}
+
+// ── User Blocks & Mutes ──────────────────────────────────────────────
+model UserBlock {
+  id        String    @id @default(cuid())
+  blockerId String
+  blocker   User      @relation("UserBlocking", fields: [blockerId], references: [id], onDelete: Cascade)
+  blockedId String
+  blocked   User      @relation("UserBlocked", fields: [blockedId], references: [id], onDelete: Cascade)
+  type      BlockType @default(BLOCK)
+  createdAt DateTime  @default(now())
+
+  @@unique([blockerId, blockedId])
+  @@index([blockerId])
+  @@index([blockedId])
+}
+
+enum BlockType {
+  BLOCK
+  MUTE
 }

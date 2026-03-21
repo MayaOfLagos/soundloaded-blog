@@ -1,16 +1,15 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
-import { LeftSidebar } from "@/components/home/LeftSidebar";
-import { ArtistCard } from "@/components/music/ArtistCard";
+import { MusicLeftSidebar } from "@/components/music/MusicLeftSidebar";
 import { TrendingSidebar } from "@/components/blog/TrendingSidebar";
 import { PopularMusicSidebar } from "@/components/music/PopularMusicSidebar";
-import { Skeleton } from "@/components/ui/skeleton";
 import { NewsletterForm } from "@/components/common/NewsletterForm";
-import { getLatestArtists } from "@/lib/api/music";
+import { getDistinctGenres } from "@/lib/api/music";
 import { getSettings } from "@/lib/settings";
 import { SectionDisabled } from "@/components/common/SectionDisabled";
 import { JsonLd } from "@/components/common/JsonLd";
 import { buildCollectionPageSchema } from "@/lib/structured-data";
+import { ArtistsInfiniteGrid, ArtistsGridSkeleton } from "./ArtistsInfiniteGrid";
 
 export async function generateMetadata(): Promise<Metadata> {
   const s = await getSettings();
@@ -45,7 +44,7 @@ export default async function ArtistsPage() {
       <JsonLd schema={[schema]} />
       <div className="mx-auto max-w-[1440px] px-4 sm:px-6">
         <div className="grid grid-cols-1 gap-6 py-5 lg:grid-cols-[1fr_300px] xl:grid-cols-[220px_1fr_300px]">
-          <LeftSidebar />
+          <MusicLeftSidebar />
 
           <main className="min-w-0">
             <div className="mb-5">
@@ -56,7 +55,7 @@ export default async function ArtistsPage() {
             </div>
 
             <Suspense fallback={<ArtistsGridSkeleton />}>
-              <ArtistsGrid />
+              <ArtistsGridLoader />
             </Suspense>
 
             <div className="mt-8 space-y-5 lg:hidden">
@@ -95,41 +94,9 @@ export default async function ArtistsPage() {
   );
 }
 
-async function ArtistsGrid() {
-  const artists = await getLatestArtists({ limit: 24 });
-
-  if (!artists.length) {
-    return (
-      <div className="py-20 text-center">
-        <p className="text-xl font-bold">No artists yet</p>
-        <p className="text-muted-foreground mt-2">
-          Artists will appear here once added from the admin panel.
-        </p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-      {artists.map((artist) => (
-        <ArtistCard key={artist.id} artist={artist} />
-      ))}
-    </div>
-  );
-}
-
-function ArtistsGridSkeleton() {
-  return (
-    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-      {Array.from({ length: 10 }).map((_, i) => (
-        <div key={i} className="border-border flex flex-col items-center rounded-xl border p-4">
-          <Skeleton className="mb-3 h-20 w-20 rounded-full" />
-          <Skeleton className="h-4 w-24" />
-          <Skeleton className="mt-2 h-3 w-16" />
-        </div>
-      ))}
-    </div>
-  );
+async function ArtistsGridLoader() {
+  const genres = await getDistinctGenres();
+  return <ArtistsInfiniteGrid genres={genres} />;
 }
 
 function SidebarBlockSkeleton() {

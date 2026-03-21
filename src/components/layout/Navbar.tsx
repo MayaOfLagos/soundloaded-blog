@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Compass, Heart, Bookmark, Library } from "lucide-react";
+import { Home, Rss, Compass } from "lucide-react";
 import { Logo } from "@/components/common/Logo";
 import { SearchBar } from "@/components/search/SearchBar";
+import { NotificationBell } from "./NotificationBell";
 import { UserMenu } from "./UserMenu";
 import { MobileNav } from "./MobileNav";
 import { useSettings } from "@/hooks/useSettings";
@@ -12,10 +13,8 @@ import { cn } from "@/lib/utils";
 
 const ALL_NAV_LINKS = [
   { href: "/", label: "Home", icon: Home, settingsKey: null },
+  { href: "/feed", label: "Feed", icon: Rss, settingsKey: "enableFeed" as const },
   { href: "/explore", label: "Explore", icon: Compass, settingsKey: "enableExplore" as const },
-  { href: "/favorites", label: "Favorites", icon: Heart, settingsKey: null },
-  { href: "/bookmarks", label: "Bookmarks", icon: Bookmark, settingsKey: null },
-  { href: "/library", label: "Library", icon: Library, settingsKey: null },
 ];
 
 export function Navbar() {
@@ -65,6 +64,7 @@ export function Navbar() {
         {/* Right actions */}
         <div className="ml-auto flex items-center gap-2">
           <SearchBar />
+          <NotificationBell />
           <UserMenu />
         </div>
       </div>

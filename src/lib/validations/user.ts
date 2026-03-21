@@ -2,6 +2,15 @@ import { z } from "zod";
 
 export const updateProfileSchema = z.object({
   name: z.string().min(2).max(80).optional(),
+  username: z
+    .string()
+    .min(3, "Username must be at least 3 characters")
+    .max(30, "Username must be at most 30 characters")
+    .regex(
+      /^[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?$/,
+      "Username must start and end with a letter or number and can only contain lowercase letters, numbers, dots, hyphens, and underscores"
+    )
+    .optional(),
   bio: z.string().max(500).optional(),
   location: z.string().max(100).optional(),
   socialLinks: z

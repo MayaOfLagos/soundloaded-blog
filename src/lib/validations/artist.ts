@@ -5,6 +5,7 @@ export const artistSchema = z.object({
   slug: z.string().min(1, "Slug is required"),
   bio: z.string().optional().nullable(),
   photo: z.string().url().optional().nullable().or(z.literal("")),
+  coverImage: z.string().url().optional().nullable().or(z.literal("")),
   country: z.string().optional().nullable(),
   genre: z.string().optional().nullable(),
   instagram: z.string().optional().nullable(),
@@ -12,6 +13,7 @@ export const artistSchema = z.object({
   facebook: z.string().optional().nullable(),
   spotify: z.string().optional().nullable(),
   appleMusic: z.string().optional().nullable(),
+  verified: z.boolean().optional(),
 });
 
 export type ArtistFormValues = z.infer<typeof artistSchema>;

@@ -21,6 +21,11 @@ export async function GET(request: NextRequest) {
       orderBy: { createdAt: "desc" },
       skip: (page - 1) * limit,
       take: limit,
+      include: {
+        actor: {
+          select: { id: true, name: true, image: true, username: true },
+        },
+      },
     }),
     db.notification.count({ where }),
   ]);

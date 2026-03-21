@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 export async function GET() {
   try {
     const categories = await db.category.findMany({
-      orderBy: { name: "asc" },
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
       include: { _count: { select: { posts: { where: { status: "PUBLISHED" } } } } },
     });
     return NextResponse.json({ categories });

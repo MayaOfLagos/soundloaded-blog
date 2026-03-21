@@ -15,6 +15,7 @@ export async function GET() {
     where: { id: userId },
     select: {
       name: true,
+      username: true,
       email: true,
       image: true,
       bio: true,
@@ -49,13 +50,22 @@ export async function PATCH(request: NextRequest) {
     );
   }
 
-  const { name, bio, location, socialLinks, image } = result.data;
+  const { name, username, bio, location, socialLinks, image } = result.data;
+
+  // If username is being changed, check uniqueness
+  if (username) {
+    const existing = await db.user.findUnique({ where: { username } });
+    if (existing && existing.id !== userId) {
+      return NextResponse.json({ error: "Username is already taken" }, { status: 409 });
+    }
+  }
 
   const user = await db.user.update({
     where: { id: userId },
-    data: { name, bio, location, socialLinks, image },
+    data: { name, username, bio, location, socialLinks, image },
     select: {
       name: true,
+      username: true,
       email: true,
       image: true,
       bio: true,

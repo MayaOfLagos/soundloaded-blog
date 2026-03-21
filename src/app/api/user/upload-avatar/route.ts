@@ -1,9 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { getPresignedUploadUrl, MEDIA_BUCKET, CDN_URL } from "@/lib/r2";
+import { Ratelimit } from "@upstash/ratelimit";
+import { Redis } from "@upstash/redis";
 import crypto from "crypto";
 
 const ALLOWED_TYPES = ["image/png", "image/jpeg", "image/webp"];
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
+
+const ratelimit =
+  process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN
+    ? new Ratelimit({
+        redis: Redis.fromEnv(),
+        limiter: Ratelimit.slidingWindow(5, "1 h"),
+        prefix: "ratelimit:avatar",
+      })
+    : null;
 
 export async function POST(request: NextRequest) {
   const session = await auth();
@@ -12,8 +24,24 @@ export async function POST(request: NextRequest) {
   }
 
   const userId = (session.user as { id: string }).id;
+
+  // Rate limit per user
+  if (ratelimit) {
+    const { success } = await ratelimit.limit(userId);
+    if (!success) {
+      return NextResponse.json(
+        { error: "Too many uploads. Please try again later." },
+        { status: 429 }
+      );
+    }
+  }
+
   const body = await request.json();
-  const { filename, contentType } = body as { filename: string; contentType: string };
+  const { filename, contentType, size } = body as {
+    filename: string;
+    contentType: string;
+    size?: number;
+  };
 
   if (!filename || !contentType) {
     return NextResponse.json({ error: "filename and contentType are required" }, { status: 400 });
@@ -24,6 +52,10 @@ export async function POST(request: NextRequest) {
       { error: "Only PNG, JPEG, and WebP images are allowed" },
       { status: 400 }
     );
+  }
+
+  if (size && size > MAX_FILE_SIZE) {
+    return NextResponse.json({ error: "File too large (max 5MB)" }, { status: 400 });
   }
 
   const ext = filename.split(".").pop() || "jpg";

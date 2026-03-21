@@ -31,7 +31,11 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const { type, contentType, filename } = await req.json();
+    const { type, contentType, filename, size } = await req.json();
+
+    if (size && size > 5 * 1024 * 1024) {
+      return NextResponse.json({ error: "File too large (max 5MB)" }, { status: 400 });
+    }
 
     if (!UPLOAD_TYPES.includes(type)) {
       return NextResponse.json({ error: "Invalid upload type" }, { status: 400 });

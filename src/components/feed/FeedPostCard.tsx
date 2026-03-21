@@ -187,9 +187,19 @@ export function FeedPostCard({ post }: FeedPostCardProps) {
 
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-foreground cursor-pointer truncate text-[15px] leading-tight font-semibold hover:underline">
-              {post.author.name || "Anonymous"}
-            </span>
+            {post.author.username ? (
+              <NextLink
+                href={`/author/${post.author.username}`}
+                className="text-foreground truncate text-[15px] leading-tight font-semibold hover:underline"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {post.author.name || "Anonymous"}
+              </NextLink>
+            ) : (
+              <span className="text-foreground truncate text-[15px] leading-tight font-semibold">
+                {post.author.name || "Anonymous"}
+              </span>
+            )}
             {!isOwnPost && !isFollowing && status === "authenticated" && (
               <>
                 <span className="text-muted-foreground text-[15px]">·</span>

@@ -2,6 +2,17 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { r2Client, getMediaUrl, MEDIA_BUCKET, MUSIC_BUCKET, MUSIC_CDN_URL } from "@/lib/r2";
 import { PutObjectCommand } from "@aws-sdk/client-s3";
+import { Ratelimit } from "@upstash/ratelimit";
+import { Redis } from "@upstash/redis";
+
+const ratelimit =
+  process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN
+    ? new Ratelimit({
+        redis: Redis.fromEnv(),
+        limiter: Ratelimit.slidingWindow(10, "1 h"),
+        prefix: "ratelimit:stories-upload",
+      })
+    : null;
 
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50 MB
 
@@ -35,6 +46,17 @@ export async function POST(request: NextRequest) {
   }
 
   const userId = (session.user as { id: string }).id;
+
+  // Rate limit per user
+  if (ratelimit) {
+    const { success } = await ratelimit.limit(userId);
+    if (!success) {
+      return NextResponse.json(
+        { error: "Too many uploads. Please try again later." },
+        { status: 429 }
+      );
+    }
+  }
 
   const formData = await request.formData();
   const file = formData.get("file") as File | null;

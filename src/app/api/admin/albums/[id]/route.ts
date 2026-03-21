@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { albumSchema } from "@/lib/validations/album";
 import { z } from "zod";
 
-const ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN", "EDITOR"];
+const ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN"];
 
 async function requireAdmin() {
   const session = await auth();

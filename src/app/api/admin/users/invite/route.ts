@@ -35,8 +35,18 @@ export async function POST(req: NextRequest) {
     const tempPassword = Math.random().toString(36).slice(-12);
     const hashed = await bcrypt.hash(tempPassword, 12);
 
+    // Generate a default username from the email prefix
+    const emailPrefix = email
+      .split("@")[0]
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "")
+      .slice(0, 20);
+    const suffix = crypto.randomUUID().slice(0, 6);
+    const username = `${emailPrefix}-${suffix}`;
+
     const user = await db.user.create({
-      data: { email, role, password: hashed },
+      data: { email, role, password: hashed, username },
       select: { id: true, email: true, role: true },
     });
 

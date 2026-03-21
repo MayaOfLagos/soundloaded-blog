@@ -3,61 +3,39 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
-import {
-  Home,
-  Compass,
-  Heart,
-  Bookmark,
-  Library,
-  Tag,
-  Menu,
-  X,
-  Instagram,
-  Twitter,
-  Youtube,
-  Facebook,
-  Music,
-  Send,
-  Phone,
-  User,
-  Download,
-  Settings,
-  Shield,
-  LogOut,
-  LogIn,
-  UserPlus,
-  icons,
-} from "lucide-react";
-import { useSession, signOut } from "next-auth/react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { motion } from "motion/react";
+import { Home, Compass, Rss, Tag, Menu, X, Upload, icons } from "lucide-react";
+import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import { Logo } from "@/components/common/Logo";
-import { ThemeToggle } from "@/components/common/ThemeToggle";
+import { SOCIAL_ICON_MAP } from "@/components/common/SocialIcons";
 import { useSettings } from "@/hooks/useSettings";
+import { useIsMounted } from "@/hooks/useIsMounted";
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 import { cn } from "@/lib/utils";
 
-const MAIN_NAV = [
-  { href: "/", label: "Home", icon: Home },
-  { href: "/explore", label: "Explore", icon: Compass },
-  { href: "/favorites", label: "Favorites", icon: Heart },
-  { href: "/bookmarks", label: "Bookmarks", icon: Bookmark },
-  { href: "/library", label: "Library", icon: Library },
+/* ── Constants ── */
+
+const ALL_NAV_ITEMS = [
+  { href: "/", label: "Home", icon: Home, settingsKey: null },
+  { href: "/feed", label: "Feed", icon: Rss, settingsKey: "enableFeed" as const },
+  { href: "/explore", label: "Explore", icon: Compass, settingsKey: "enableExplore" as const },
 ];
 
-const SOCIAL_ICON_MAP: Record<string, typeof Instagram> = {
-  instagram: Instagram,
-  twitter: Twitter,
-  youtube: Youtube,
-  facebook: Facebook,
-  tiktok: Music,
-  telegram: Send,
-  whatsapp: Phone,
-};
+const TRENDING_TAGS = [
+  "Afrobeats",
+  "Amapiano",
+  "Gospel",
+  "Hip Hop",
+  "R&B",
+  "Fuji",
+  "Highlife",
+  "New Release",
+  "Freestyle",
+  "Mixtape",
+];
 
 const SOCIAL_URL_MAP: Record<string, (handle: string) => string> = {
   instagram: (h) => `https://instagram.com/${h}`,
@@ -69,12 +47,26 @@ const SOCIAL_URL_MAP: Record<string, (handle: string) => string> = {
   whatsapp: (h) => `https://wa.me/${h}`,
 };
 
+const SLUG_TO_TOGGLE: Record<string, string> = {
+  news: "enableNews",
+  gist: "enableGist",
+  lyrics: "enableLyrics",
+  videos: "enableVideos",
+  music: "enableMusic",
+  albums: "enableAlbums",
+  artists: "enableArtists",
+};
+
+const EASE: [number, number, number, number] = [0.23, 1, 0.32, 1];
+
 interface Category {
   id: string;
   name: string;
   slug: string;
   icon: string | null;
 }
+
+/* ── Helpers ── */
 
 function toPascalCase(kebab: string): string {
   return kebab
@@ -90,60 +82,85 @@ function LucideIcon({ name, className }: { name: string; className?: string }) {
   return <IconComponent className={className} />;
 }
 
-function NavSection({
-  title,
-  links,
-  pathname,
-  onClose,
-}: {
-  title: string;
-  links: { href: string; label: string; icon: React.ComponentType<{ className?: string }> }[];
-  pathname: string;
-  onClose: () => void;
-}) {
+/* ── Sub-components ── */
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <div>
-      <p className="text-muted-foreground mb-2 px-2 text-[10px] font-semibold tracking-widest uppercase">
-        {title}
-      </p>
-      <ul className="space-y-0.5">
-        {links.map(({ href, label, icon: Icon }) => {
-          const isActive = href === "/" ? pathname === "/" : pathname.startsWith(href);
-          return (
-            <li key={href}>
-              <Link
-                href={href}
-                onClick={onClose}
-                className={cn(
-                  "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
-                  isActive
-                    ? "bg-brand/10 text-brand font-bold"
-                    : "text-foreground hover:bg-muted hover:text-foreground"
-                )}
-              >
-                <Icon
-                  className={cn(
-                    "h-4 w-4 flex-shrink-0",
-                    isActive ? "text-brand" : "text-muted-foreground"
-                  )}
-                />
-                {label}
-              </Link>
-            </li>
-          );
-        })}
-      </ul>
-    </div>
+    <p className="text-muted-foreground/60 mb-2 px-1 text-[10px] font-bold tracking-[0.2em] uppercase">
+      {children}
+    </p>
   );
 }
 
-const ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN", "EDITOR"];
+function NavItem({
+  href,
+  label,
+  icon: Icon,
+  isActive,
+  onClose,
+}: {
+  href: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  isActive: boolean;
+  onClose: () => void;
+}) {
+  return (
+    <Link
+      href={href}
+      onClick={onClose}
+      className={cn(
+        "group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition-all duration-200",
+        isActive ? "bg-brand/10 text-brand font-bold" : "text-foreground hover:bg-muted"
+      )}
+    >
+      <div
+        className={cn(
+          "flex h-8 w-8 items-center justify-center rounded-lg transition-colors",
+          isActive
+            ? "bg-brand/15 text-brand"
+            : "bg-muted text-muted-foreground group-hover:text-foreground"
+        )}
+      >
+        <Icon className="h-[16px] w-[16px]" />
+      </div>
+      {label}
+      {isActive && <span className="bg-brand ml-auto h-1.5 w-1.5 rounded-full" />}
+    </Link>
+  );
+}
+
+/* ── Stagger wrapper ── */
+
+function StaggerSection({
+  children,
+  index,
+  className,
+}: {
+  children: React.ReactNode;
+  index: number;
+  className?: string;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.06 + index * 0.04, duration: 0.3, ease: EASE }}
+      className={className}
+    >
+      {children}
+    </motion.div>
+  );
+}
+
+/* ── Main Component ── */
 
 export function MobileNav() {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
   const { data: settings } = useSettings();
-  const { data: session, status } = useSession();
+  const mounted = useIsMounted();
+
   const { data: categoriesData } = useQuery({
     queryKey: ["categories"],
     queryFn: async () => {
@@ -153,13 +170,37 @@ export function MobileNav() {
     staleTime: 5 * 60 * 1000,
   });
 
-  const browseLinks = (categoriesData ?? []).map((cat) => ({
-    href: `/${cat.slug}`,
-    label: cat.name,
-    icon: ({ className }: { className?: string }) => (
-      <LucideIcon name={cat.icon ?? "tag"} className={className} />
-    ),
-  }));
+  const close = () => setOpen(false);
+
+  // Filter nav items by feature toggles
+  const navItems = ALL_NAV_ITEMS.filter((item) => {
+    if (!item.settingsKey) return true;
+    return !settings || settings[item.settingsKey] !== false;
+  });
+
+  // Filter categories by feature toggles
+  const categories = (categoriesData ?? []).filter((cat) => {
+    const toggleKey = SLUG_TO_TOGGLE[cat.slug];
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if (toggleKey && settings && !(settings as any)[toggleKey]) return false;
+    return true;
+  });
+
+  // Social links
+  const socialLinks =
+    mounted && settings
+      ? (["instagram", "twitter", "youtube", "facebook", "tiktok", "telegram"] as const)
+          .filter((key) => settings[key])
+          .map((key) => ({
+            key,
+            href: SOCIAL_URL_MAP[key](settings[key]),
+            icon: SOCIAL_ICON_MAP[key],
+            label: key.charAt(0).toUpperCase() + key.slice(1),
+          }))
+      : [];
+
+  const copyrightName =
+    settings?.copyrightText?.replace(". All rights reserved.", "") || "Soundloaded Nigeria";
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
@@ -174,155 +215,191 @@ export function MobileNav() {
         </Button>
       </SheetTrigger>
 
-      <SheetContent side="left" className="bg-card border-border flex w-[300px] flex-col p-0">
-        <SheetHeader className="border-border border-b px-5 pt-5 pb-4">
-          <VisuallyHidden>
-            <SheetTitle>Navigation menu</SheetTitle>
-          </VisuallyHidden>
-          <div className="flex items-center justify-between">
-            <Logo
-              logoLightUrl={settings?.logoLight}
-              logoDarkUrl={settings?.logoDark}
-              siteName={settings?.siteName}
-            />
-            <Button
-              variant="ghost"
-              size="icon"
-              className="-mr-1 h-8 w-8"
-              onClick={() => setOpen(false)}
-              aria-label="Close menu"
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
-        </SheetHeader>
+      <SheetContent
+        side="left"
+        hideCloseButton
+        className={cn(
+          // Override default Sheet positioning for detached look
+          "!inset-y-auto !h-auto !w-[calc(100vw-1.5rem)] !max-w-[320px] !border-0",
+          "!fixed !top-3 !bottom-3 !left-3",
+          "!rounded-2xl",
+          "!border-border/60 !border",
+          "!bg-background/95 !backdrop-blur-xl",
+          "!shadow-2xl !shadow-black/20 dark:!shadow-black/50",
+          "flex flex-col overflow-hidden !p-0"
+        )}
+      >
+        <VisuallyHidden>
+          <SheetTitle>Navigation menu</SheetTitle>
+        </VisuallyHidden>
 
-        {/* Nav links */}
-        <nav className="flex-1 space-y-5 overflow-y-auto px-3 py-4">
-          <NavSection
-            title="Menu"
-            links={MAIN_NAV}
-            pathname={pathname}
-            onClose={() => setOpen(false)}
+        {/* ── [A] Header ── */}
+        <div className="flex flex-shrink-0 items-center justify-between px-5 pt-5 pb-3">
+          <Logo
+            logoLightUrl={settings?.logoLight}
+            logoDarkUrl={settings?.logoDark}
+            siteName={settings?.siteName}
           />
-          <Separator />
-          {browseLinks.length > 0 && (
-            <NavSection
-              title="Browse"
-              links={browseLinks}
-              pathname={pathname}
-              onClose={() => setOpen(false)}
-            />
-          )}
-        </nav>
+          <button
+            type="button"
+            onClick={close}
+            className="text-muted-foreground hover:text-foreground hover:bg-muted -mr-1 flex h-8 w-8 items-center justify-center rounded-lg transition-colors"
+            aria-label="Close menu"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
 
-        {/* Footer area */}
-        <div className="border-border space-y-3 border-t px-5 pt-4 pb-6">
-          {/* User section */}
-          {status === "authenticated" && session?.user ? (
-            <>
-              <div className="flex items-center gap-3 py-1">
-                <Avatar className="h-9 w-9">
-                  <AvatarImage src={session.user.image ?? undefined} />
-                  <AvatarFallback className="bg-brand/20 text-brand text-sm font-bold">
-                    {session.user.name?.charAt(0)?.toUpperCase() ?? "U"}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="min-w-0 flex-1">
-                  <p className="text-foreground truncate text-sm font-semibold">
-                    {session.user.name ?? "User"}
-                  </p>
-                  <p className="text-muted-foreground truncate text-xs">{session.user.email}</p>
-                </div>
-              </div>
-              <Separator />
-              <ul className="space-y-0.5">
-                {[
-                  { href: "/settings", label: "My Profile", icon: User },
-                  { href: "/downloads", label: "My Downloads", icon: Download },
-                  { href: "/settings", label: "Settings", icon: Settings },
-                  ...(ADMIN_ROLES.includes((session.user as { role?: string }).role ?? "")
-                    ? [{ href: "/admin", label: "Admin Panel", icon: Shield }]
-                    : []),
-                ].map(({ href, label, icon: Icon }) => (
-                  <li key={href}>
-                    <Link
-                      href={href}
-                      onClick={() => setOpen(false)}
-                      className="text-foreground hover:bg-muted flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors"
-                    >
-                      <Icon className="text-muted-foreground h-4 w-4 flex-shrink-0" />
-                      {label}
-                    </Link>
-                  </li>
-                ))}
-                <li>
-                  <button
-                    onClick={() => {
-                      setOpen(false);
-                      signOut({ callbackUrl: "/" });
-                    }}
-                    className="text-muted-foreground flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors hover:bg-red-500/10 hover:text-red-600"
-                  >
-                    <LogOut className="h-4 w-4 flex-shrink-0" />
-                    Sign Out
-                  </button>
-                </li>
-              </ul>
-            </>
-          ) : status === "unauthenticated" ? (
-            <div className="flex gap-2">
-              <Button variant="default" size="sm" className="flex-1 gap-1.5" asChild>
-                <Link href="/login" onClick={() => setOpen(false)}>
-                  <LogIn className="h-4 w-4" />
-                  Sign In
-                </Link>
-              </Button>
-              <Button variant="outline" size="sm" className="flex-1 gap-1.5" asChild>
-                <Link href="/register" onClick={() => setOpen(false)}>
-                  <UserPlus className="h-4 w-4" />
-                  Register
-                </Link>
-              </Button>
+        {/* ── [B] Scrollable Body ── */}
+        <div className="scrollbar-auto-hide flex-1 space-y-4 overflow-y-auto px-3 pb-3">
+          {/* Menu */}
+          <StaggerSection index={0}>
+            <SectionLabel>Menu</SectionLabel>
+            <div className="space-y-0.5">
+              {navItems.map(({ href, label, icon }) => (
+                <NavItem
+                  key={href}
+                  href={href}
+                  label={label}
+                  icon={icon}
+                  isActive={href === "/" ? pathname === "/" : pathname.startsWith(href)}
+                  onClose={close}
+                />
+              ))}
             </div>
-          ) : null}
+          </StaggerSection>
 
-          <Separator />
+          {/* [B3] Browse Categories */}
+          {categories.length > 0 && (
+            <StaggerSection index={2}>
+              <SectionLabel>Browse</SectionLabel>
+              <div className="space-y-0.5">
+                {categories.map((cat) => {
+                  const href = `/${cat.slug}`;
+                  const isActive = pathname.startsWith(href);
+                  return (
+                    <NavItem
+                      key={cat.id}
+                      href={href}
+                      label={cat.name}
+                      icon={({ className }) => (
+                        <LucideIcon name={cat.icon ?? "tag"} className={className} />
+                      )}
+                      isActive={isActive}
+                      onClose={close}
+                    />
+                  );
+                })}
+              </div>
+            </StaggerSection>
+          )}
 
-          {/* Theme toggle */}
-          <div className="flex items-center justify-between">
-            <span className="text-muted-foreground text-sm">Theme</span>
-            <ThemeToggle />
-          </div>
+          {/* [B4] Submit Music CTA */}
+          <StaggerSection index={3}>
+            <div className="from-brand via-brand/90 relative overflow-hidden rounded-xl bg-gradient-to-br to-rose-600 p-3.5 text-white">
+              <div className="absolute -top-4 -right-4 h-14 w-14 rounded-full bg-white/10" />
+              <div className="absolute -bottom-3 -left-3 h-10 w-10 rounded-full bg-white/5" />
+              <div className="relative flex items-center gap-3">
+                <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-white/20 backdrop-blur-sm">
+                  <Upload className="h-4 w-4" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-bold">Submit Your Music</p>
+                  <p className="mt-0.5 text-[10px] leading-snug text-white/70">
+                    Get featured on Nigeria&apos;s #1 blog
+                  </p>
+                </div>
+                <Link
+                  href="/submit"
+                  onClick={close}
+                  className="flex-shrink-0 rounded-lg bg-white/20 px-3 py-1.5 text-[11px] font-semibold backdrop-blur-sm transition-colors hover:bg-white/30"
+                >
+                  Go
+                </Link>
+              </div>
+            </div>
+          </StaggerSection>
 
-          <Separator />
+          {/* [B5] Trending Tags */}
+          <StaggerSection index={4}>
+            <SectionLabel>Trending Tags</SectionLabel>
+            <div className="scrollbar-hide -mx-1 flex gap-1.5 overflow-x-auto px-1 pb-1">
+              {TRENDING_TAGS.map((tag) => (
+                <Link
+                  key={tag}
+                  href={`/search?q=${encodeURIComponent(tag)}`}
+                  onClick={close}
+                  className="bg-muted text-muted-foreground hover:bg-brand/10 hover:text-brand flex-shrink-0 rounded-lg px-2.5 py-1 text-[11px] font-medium transition-all"
+                >
+                  #{tag}
+                </Link>
+              ))}
+            </div>
+          </StaggerSection>
 
-          {/* Social links */}
-          <div className="flex items-center gap-2" suppressHydrationWarning>
-            {(["instagram", "twitter", "youtube", "facebook", "tiktok", "telegram"] as const)
-              .filter((key) => settings?.[key])
-              .map((key) => {
-                const Icon = SOCIAL_ICON_MAP[key];
-                const href = SOCIAL_URL_MAP[key](settings![key]);
-                const label = key.charAt(0).toUpperCase() + key.slice(1);
-                return (
+          {/* [B6] Follow Us */}
+          {socialLinks.length > 0 && (
+            <StaggerSection index={5}>
+              <SectionLabel>Follow Us</SectionLabel>
+              <div className="flex flex-wrap gap-1.5" suppressHydrationWarning>
+                {socialLinks.map(({ key, href, icon: Icon, label }) => (
                   <a
                     key={key}
                     href={href}
                     target="_blank"
                     rel="noopener noreferrer"
                     aria-label={label}
-                    className="text-muted-foreground hover:text-foreground hover:bg-muted flex h-8 w-8 items-center justify-center rounded-lg transition-colors"
+                    className="bg-muted text-muted-foreground hover:bg-brand/10 hover:text-brand flex h-9 w-9 items-center justify-center rounded-xl transition-all"
                   >
                     <Icon className="h-4 w-4" />
                   </a>
-                );
-              })}
-          </div>
+                ))}
+              </div>
+            </StaggerSection>
+          )}
 
-          <p className="text-muted-foreground text-[11px]">
-            {settings?.tagline || "Nigeria\u0027s #1 Music Blog"}
-          </p>
+          {/* Footer links & copyright */}
+          <StaggerSection index={5} className="pt-2">
+            <div className="text-muted-foreground/60 flex flex-wrap items-center justify-center gap-x-2 gap-y-0.5 text-[10px]">
+              <Link
+                href="/about"
+                onClick={close}
+                className="hover:text-foreground transition-colors"
+              >
+                About
+              </Link>
+              <span className="text-muted-foreground/30">·</span>
+              <Link
+                href="/contact"
+                onClick={close}
+                className="hover:text-foreground transition-colors"
+              >
+                Contact
+              </Link>
+              <span className="text-muted-foreground/30">·</span>
+              <Link
+                href="/privacy"
+                onClick={close}
+                className="hover:text-foreground transition-colors"
+              >
+                Privacy
+              </Link>
+              <span className="text-muted-foreground/30">·</span>
+              <Link
+                href="/terms"
+                onClick={close}
+                className="hover:text-foreground transition-colors"
+              >
+                Terms
+              </Link>
+            </div>
+            <p
+              className="text-muted-foreground/40 mt-1.5 text-center text-[10px]"
+              suppressHydrationWarning
+            >
+              &copy; {new Date().getFullYear()} {copyrightName}
+            </p>
+          </StaggerSection>
         </div>
       </SheetContent>
     </Sheet>

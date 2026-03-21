@@ -10,6 +10,8 @@ import { db } from "@/lib/db";
 import { DashboardLeftSidebar } from "@/components/dashboard/DashboardLeftSidebar";
 import { DashboardActivityChart } from "@/components/dashboard/DashboardActivityChart";
 import { DashboardStatsDonut } from "@/components/dashboard/DashboardStatsDonut";
+import { ArtistDashboard } from "@/components/dashboard/ArtistDashboard";
+import { LabelDashboard } from "@/components/dashboard/LabelDashboard";
 import { Badge } from "@/components/ui/badge";
 
 export const metadata: Metadata = {
@@ -126,6 +128,47 @@ export default async function DashboardPage() {
   if (!session?.user) redirect("/login");
 
   const userId = (session.user as { id: string }).id;
+
+  // Check for creator profiles
+  const [artistProfile, labelProfile] = await Promise.all([
+    db.artist.findUnique({
+      where: { ownerId: userId },
+      include: {
+        _count: { select: { music: true, albums: true, artistFollows: true } },
+      },
+    }),
+    db.label.findUnique({
+      where: { ownerId: userId },
+      include: {
+        _count: { select: { artists: true } },
+      },
+    }),
+  ]);
+
+  // Route to creator dashboard if applicable
+  if (artistProfile) {
+    return (
+      <div className="mx-auto max-w-[1440px] px-4 sm:px-6">
+        <div className="grid grid-cols-1 gap-6 py-5 xl:grid-cols-[220px_1fr]">
+          <DashboardLeftSidebar />
+          <ArtistDashboard artist={JSON.parse(JSON.stringify(artistProfile))} userId={userId} />
+        </div>
+      </div>
+    );
+  }
+
+  if (labelProfile) {
+    return (
+      <div className="mx-auto max-w-[1440px] px-4 sm:px-6">
+        <div className="grid grid-cols-1 gap-6 py-5 xl:grid-cols-[220px_1fr]">
+          <DashboardLeftSidebar />
+          <LabelDashboard label={JSON.parse(JSON.stringify(labelProfile))} userId={userId} />
+        </div>
+      </div>
+    );
+  }
+
+  // Default: Reader dashboard
   const data = await getDashboardData(userId);
 
   if (!data.user) redirect("/login");

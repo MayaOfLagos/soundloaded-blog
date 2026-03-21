@@ -9,12 +9,15 @@ import {
   Music,
   Mic2,
   Disc3,
+  Building2,
+  Rss,
   Tags,
   MessageSquare,
   ImageIcon,
   Camera,
   Mail,
   Users,
+  UserCheck,
   Flag,
   BarChart3,
   Settings,
@@ -48,15 +51,18 @@ const mainNav = [
   { title: "Music", href: "/admin/music", icon: Music },
   { title: "Artists", href: "/admin/artists", icon: Mic2 },
   { title: "Albums", href: "/admin/albums", icon: Disc3 },
+  { title: "Labels", href: "/admin/labels", icon: Building2 },
 ];
 
 const manageNav = [
+  { title: "Feed", href: "/admin/feed", icon: Rss },
   { title: "Categories", href: "/admin/categories", icon: Tags },
   { title: "Comments", href: "/admin/comments", icon: MessageSquare },
   { title: "Media", href: "/admin/media", icon: ImageIcon },
   { title: "Stories", href: "/admin/stories", icon: Camera },
   { title: "Newsletter", href: "/admin/newsletter", icon: Mail },
   { title: "Users", href: "/admin/users", icon: Users },
+  { title: "Creators", href: "/admin/creators", icon: UserCheck },
   { title: "Reports", href: "/admin/reports", icon: Flag },
 ];
 

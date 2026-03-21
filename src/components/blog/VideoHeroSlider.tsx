@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { Play, Eye, ChevronLeft, ChevronRight } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { formatRelativeDate } from "@/lib/utils";
 import type { PostCardData } from "./PostCard";
 
@@ -18,44 +19,76 @@ const SLIDE_DURATION = 6000;
 export function VideoHeroSlider({ posts, interval = SLIDE_DURATION }: VideoHeroSliderProps) {
   const [current, setCurrent] = useState(0);
   const [direction, setDirection] = useState(1);
-  const timerRef = useRef<ReturnType<typeof setInterval>>(undefined);
+  const [isPaused, setIsPaused] = useState(false);
+  const [progressKey, setProgressKey] = useState(0);
+  const startTimeRef = useRef(0);
+  useEffect(() => {
+    startTimeRef.current = Date.now();
+  }, []);
+  const rafRef = useRef<number>(0);
+  const [progress, setProgress] = useState(0);
   const total = posts.length;
+
+  const advance = useCallback((index: number, dir: number) => {
+    setDirection(dir);
+    setCurrent(index);
+    setProgressKey((k) => k + 1);
+    setProgress(0);
+    startTimeRef.current = Date.now();
+  }, []);
+
+  const next = useCallback(() => {
+    advance((current + 1) % total, 1);
+  }, [current, total, advance]);
+
+  const prev = useCallback(() => {
+    advance((current - 1 + total) % total, -1);
+  }, [current, total, advance]);
 
   const goTo = useCallback(
     (index: number) => {
-      setDirection(index > current ? 1 : -1);
-      setCurrent(index);
+      advance(index, index > current ? 1 : -1);
     },
-    [current]
+    [current, advance]
   );
 
-  const next = useCallback(() => {
-    setDirection(1);
-    setCurrent((prev) => (prev + 1) % total);
-  }, [total]);
-
-  const prev = useCallback(() => {
-    setDirection(-1);
-    setCurrent((prev) => (prev - 1 + total) % total);
-  }, [total]);
-
+  // rAF-based timer — tracks elapsed time for smooth progress
   useEffect(() => {
-    if (total <= 1) return;
-    timerRef.current = setInterval(next, interval);
-    return () => clearInterval(timerRef.current);
-  }, [next, interval, total]);
+    if (total <= 1 || isPaused) return;
 
-  const pause = () => clearInterval(timerRef.current);
+    startTimeRef.current = Date.now() - progress * interval;
+
+    const tick = () => {
+      const elapsed = Date.now() - startTimeRef.current;
+      const pct = Math.min(elapsed / interval, 1);
+      setProgress(pct);
+
+      if (pct >= 1) {
+        // Auto-advance to next slide
+        setCurrent((prev) => (prev + 1) % total);
+        setDirection(1);
+        setProgressKey((k) => k + 1);
+        setProgress(0);
+        startTimeRef.current = Date.now();
+      }
+
+      rafRef.current = requestAnimationFrame(tick);
+    };
+
+    rafRef.current = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafRef.current);
+  }, [total, isPaused, interval, progressKey]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const pause = () => setIsPaused(true);
   const resume = () => {
-    if (total <= 1) return;
-    timerRef.current = setInterval(next, interval);
+    startTimeRef.current = Date.now() - progress * interval;
+    setIsPaused(false);
   };
 
   if (!posts.length) return null;
 
   const post = posts[current];
 
-  /* Cinematic zoom-fade animation — feels like video transitions */
   const variants = {
     enter: (d: number) => ({
       scale: 1.1,
@@ -135,12 +168,7 @@ export function VideoHeroSlider({ posts, interval = SLIDE_DURATION }: VideoHeroS
               </div>
 
               {/* Bottom content */}
-              <div className="absolute right-0 bottom-0 left-0 p-5 sm:p-7">
-                {post.category && (
-                  <span className="bg-brand/80 mb-3 inline-block rounded-full px-3 py-0.5 text-[10px] font-bold tracking-wide text-white uppercase backdrop-blur-sm">
-                    {post.category.name}
-                  </span>
-                )}
+              <div className="absolute right-0 bottom-0 left-0 p-5 pb-8 sm:p-7 sm:pb-10">
                 <h2 className="line-clamp-2 text-xl leading-tight font-extrabold text-white drop-shadow-lg sm:text-2xl lg:text-3xl">
                   {post.title}
                 </h2>
@@ -153,9 +181,12 @@ export function VideoHeroSlider({ posts, interval = SLIDE_DURATION }: VideoHeroS
                 <div className="mt-3 flex items-center gap-3">
                   {post.author && (
                     <div className="flex items-center gap-2">
-                      <div className="flex h-7 w-7 items-center justify-center rounded-full bg-white/15 text-xs font-bold text-white backdrop-blur-sm">
-                        {post.author.name.charAt(0).toUpperCase()}
-                      </div>
+                      <Avatar className="h-7 w-7 ring-1 ring-white/30">
+                        <AvatarImage src={post.author.avatar ?? undefined} />
+                        <AvatarFallback className="bg-white/15 text-xs font-bold text-white backdrop-blur-sm">
+                          {post.author.name.charAt(0).toUpperCase()}
+                        </AvatarFallback>
+                      </Avatar>
                       <span className="text-xs font-medium text-white/70">{post.author.name}</span>
                     </div>
                   )}
@@ -167,12 +198,40 @@ export function VideoHeroSlider({ posts, interval = SLIDE_DURATION }: VideoHeroS
             </Link>
           </motion.div>
         </AnimatePresence>
+
+        {/* Progress bars — absolute bottom, inside the hero */}
+        {total > 1 && (
+          <div className="absolute right-0 bottom-0 left-0 z-20 flex gap-1.5 px-5 pb-3">
+            {posts.map((_, i) => (
+              <button
+                type="button"
+                key={i}
+                onClick={(e) => {
+                  e.preventDefault();
+                  goTo(i);
+                }}
+                className="relative h-[3px] flex-1 overflow-hidden rounded-full bg-white/20 transition-colors hover:bg-white/30"
+                aria-label={`Go to video ${i + 1}`}
+              >
+                {i === current && (
+                  <div
+                    key={`progress-${progressKey}`}
+                    className="absolute inset-y-0 left-0 rounded-full bg-white"
+                    style={{ width: `${progress * 100}%` }}
+                  />
+                )}
+                {i < current && <div className="absolute inset-0 rounded-full bg-white/60" />}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Navigation arrows */}
       {total > 1 && (
         <>
           <button
+            type="button"
             onClick={(e) => {
               e.preventDefault();
               prev();
@@ -183,6 +242,7 @@ export function VideoHeroSlider({ posts, interval = SLIDE_DURATION }: VideoHeroS
             <ChevronLeft className="h-5 w-5" />
           </button>
           <button
+            type="button"
             onClick={(e) => {
               e.preventDefault();
               next();
@@ -193,34 +253,6 @@ export function VideoHeroSlider({ posts, interval = SLIDE_DURATION }: VideoHeroS
             <ChevronRight className="h-5 w-5" />
           </button>
         </>
-      )}
-
-      {/* Progress bar indicators (YouTube-style) */}
-      {total > 1 && (
-        <div className="absolute right-0 bottom-0 left-0 z-10 flex gap-1 px-4 pb-1.5">
-          {posts.map((_, i) => (
-            <button
-              key={i}
-              onClick={(e) => {
-                e.preventDefault();
-                goTo(i);
-              }}
-              className="relative h-1 flex-1 overflow-hidden rounded-full bg-white/20 transition-colors hover:bg-white/30"
-              aria-label={`Go to video ${i + 1}`}
-            >
-              {i === current && (
-                <motion.div
-                  className="absolute inset-y-0 left-0 rounded-full bg-red-500"
-                  initial={{ width: "0%" }}
-                  animate={{ width: "100%" }}
-                  transition={{ duration: interval / 1000, ease: "linear" }}
-                  key={`progress-${current}`}
-                />
-              )}
-              {i < current && <div className="absolute inset-0 rounded-full bg-white/50" />}
-            </button>
-          ))}
-        </div>
       )}
     </div>
   );

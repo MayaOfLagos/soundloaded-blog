@@ -5,20 +5,30 @@ import { Calendar, ChevronRight, Eye } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { PostBody } from "@/components/blog/PostBody";
+import { PostCard } from "@/components/blog/PostCard";
 import { PostDownloadButton } from "@/components/blog/PostDownloadButton";
-import { RelatedPosts } from "@/components/blog/RelatedPosts";
 import { ShareButtons } from "@/components/blog/ShareButtons";
 import { CommentSection } from "@/components/blog/CommentSection";
 import { JsonLd } from "@/components/common/JsonLd";
 import { buildNewsArticleSchema, buildBreadcrumbSchema } from "@/lib/structured-data";
 import { formatDate, formatRelativeDate } from "@/lib/utils";
 import { DetailLayout } from "./DetailLayout";
+import { GistLeftSidebar } from "./GistLeftSidebar";
 import { TrendingSidebar } from "@/components/blog/TrendingSidebar";
 import { NewsletterSidebarCard } from "./NewsletterSidebarCard";
 import type { DetailPageProps } from "./types";
 
 function SidebarSkeleton() {
   return <div className="bg-muted/50 h-64 animate-pulse rounded-2xl" />;
+}
+
+function LeftSidebarSkeleton() {
+  return (
+    <div className="space-y-5">
+      <div className="bg-muted/50 h-72 animate-pulse rounded-2xl" />
+      <div className="bg-muted/50 h-56 animate-pulse rounded-2xl" />
+    </div>
+  );
 }
 
 export function GistPostDetail({ post, settings, related, articleUrl }: DetailPageProps) {
@@ -37,10 +47,19 @@ export function GistPostDetail({ post, settings, related, articleUrl }: DetailPa
     settings.siteUrl
   );
 
+  // Split related posts: first 3 for grid, rest for list
+  const gridPosts = related.slice(0, 3);
+  const listPosts = related.slice(3);
+
   return (
     <>
       <JsonLd schema={[articleSchema, breadcrumbSchema]} />
       <DetailLayout
+        leftSidebar={
+          <Suspense fallback={<LeftSidebarSkeleton />}>
+            <GistLeftSidebar excludePostId={post.id} />
+          </Suspense>
+        }
         sidebar={
           <>
             <Suspense fallback={<SidebarSkeleton />}>
@@ -150,10 +169,27 @@ export function GistPostDetail({ post, settings, related, articleUrl }: DetailPa
             <ShareButtons url={articleUrl} title={post.title} />
           </div>
 
-          {related.length > 0 && (
+          {/* More Gist — 3 column grid */}
+          {gridPosts.length > 0 && (
             <section className="mt-12">
-              <h2 className="mb-4 text-xl font-bold">More Gist</h2>
-              <RelatedPosts posts={related} />
+              <h2 className="text-foreground mb-4 text-xl font-bold">More Gist</h2>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                {gridPosts.map((p) => (
+                  <PostCard key={p.id} post={p} hideExcerpt />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Related Contents — list style */}
+          {listPosts.length > 0 && (
+            <section className="mt-10">
+              <h2 className="text-foreground mb-2 text-lg font-bold">Related Contents</h2>
+              <div className="border-border divide-border divide-y border-t">
+                {listPosts.map((p) => (
+                  <PostCard key={p.id} post={p} variant="compact" />
+                ))}
+              </div>
             </section>
           )}
 

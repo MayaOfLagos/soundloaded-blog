@@ -1,14 +1,14 @@
 "use client";
 
-import { useState, useRef } from "react";
-import { Play, Download, Heart } from "lucide-react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { Play, Download, Heart, MoreHorizontal, ListPlus, Share2, User } from "lucide-react";
 import { motion } from "motion/react";
+import useMeasure from "react-use-measure";
 import { usePlayerStore } from "@/store/player.store";
 import type { Track } from "@/store/player.store";
 import { useMusicFavorite } from "@/hooks/useMusicFavorite";
 import { ShareButton } from "./ShareButton";
-import { MusicActionMenu } from "./MusicActionMenu";
-import type { MusicCardData } from "@/lib/api/music";
+import { notify } from "@/hooks/useToast";
 import { cn } from "@/lib/utils";
 
 interface TrackActionBarProps {
@@ -203,20 +203,6 @@ export function TrackActionBar({ track, siteUrl, enableDownloads }: TrackActionB
     toggleFavorite();
   };
 
-  const musicCardData: MusicCardData = {
-    id: track.id,
-    slug: track.slug,
-    title: track.title,
-    artistName: track.artistName,
-    albumTitle: track.albumTitle,
-    coverArt: track.coverArt,
-    genre: track.genre,
-    downloadCount: track.downloadCount,
-    enableDownload: track.enableDownload,
-    fileSize: track.fileSize ? BigInt(track.fileSize) : null,
-    releaseYear: track.releaseYear,
-  };
-
   const playLabel = isActivelyPlaying ? "Playing" : isCurrentTrack ? "Resume" : "Play";
   const downloadLabel =
     downloadState === "loading" ? "Getting..." : downloadState === "done" ? "Done!" : "Download";
@@ -264,19 +250,199 @@ export function TrackActionBar({ track, siteUrl, enableDownloads }: TrackActionB
         />
       </DiscreteAction>
 
-      {/* Share — keeps its dropdown behavior, styled as discrete pill */}
+      {/* Share — styled as discrete pill */}
       <ShareButton
         title={track.title}
         artist={track.artistName}
         url={`${siteUrl}/music/${track.slug}`}
         size={18}
-        className="bg-muted hover:bg-muted/80 outline-background h-[38px] w-[38px] shadow-md outline outline-2"
+        className="outline-background shadow-md outline outline-2"
       />
 
-      {/* More options */}
-      <div className="bg-muted hover:bg-muted/80 outline-background flex h-[38px] w-[38px] items-center justify-center rounded-full shadow-md outline outline-2 transition-colors">
-        <MusicActionMenu track={musicCardData} size={18} className="text-foreground" />
-      </div>
+      {/* More options — inline smooth-dropdown */}
+      <MoreOptionsDropdown track={track} siteUrl={siteUrl} />
+    </div>
+  );
+}
+
+/* ─── Inline Smooth Dropdown for More Options ─── */
+
+const easeOutQuint: [number, number, number, number] = [0.23, 1, 0.32, 1];
+
+const moreMenuItems = [
+  { id: "queue", label: "Add to Queue", icon: ListPlus },
+  { id: "artist", label: "Go to Artist", icon: User },
+  { id: "share", label: "Share", icon: Share2 },
+  { id: "download", label: "Download", icon: Download },
+];
+
+function MoreOptionsDropdown({
+  track,
+  siteUrl,
+}: {
+  track: TrackActionBarProps["track"];
+  siteUrl: string;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [hoveredItem, setHoveredItem] = useState<string | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [contentRef, contentBounds] = useMeasure();
+  const addToQueue = usePlayerStore((s) => s.addToQueue);
+
+  // Click outside to close
+  useEffect(() => {
+    if (!isOpen) return;
+    const handler = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [isOpen]);
+
+  const handleAction = useCallback(
+    (id: string) => {
+      switch (id) {
+        case "queue":
+          addToQueue({
+            id: track.id,
+            title: track.title,
+            artist: track.artistName,
+            coverArt: track.coverArt,
+            r2Key: track.r2Key,
+            duration: track.duration ?? 0,
+            slug: track.slug,
+          });
+          notify.success(`Added "${track.title}" to queue`);
+          break;
+        case "artist":
+          window.location.href = `/artists?q=${encodeURIComponent(track.artistName)}`;
+          break;
+        case "share":
+          if (navigator.share) {
+            navigator
+              .share({ title: track.title, url: `${siteUrl}/music/${track.slug}` })
+              .catch((err) => {
+                if (err instanceof DOMException && err.name === "AbortError") return;
+              });
+          } else {
+            navigator.clipboard
+              .writeText(`${siteUrl}/music/${track.slug}`)
+              .then(() => notify.success("Link copied!"))
+              .catch(() => notify.error("Failed to copy link"));
+          }
+          break;
+        case "download":
+          if (track.enableDownload) {
+            window.location.href = `/music/${track.slug}?download=true`;
+          } else {
+            notify.error("Download not available");
+          }
+          break;
+      }
+      setIsOpen(false);
+    },
+    [track, siteUrl, addToQueue]
+  );
+
+  const visibleItems = moreMenuItems.filter(
+    (item) => item.id !== "download" || track.enableDownload
+  );
+
+  const openHeight = Math.max(40, Math.ceil(contentBounds.height));
+
+  return (
+    <div ref={containerRef} className="relative h-[38px] w-[38px]">
+      <motion.div
+        layout
+        initial={false}
+        animate={{
+          width: isOpen ? 200 : 38,
+          height: isOpen ? openHeight : 38,
+          borderRadius: isOpen ? 14 : 19,
+        }}
+        transition={{
+          type: "spring" as const,
+          damping: 34,
+          stiffness: 380,
+          mass: 0.8,
+        }}
+        className="bg-muted border-border absolute right-0 bottom-0 origin-bottom-right cursor-pointer overflow-hidden border shadow-lg"
+        onClick={() => !isOpen && setIsOpen(true)}
+      >
+        {/* Trigger icon — visible when closed */}
+        <motion.div
+          initial={false}
+          animate={{
+            opacity: isOpen ? 0 : 1,
+            scale: isOpen ? 0.8 : 1,
+          }}
+          transition={{ duration: 0.15 }}
+          className="absolute inset-0 flex items-center justify-center"
+          style={{ pointerEvents: isOpen ? "none" : "auto", willChange: "transform" }}
+        >
+          <MoreHorizontal className="text-foreground h-[18px] w-[18px]" />
+        </motion.div>
+
+        {/* Menu content — fades in when open */}
+        <div ref={contentRef}>
+          <motion.div
+            layout
+            initial={false}
+            animate={{ opacity: isOpen ? 1 : 0 }}
+            transition={{ duration: 0.2, delay: isOpen ? 0.08 : 0 }}
+            className="p-1.5"
+            style={{ pointerEvents: isOpen ? "auto" : "none", willChange: "transform" }}
+          >
+            <div className="flex flex-col gap-0.5">
+              {visibleItems.map((item, index) => {
+                const Icon = item.icon;
+                const isHovered = hoveredItem === item.id;
+                const itemDelay = isOpen ? 0.06 + index * 0.02 : 0;
+
+                return (
+                  <motion.div
+                    key={item.id}
+                    initial={{ opacity: 0, x: 8 }}
+                    animate={{
+                      opacity: isOpen ? 1 : 0,
+                      x: isOpen ? 0 : 8,
+                    }}
+                    transition={{ delay: itemDelay, duration: 0.15, ease: easeOutQuint }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleAction(item.id);
+                    }}
+                    onMouseEnter={() => setHoveredItem(item.id)}
+                    onMouseLeave={() => setHoveredItem(null)}
+                    className="text-muted-foreground hover:text-foreground relative flex cursor-pointer items-center gap-3 rounded-lg py-2 pr-3 pl-3 text-sm transition-colors duration-200 ease-out"
+                  >
+                    {isHovered && (
+                      <motion.div
+                        layoutId="more-menu-bg"
+                        className="bg-background/60 absolute inset-0 rounded-lg"
+                        transition={{ type: "spring", damping: 30, stiffness: 520, mass: 0.8 }}
+                      />
+                    )}
+                    {isHovered && (
+                      <motion.div
+                        layoutId="more-menu-bar"
+                        className="bg-foreground absolute top-0 bottom-0 left-0 my-auto h-5 w-[3px] rounded-full"
+                        transition={{ type: "spring", damping: 30, stiffness: 520, mass: 0.8 }}
+                      />
+                    )}
+                    <Icon size={16} className="relative z-10" />
+                    <span className="relative z-10 font-medium whitespace-nowrap">
+                      {item.label}
+                    </span>
+                  </motion.div>
+                );
+              })}
+            </div>
+          </motion.div>
+        </div>
+      </motion.div>
     </div>
   );
 }

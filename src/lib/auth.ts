@@ -78,7 +78,7 @@ async function clearLoginAttempts(email: string): Promise<void> {
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   secret: process.env.NEXTAUTH_SECRET,
-  session: { strategy: "jwt" },
+  session: { strategy: "jwt", maxAge: 30 * 24 * 60 * 60 },
   pages: {
     signIn: "/login",
     error: "/login",
@@ -92,7 +92,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       },
       async authorize(credentials) {
         const parsed = z
-          .object({ email: z.string().email(), password: z.string().min(6) })
+          .object({ email: z.string().email(), password: z.string().min(8) })
           .safeParse(credentials);
 
         if (!parsed.success) return null;
@@ -117,21 +117,41 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         // Clear failed attempts on successful login
         await clearLoginAttempts(email);
 
+        // Check for linked creator profiles
+        const [artistProfile, labelProfile] = await Promise.all([
+          db.artist.findUnique({ where: { ownerId: user.id }, select: { id: true } }),
+          db.label.findUnique({ where: { ownerId: user.id }, select: { id: true } }),
+        ]);
+
         return {
           id: user.id,
           name: user.name,
           email: user.email,
           role: user.role,
           image: user.image,
+          artistProfileId: artistProfile?.id ?? null,
+          labelProfileId: labelProfile?.id ?? null,
         };
       },
     }),
   ],
   callbacks: {
-    jwt({ token, user }) {
+    async jwt({ token, user, trigger }) {
       if (user) {
         token.id = user.id;
         token.role = (user as { role?: string }).role;
+        token.artistProfileId =
+          (user as { artistProfileId?: string | null }).artistProfileId ?? null;
+        token.labelProfileId = (user as { labelProfileId?: string | null }).labelProfileId ?? null;
+      }
+      // Re-fetch profiles on session update (e.g. after application approval)
+      if (trigger === "update" && token.id) {
+        const [artistProfile, labelProfile] = await Promise.all([
+          db.artist.findUnique({ where: { ownerId: token.id as string }, select: { id: true } }),
+          db.label.findUnique({ where: { ownerId: token.id as string }, select: { id: true } }),
+        ]);
+        token.artistProfileId = artistProfile?.id ?? null;
+        token.labelProfileId = labelProfile?.id ?? null;
       }
       return token;
     },
@@ -139,6 +159,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (session.user) {
         session.user.id = token.id as string;
         (session.user as { role?: string }).role = token.role as string;
+        (session.user as { artistProfileId?: string | null }).artistProfileId =
+          token.artistProfileId as string | null;
+        (session.user as { labelProfileId?: string | null }).labelProfileId =
+          token.labelProfileId as string | null;
       }
       return session;
     },

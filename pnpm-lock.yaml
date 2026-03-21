@@ -369,6 +369,9 @@ importers:
       '@types/jsmediatags':
         specifier: ^3.9.6
         version: 3.9.6
+      '@types/mime-types':
+        specifier: ^3.0.1
+        version: 3.0.1
       '@types/node':
         specifier: ^20
         version: 20.19.34
@@ -387,6 +390,9 @@ importers:
       cross-env:
         specifier: ^10.0.0
         version: 10.1.0
+      dotenv:
+        specifier: ^17.3.1
+        version: 17.3.1
       dotenv-cli:
         specifier: ^8.0.0
         version: 8.0.0
@@ -402,6 +408,9 @@ importers:
       lint-staged:
         specifier: ^16.1.0
         version: 16.2.7
+      mime-types:
+        specifier: ^3.0.2
+        version: 3.0.2
       prettier:
         specifier: ^3.5.3
         version: 3.8.1
@@ -3706,6 +3715,9 @@ packages:
   '@types/mdurl@2.0.0':
     resolution: {integrity: sha512-RGdgjQUZba5p6QEFAVx2OGb8rQDL/cPRG7GiedRzMcJ1tYnUANBncjbSB1NRGwbvjcPeikRABz2nshyPk1bhWg==}
 
+  '@types/mime-types@3.0.1':
+    resolution: {integrity: sha512-xRMsfuQbnRq1Ef+C+RKaENOxXX87Ygl38W1vDfPHRku02TgQr+Qd8iivLtAMcR0KF5/29xlnFihkTlbqFrGOVQ==}
+
   '@types/ms@2.1.0':
     resolution: {integrity: sha512-GsCCIZDE/p3i96vtEqx+7dBUGXrc7zeSK3wwPHIaRThS+9OhWIXRqzs4d6k1SVU8g91DrNRWxWUGhp5KXQb2VA==}
 
@@ -4658,6 +4670,10 @@ packages:
 
   dotenv@16.6.1:
     resolution: {integrity: sha512-uBq4egWHTcTt33a72vpSG0z3HnPuIl6NqYcTrKEg2azoEyl2hpW0zqlxysq2pK9HlDIHyHyakeYaYnSAwd8bow==}
+    engines: {node: '>=12'}
+
+  dotenv@17.3.1:
+    resolution: {integrity: sha512-IO8C/dzEb6O3F9/twg6ZLXz164a2fhTnEWb95H23Dm4OuN+92NmEAlTrupP9VW6Jm3sO26tQlqyvyi4CsnY9GA==}
     engines: {node: '>=12'}
 
   drizzle-kit@0.31.7:
@@ -6072,9 +6088,17 @@ packages:
     resolution: {integrity: sha512-sPU4uV7dYlvtWJxwwxHD0PuihVNiE7TyAbQ5SWxDCB9mUYvOgroQOwYQQOKPJ8CIbE+1ETVlOoK1UC2nU3gYvg==}
     engines: {node: '>= 0.6'}
 
+  mime-db@1.54.0:
+    resolution: {integrity: sha512-aU5EJuIN2WDemCcAp2vFBfp/m4EAhWJnUNSSw0ixs7/kXbd6Pg64EmwJkNdFhB8aWt1sH2CTXrLxo/iAGV3oPQ==}
+    engines: {node: '>= 0.6'}
+
   mime-types@2.1.35:
     resolution: {integrity: sha512-ZDY+bPm5zTTF+YpCrAU9nK0UgICYPT0QtT1NZWFv4s++TNkcgVaT0g6+4R2uI4MjQjzysHB1zxuWL50hzaeXiw==}
     engines: {node: '>= 0.6'}
+
+  mime-types@3.0.2:
+    resolution: {integrity: sha512-Lbgzdk0h4juoQ9fCKXW4by0UJqj+nOOrI9MJ1sSj4nI8aI2eo1qmvQEie4VD1glsS250n15LsWsYtCugiStS5A==}
+    engines: {node: '>=18'}
 
   mimic-function@5.0.1:
     resolution: {integrity: sha512-VP79XUPxV2CigYP3jWwAUFSku2aKqBH7uTAapFWCBqutsbmDo96KY5o8uh6U+/YSIn5OxJnXp73beVkpqMIGhA==}
@@ -11546,6 +11570,8 @@ snapshots:
 
   '@types/mdurl@2.0.0': {}
 
+  '@types/mime-types@3.0.1': {}
+
   '@types/ms@2.1.0': {}
 
   '@types/mysql@2.15.26':
@@ -12474,6 +12500,8 @@ snapshots:
   dotenv-expand@10.0.0: {}
 
   dotenv@16.6.1: {}
+
+  dotenv@17.3.1: {}
 
   drizzle-kit@0.31.7:
     dependencies:
@@ -14098,9 +14126,15 @@ snapshots:
 
   mime-db@1.52.0: {}
 
+  mime-db@1.54.0: {}
+
   mime-types@2.1.35:
     dependencies:
       mime-db: 1.52.0
+
+  mime-types@3.0.2:
+    dependencies:
+      mime-db: 1.54.0
 
   mimic-function@5.0.1: {}
 

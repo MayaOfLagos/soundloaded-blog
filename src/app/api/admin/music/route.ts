@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { z } from "zod";
 import { indexMusic } from "@/lib/meilisearch";
 
-const ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN", "EDITOR"];
+const ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN"];
 
 async function requireAdmin() {
   const session = await auth();

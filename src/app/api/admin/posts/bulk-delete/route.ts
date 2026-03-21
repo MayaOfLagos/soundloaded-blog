@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { z } from "zod";
 import { removeFromIndex, INDEXES } from "@/lib/meilisearch";
 
-const ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN", "EDITOR"];
+const ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN"];
 
 const schema = z.object({
   ids: z.array(z.string().min(1)).min(1).max(100),

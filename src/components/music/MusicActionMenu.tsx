@@ -64,6 +64,8 @@ export function MusicActionMenu({ track, size = 20, className }: MusicActionMenu
     e.stopPropagation();
     if (!isOpen && triggerRef.current) {
       const rect = triggerRef.current.getBoundingClientRect();
+      // Anchor so the dropdown's right edge aligns with trigger's right edge,
+      // and it expands upward from the trigger's top
       setAnchor({
         top: rect.top + window.scrollY,
         left: rect.right + window.scrollX,
@@ -164,15 +166,19 @@ export function MusicActionMenu({ track, size = 20, className }: MusicActionMenu
         <MoreHorizontal size={size} className="text-white drop-shadow-md" />
       </button>
 
-      {/* Portal: exact uselayouts doc pattern, positioned at trigger */}
+      {/* Portal: smooth-dropdown pattern, anchored at trigger's right edge */}
       {portalReady &&
         createPortal(
           <div
             ref={containerRef}
             className="absolute z-[9999]"
             style={{
+              // Right edge of container = right edge of trigger
+              // Dropdown grows leftward + upward from trigger
               top: anchor.top,
-              left: anchor.left - 40,
+              left: anchor.left,
+              width: 0,
+              height: 0,
               pointerEvents: isOpen ? "auto" : "none",
             }}
           >
@@ -180,7 +186,7 @@ export function MusicActionMenu({ track, size = 20, className }: MusicActionMenu
               layout
               initial={false}
               animate={{
-                width: isOpen ? 220 : 0,
+                width: isOpen ? 200 : 0,
                 height: isOpen ? openHeight : 0,
                 borderRadius: isOpen ? 14 : 12,
                 opacity: isOpen ? 1 : 0,
@@ -192,7 +198,7 @@ export function MusicActionMenu({ track, size = 20, className }: MusicActionMenu
                 mass: 0.8,
                 opacity: { duration: 0.15 },
               }}
-              className="bg-popover border-border absolute top-0 right-0 origin-top-right cursor-pointer overflow-hidden border shadow-lg"
+              className="bg-popover border-border absolute right-0 bottom-0 origin-bottom-right cursor-pointer overflow-hidden border shadow-lg"
               style={{ pointerEvents: isOpen ? "auto" : "none" }}
               onClick={(e) => {
                 e.stopPropagation();

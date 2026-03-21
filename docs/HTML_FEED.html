@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Facebook Post Card</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --fb-bg:#f0f2f5;
+  --card-bg:#ffffff;
+  --text-primary:#050505;
+  --text-secondary:#65676b;
+  --border:#ced0d4;
+  --blue:#1877f2;
+  --hover-bg:#f2f2f2;
+  --divider:#e4e6ea;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --fb-bg:#18191a;
+    --card-bg:#242526;
+    --text-primary:#e4e6eb;
+    --text-secondary:#b0b3b8;
+    --border:#3e4042;
+    --hover-bg:#3a3b3c;
+    --divider:#3e4042;
+  }
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;background:var(--fb-bg);padding:16px;min-height:100vh}
+.feed{max-width:500px;margin:0 auto;display:flex;flex-direction:column;gap:10px}
+
+/* CARD */
+.post-card{background:var(--card-bg);border-radius:12px;border:0.5px solid var(--border);overflow:hidden}
+
+/* HEADER */
+.post-header{display:flex;align-items:flex-start;padding:12px 16px 0;gap:8px}
+.avatar-ring{width:42px;height:42px;border-radius:50%;border:2px solid var(--blue);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.avatar{width:38px;height:38px;border-radius:50%;background:var(--blue);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:#fff;letter-spacing:-.5px}
+.header-info{flex:1;min-width:0}
+.name-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.page-name{font-size:15px;font-weight:600;color:var(--text-primary);line-height:1.3;white-space:nowrap;cursor:pointer}
+.page-name:hover{text-decoration:underline}
+.follow-btn{font-size:13px;font-weight:600;color:var(--blue);cursor:pointer;background:none;border:none;padding:0;line-height:1;font-family:inherit}
+.follow-btn:hover{text-decoration:underline}
+.meta-row{display:flex;align-items:center;gap:4px;margin-top:2px}
+.timestamp{font-size:13px;color:var(--text-secondary);cursor:pointer}
+.timestamp:hover{text-decoration:underline}
+.dot-sep{font-size:13px;color:var(--text-secondary)}
+.public-icon{display:flex;align-items:center;color:var(--text-secondary)}
+.header-actions{display:flex;align-items:center;gap:2px;flex-shrink:0;margin-left:auto;padding-left:8px}
+.icon-btn{width:36px;height:36px;border-radius:50%;border:none;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text-secondary);transition:background .15s;font-family:inherit}
+.icon-btn:hover{background:var(--hover-bg)}
+
+/* TEXT BODY */
+.post-body{padding:10px 16px 12px}
+.post-text{font-size:15px;color:var(--text-primary);line-height:1.4;white-space:pre-wrap;word-break:break-word}
+.post-text.truncated{display:-webkit-box;-webkit-line-clamp:5;-webkit-box-orient:vertical;overflow:hidden}
+.see-more{font-size:15px;font-weight:600;color:var(--text-primary);cursor:pointer;background:none;border:none;padding:0;display:inline;font-family:inherit}
+.see-more:hover{text-decoration:underline}
+.hashtags{margin-top:8px;display:flex;flex-wrap:wrap;gap:6px}
+.hashtag{font-size:14px;color:var(--blue);cursor:pointer}
+.hashtag:hover{text-decoration:underline}
+
+/* IMAGE */
+.post-image-wrap{position:relative;background:#f0f0f0;overflow:hidden;aspect-ratio:4/5}
+.post-image-wrap img{width:100%;height:100%;object-fit:cover;display:block}
+
+/* REACTIONS BAR */
+.reactions-bar{padding:6px 16px;display:flex;align-items:center;justify-content:space-between}
+.reaction-counts{display:flex;align-items:center;gap:5px;cursor:pointer}
+.reaction-emojis{display:flex;align-items:center}
+.emoji-icon{width:18px;height:18px;border-radius:50%;border:1.5px solid var(--card-bg);margin-right:-3px;display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0}
+.emoji-like{background:#1877f2}
+.emoji-haha{background:#f7b125}
+.count-text{font-size:15px;color:var(--text-secondary);margin-left:8px}
+.count-text:hover{text-decoration:underline}
+.right-counts{display:flex;gap:12px}
+.right-count{font-size:15px;color:var(--text-secondary);cursor:pointer}
+.right-count:hover{text-decoration:underline}
+
+/* DIVIDER */
+.divider{height:0.5px;background:var(--divider);margin:0 16px}
+
+/* ACTION BAR */
+.action-bar{display:flex;padding:4px 8px;gap:0}
+.action-btn{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:8px 4px;border:none;background:transparent;cursor:pointer;border-radius:8px;color:var(--text-secondary);font-size:15px;font-weight:500;transition:background .15s;font-family:inherit}
+.action-btn:hover{background:var(--hover-bg)}
+.action-btn.liked{color:#1877f2}
+.action-btn svg{width:18px;height:18px;fill:currentColor;flex-shrink:0}
+
+/* COMMENT AREA */
+.comment-area{padding:8px 16px 12px;display:flex;gap:8px;align-items:center}
+.comment-avatar{width:32px;height:32px;border-radius:50%;background:var(--hover-bg);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:var(--text-secondary)}
+.comment-input{flex:1;background:var(--hover-bg);border:none;border-radius:20px;padding:8px 14px;font-size:15px;color:var(--text-primary);font-family:inherit;outline:none;cursor:text;line-height:1.3}
+.comment-input::placeholder{color:var(--text-secondary)}
+
+/* REACTION PICKER */
+.reaction-picker-wrap{position:relative;display:flex;align-items:center}
+.reaction-picker{position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%) scale(0.85);background:var(--card-bg);border:0.5px solid var(--border);border-radius:24px;padding:6px 10px;display:flex;gap:4px;opacity:0;pointer-events:none;transition:opacity .18s,transform .18s;box-shadow:0 4px 16px rgba(0,0,0,.15);white-space:nowrap;z-index:10}
+.reaction-picker.visible{opacity:1;pointer-events:all;transform:translateX(-50%) scale(1)}
+.rxn{display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;padding:4px 6px;border-radius:8px;transition:transform .1s}
+.rxn:hover{transform:scale(1.3) translateY(-4px)}
+.rxn-emoji{font-size:26px;line-height:1}
+.rxn-label{font-size:10px;color:var(--text-secondary);font-weight:600;opacity:0;transition:opacity .1s}
+.rxn:hover .rxn-label{opacity:1}
+
+@media (prefers-reduced-motion:reduce){
+  *{transition:none!important;animation:none!important}
+}
+@media (max-width:520px){
+  body{padding:0}
+  .post-card{border-radius:0;border-left:none;border-right:none}
+  .action-btn span.label{display:none}
+}
+</style>
+</head>
+<body>
+
+<div class="feed">
+  <div class="post-card">
+
+    <!-- HEADER -->
+    <div class="post-header">
+      <div class="avatar-ring">
+        <div class="avatar">LT</div>
+      </div>
+      <div class="header-info">
+        <div class="name-row">
+          <span class="page-name">Laskenta Technologies Limited</span>
+          <span style="color:var(--text-secondary);font-size:15px">·</span>
+          <button class="follow-btn">Follow</button>
+        </div>
+        <div class="meta-row">
+          <span class="timestamp">2h</span>
+          <span class="dot-sep">·</span>
+          <span class="public-icon">
+            <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor">
+              <path fill-rule="evenodd" d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1zM2.5 8a5.5 5.5 0 1 1 11 0 5.5 5.5 0 0 1-11 0z"/>
+              <path d="M5.5 8a2.5 2.5 0 0 0 5 0 2.5 2.5 0 0 0-5 0z"/>
+            </svg>
+          </span>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button class="icon-btn" title="More options" aria-label="More options">
+          <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
+            <circle cx="4" cy="10" r="2"/><circle cx="10" cy="10" r="2"/><circle cx="16" cy="10" r="2"/>
+          </svg>
+        </button>
+        <button class="icon-btn" title="Hide post" aria-label="Hide post">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M12.7 4.7a1 1 0 0 0-1.4-1.4L8 6.6 4.7 3.3a1 1 0 0 0-1.4 1.4L6.6 8l-3.3 3.3a1 1 0 1 0 1.4 1.4L8 9.4l3.3 3.3a1 1 0 0 0 1.4-1.4L9.4 8l3.3-3.3z"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- BODY -->
+    <div class="post-body">
+      <div id="posttext" class="post-text truncated">Before you marry a person, make them use a computer with slow internet to see exactly who they are.
+
+If you remember dial up internet, you already passed a life test. That loud connection sound, waiting five whole minutes for one page to load, and praying nobody picked up the house phone. The second someone called, boom... you were kicked offline. Windows 98 did not care about your feelings or your patience.
+
+Now imagine going back to that after today's fast WiFi and instant streaming. No buffering, no spinning wheel, just pure frustration building slowly. It is funny because it is true. Technology can test anyone's patience. Not men, not women... just humans trying to stay calm while the screen refuses to cooperate.
+
+Maybe real compatibility is not about perfection but about how calmly you handle small annoyances together. Could you survive dial up days again without losing your cool?</div>
+      <button class="see-more" id="seemorebtn" onclick="toggleText()">See more</button>
+      <div class="hashtags">
+        <span class="hashtag">#fblifestyle</span>
+        <span class="hashtag">#marriagehumor</span>
+        <span class="hashtag">#90skids</span>
+        <span class="hashtag">#technology</span>
+        <span class="hashtag">#relationships</span>
+      </div>
+    </div>
+
+    <!-- IMAGE -->
+    <div class="post-image-wrap">
+      <img
+        src="https://scontent-mad1-1.xx.fbcdn.net/v/t39.30808-6/651009677_122165449478898173_6256231750553353852_n.jpg?stp=dst-jpg_s1080x2048_tt6&_nc_cat=102&ccb=1-7&_nc_sid=7b2446&_nc_eui2=AeGYwdh5pGiWBxLR8B9GnbCG0FXtKH7sLZTQVe0ofuwtlB58RkrMCVX_u1AySakiXDLfQwA82EY6umV_VW_uFYun&_nc_ohc=BM7_YdE-nfUQ7kNvwGBbwE0&_nc_zt=23&_nc_ht=scontent-mad1-1.xx&oh=00_AfxJfQ2d6bNwQwEArdQ1WWGaidqsah5OpfeZjI7hjmAIbg&oe=69B8E7CB"
+        alt="Post image"
+        loading="lazy"
+        onerror="this.parentElement.style.display='none'"
+      />
+    </div>
+
+    <!-- REACTIONS BAR -->
+    <div class="reactions-bar">
+      <div class="reaction-counts" id="reactioncounts">
+        <div class="reaction-emojis" id="reactionemojis">
+          <div class="emoji-icon emoji-like">
+            <svg width="10" height="10" viewBox="0 0 16 16" fill="white">
+              <path d="M7.3 3.87a.7.7 0 0 1 .7-.7c.67 0 1.22.55 1.22 1.22v1.75a.1.1 0 0 0 .1.1h1.8c.99 0 1.72.93 1.49 1.89l-.46 1.9a2.3 2.3 0 0 1-2.24 1.77H6.92a.58.58 0 0 1-.58-.58V7.74c0-.42.1-.83.28-1.2l.29-.57a3.69 3.69 0 0 0 .39-1.65V3.87zM4.37 7a.77.77 0 0 0-.77.77v3.26a.77.77 0 0 0 .77.77h.77a.38.38 0 0 0 .38-.38V7.38A.38.38 0 0 0 5.14 7h-.77z"/>
+            </svg>
+          </div>
+          <div class="emoji-icon emoji-haha" style="font-size:11px">😂</div>
+        </div>
+        <span class="count-text" id="reactioncount">7</span>
+      </div>
+      <div class="right-counts">
+        <span class="right-count" id="commentcount">3 comments</span>
+        <span class="right-count">2 shares</span>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- ACTION BAR -->
+    <div class="action-bar">
+
+      <!-- Like with reaction picker -->
+      <div class="reaction-picker-wrap" style="flex:1">
+        <div class="reaction-picker" id="rxnpicker" role="menu">
+          <div class="rxn" role="menuitem" onclick="selectReaction('like','👍','#1877f2')" title="Like">
+            <span class="rxn-emoji">👍</span>
+            <span class="rxn-label">Like</span>
+          </div>
+          <div class="rxn" role="menuitem" onclick="selectReaction('love','❤️','#f33e58')" title="Love">
+            <span class="rxn-emoji">❤️</span>
+            <span class="rxn-label">Love</span>
+          </div>
+          <div class="rxn" role="menuitem" onclick="selectReaction('haha','😂','#f7b125')" title="Haha">
+            <span class="rxn-emoji">😂</span>
+            <span class="rxn-label">Haha</span>
+          </div>
+          <div class="rxn" role="menuitem" onclick="selectReaction('wow','😮','#f7b125')" title="Wow">
+            <span class="rxn-emoji">😮</span>
+            <span class="rxn-label">Wow</span>
+          </div>
+          <div class="rxn" role="menuitem" onclick="selectReaction('sad','😢','#f7b125')" title="Sad">
+            <span class="rxn-emoji">😢</span>
+            <span class="rxn-label">Sad</span>
+          </div>
+          <div class="rxn" role="menuitem" onclick="selectReaction('angry','😡','#e9710f')" title="Angry">
+            <span class="rxn-emoji">😡</span>
+            <span class="rxn-label">Angry</span>
+          </div>
+        </div>
+        <button
+          class="action-btn"
+          id="likebtn"
+          aria-pressed="false"
+          aria-label="Like"
+          onclick="handleLikeClick()"
+        >
+          <svg viewBox="0 0 20 20" id="likesvg">
+            <path d="M10.5 4.58a.87.87 0 0 1 .87-.87c.84 0 1.53.68 1.53 1.53v2.18a.13.13 0 0 0 .12.13h2.24c1.24 0 2.15 1.16 1.87 2.36l-.57 2.38a2.88 2.88 0 0 1-2.8 2.21H9.65a.72.72 0 0 1-.72-.72V9.68c0-.52.12-1.03.35-1.5l.36-.71a4.61 4.61 0 0 0 .49-2.06l-.03-.83zM5.46 8.75a.96.96 0 0 0-.96.96v4.07a.96.96 0 0 0 .96.96h.96a.48.48 0 0 0 .48-.48V9.23a.48.48 0 0 0-.48-.48h-.96z"/>
+          </svg>
+          <span class="label" id="likelabel">Like</span>
+        </button>
+      </div>
+
+      <button class="action-btn" onclick="focusComment()" aria-label="Comment">
+        <svg viewBox="0 0 20 20" fill="currentColor">
+          <path d="M10 2C5.58 2 2 5.14 2 9c0 2.01.88 3.81 2.28 5.07L4 17l2.7-1.35C7.7 15.87 8.83 16 10 16c4.42 0 8-3.14 8-7s-3.58-7-8-7z"/>
+        </svg>
+        <span class="label">Comment</span>
+      </button>
+
+      <button class="action-btn" aria-label="Share">
+        <svg viewBox="0 0 20 20" fill="currentColor">
+          <path d="M18 10l-5-5v3H6a4 4 0 0 0-4 4v3h2v-3a2 2 0 0 1 2-2h7v3l5-5z"/>
+        </svg>
+        <span class="label">Share</span>
+      </button>
+
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- COMMENT INPUT -->
+    <div class="comment-area">
+      <div class="comment-avatar">M</div>
+      <input
+        class="comment-input"
+        id="commentinput"
+        type="text"
+        placeholder="Write a comment…"
+        aria-label="Write a comment"
+      />
+    </div>
+
+  </div>
+</div>
+
+<script>
+var liked = false;
+var currentReaction = null;
+var holdTimer = null;
+var pickerOpen = false;
+var baseCount = 7;
+
+function toggleText() {
+  var t = document.getElementById('posttext');
+  var b = document.getElementById('seemorebtn');
+  if (t.classList.contains('truncated')) {
+    t.classList.remove('truncated');
+    b.textContent = 'See less';
+  } else {
+    t.classList.add('truncated');
+    b.textContent = 'See more';
+  }
+}
+
+function focusComment() {
+  document.getElementById('commentinput').focus();
+}
+
+function openPicker() {
+  document.getElementById('rxnpicker').classList.add('visible');
+  pickerOpen = true;
+}
+
+function closePicker() {
+  document.getElementById('rxnpicker').classList.remove('visible');
+  pickerOpen = false;
+}
+
+function handleLikeClick() {
+  if (pickerOpen) { closePicker(); return; }
+  if (currentReaction) {
+    clearReaction();
+  } else {
+    selectReaction('like', '👍', '#1877f2');
+  }
+}
+
+function selectReaction(type, emoji, color) {
+  closePicker();
+  var btn = document.getElementById('likebtn');
+  var label = document.getElementById('likelabel');
+  var likesvg = document.getElementById('likesvg');
+
+  if (currentReaction === type) {
+    clearReaction();
+    return;
+  }
+
+  currentReaction = type;
+  liked = true;
+  btn.classList.add('liked');
+  btn.style.color = color;
+  btn.setAttribute('aria-pressed', 'true');
+  btn.setAttribute('aria-label', type.charAt(0).toUpperCase() + type.slice(1));
+
+  if (type === 'like') {
+    likesvg.style.display = '';
+    label.textContent = 'Like';
+  } else {
+    likesvg.style.display = 'none';
+    label.textContent = emoji + ' ' + type.charAt(0).toUpperCase() + type.slice(1);
+  }
+
+  document.getElementById('reactioncount').textContent = baseCount + 1;
+}
+
+function clearReaction() {
+  currentReaction = null;
+  liked = false;
+  var btn = document.getElementById('likebtn');
+  var label = document.getElementById('likelabel');
+  var likesvg = document.getElementById('likesvg');
+  btn.classList.remove('liked');
+  btn.style.color = '';
+  btn.setAttribute('aria-pressed', 'false');
+  btn.setAttribute('aria-label', 'Like');
+  likesvg.style.display = '';
+  label.textContent = 'Like';
+  document.getElementById('reactioncount').textContent = baseCount;
+}
+
+var likebtn = document.getElementById('likebtn');
+likebtn.addEventListener('mousedown', function() {
+  holdTimer = setTimeout(openPicker, 500);
+});
+likebtn.addEventListener('mouseup', function() { clearTimeout(holdTimer); });
+likebtn.addEventListener('mouseleave', function() { clearTimeout(holdTimer); });
+likebtn.addEventListener('touchstart', function(e) {
+  holdTimer = setTimeout(openPicker, 500);
+}, { passive: true });
+likebtn.addEventListener('touchend', function() { clearTimeout(holdTimer); });
+
+document.addEventListener('click', function(e) {
+  if (pickerOpen && !e.target.closest('.reaction-picker-wrap')) {
+    closePicker();
+  }
+});
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape' && pickerOpen) closePicker();
+});
+</script>
+</body>
+</html>

@@ -1,16 +1,15 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
 import { LeftSidebar } from "@/components/home/LeftSidebar";
-import { AlbumCard } from "@/components/music/AlbumCard";
 import { TrendingSidebar } from "@/components/blog/TrendingSidebar";
 import { PopularMusicSidebar } from "@/components/music/PopularMusicSidebar";
-import { Skeleton } from "@/components/ui/skeleton";
 import { NewsletterForm } from "@/components/common/NewsletterForm";
 import { getLatestAlbums } from "@/lib/api/music";
 import { getSettings } from "@/lib/settings";
 import { SectionDisabled } from "@/components/common/SectionDisabled";
 import { JsonLd } from "@/components/common/JsonLd";
 import { buildCollectionPageSchema } from "@/lib/structured-data";
+import { AlbumsInfiniteGrid, AlbumsGridSkeleton } from "./AlbumsInfiniteGrid";
 
 export async function generateMetadata(): Promise<Metadata> {
   const s = await getSettings();
@@ -56,7 +55,7 @@ export default async function AlbumsPage() {
             </div>
 
             <Suspense fallback={<AlbumsGridSkeleton />}>
-              <AlbumsGrid />
+              <AlbumsGridLoader />
             </Suspense>
 
             <div className="mt-8 space-y-5 lg:hidden">
@@ -95,41 +94,10 @@ export default async function AlbumsPage() {
   );
 }
 
-async function AlbumsGrid() {
-  const albums = await getLatestAlbums({ limit: 20 });
+async function AlbumsGridLoader() {
+  const { albums, nextCursor } = await getLatestAlbums({ limit: 20 });
 
-  if (!albums.length) {
-    return (
-      <div className="py-20 text-center">
-        <p className="text-xl font-bold">No albums yet</p>
-        <p className="text-muted-foreground mt-2">Albums and EPs will appear here once uploaded.</p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-      {albums.map((album) => (
-        <AlbumCard key={album.id} album={album} />
-      ))}
-    </div>
-  );
-}
-
-function AlbumsGridSkeleton() {
-  return (
-    <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-      {Array.from({ length: 8 }).map((_, i) => (
-        <div key={i} className="border-border overflow-hidden rounded-xl border">
-          <Skeleton className="aspect-square w-full" />
-          <div className="space-y-2 p-3">
-            <Skeleton className="h-3 w-full" />
-            <Skeleton className="h-3 w-2/3" />
-          </div>
-        </div>
-      ))}
-    </div>
-  );
+  return <AlbumsInfiniteGrid initialAlbums={albums} initialNextCursor={nextCursor} />;
 }
 
 function SidebarBlockSkeleton() {

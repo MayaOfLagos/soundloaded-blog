@@ -3,7 +3,8 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Disc, Mic2 } from "lucide-react";
+import { Disc, Mic2, Music2 } from "lucide-react";
+import { EmptyState } from "@/components/common/EmptyState";
 import { GenreChips } from "@/components/music/GenreChips";
 import { ScrollShelf, ShelfItem } from "@/components/music/ScrollShelf";
 import { MusicShelfCard } from "@/components/music/MusicShelfCard";
@@ -116,12 +117,11 @@ export function MusicPageClient({
 
       {/* No results for filtered genre */}
       {selectedGenre && filteredNewReleases.length === 0 && filteredTrending.length === 0 && (
-        <div className="py-16 text-center">
-          <p className="text-lg font-bold">No {selectedGenre} tracks yet</p>
-          <p className="text-muted-foreground mt-1 text-sm">
-            Check back later for new {selectedGenre} music.
-          </p>
-        </div>
+        <EmptyState
+          icon={Music2}
+          title={`No ${selectedGenre} tracks yet`}
+          description={`New ${selectedGenre} music will appear here. Check back soon for fresh releases!`}
+        />
       )}
     </div>
   );
@@ -130,30 +130,36 @@ export function MusicPageClient({
 // ── Album card adapted for shelf layout ──
 function AlbumShelfCard({ album }: { album: AlbumCardData }) {
   return (
-    <Link
-      href={`/albums/${album.slug}`}
-      className="group/card hover:bg-muted/50 block rounded-lg p-3 transition-colors"
-    >
-      <div className="relative aspect-square overflow-hidden rounded-md">
-        {album.coverArt ? (
-          <Image
-            src={album.coverArt}
-            alt={album.title}
-            fill
-            className="object-cover transition-transform duration-300 group-hover/card:scale-105"
-            sizes="(max-width: 640px) 150px, (max-width: 1024px) 180px, 200px"
-          />
-        ) : (
-          <div className="from-brand/10 to-muted flex h-full items-center justify-center bg-gradient-to-br">
-            <Disc className="text-muted-foreground/40 h-10 w-10" />
-          </div>
-        )}
-      </div>
+    <div className="group/card hover:bg-muted/50 rounded-lg p-3 transition-colors">
+      <Link href={`/albums/${album.slug}`}>
+        <div className="relative aspect-square overflow-hidden rounded-md">
+          {album.coverArt ? (
+            <Image
+              src={album.coverArt}
+              alt={album.title}
+              fill
+              className="object-cover transition-transform duration-300 group-hover/card:scale-105"
+              sizes="(max-width: 640px) 150px, (max-width: 1024px) 180px, 200px"
+            />
+          ) : (
+            <div className="from-brand/10 to-muted flex h-full items-center justify-center bg-gradient-to-br">
+              <Disc className="text-muted-foreground/40 h-10 w-10" />
+            </div>
+          )}
+        </div>
+      </Link>
       <div className="mt-2 min-w-0">
-        <p className="text-foreground group-hover/card:text-brand truncate text-sm font-bold transition-colors">
-          {album.title}
-        </p>
-        <p className="text-muted-foreground mt-0.5 truncate text-xs">{album.artistName}</p>
+        <Link href={`/albums/${album.slug}`}>
+          <p className="text-foreground group-hover/card:text-brand truncate text-sm font-bold transition-colors">
+            {album.title}
+          </p>
+        </Link>
+        <Link
+          href={`/artists/${album.artistSlug}`}
+          className="text-muted-foreground hover:text-brand mt-0.5 block truncate text-xs transition-colors"
+        >
+          {album.artistName}
+        </Link>
         <div className="text-muted-foreground mt-1 flex items-center gap-2 text-[11px]">
           <Badge variant="secondary" className="py-0 text-[10px]">
             {album.releaseYear ?? "N/A"}
@@ -161,7 +167,7 @@ function AlbumShelfCard({ album }: { album: AlbumCardData }) {
           <span>{album.trackCount} tracks</span>
         </div>
       </div>
-    </Link>
+    </div>
   );
 }
 

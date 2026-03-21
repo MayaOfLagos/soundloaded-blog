@@ -145,7 +145,7 @@ export function StoryTray({ className, enableStories = true }: StoryTrayProps) {
         {/* Scrollable tray */}
         <div
           ref={scrollRef}
-          className="scrollbar-hide flex items-stretch gap-2 overflow-x-auto py-2 sm:px-6"
+          className="scrollbar-hide flex items-stretch gap-2 overflow-x-auto py-2"
           role="list"
           aria-label="Stories"
         >

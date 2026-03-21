@@ -2,15 +2,17 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import { LeftSidebar } from "@/components/home/LeftSidebar";
 import { CategoryHero } from "@/components/blog/CategoryHero";
-import { CategoryMasonryGrid } from "@/components/blog/CategoryMasonryGrid";
 import { TrendingSidebar } from "@/components/blog/TrendingSidebar";
 import { PopularMusicSidebar } from "@/components/music/PopularMusicSidebar";
 import { PostCardSkeleton } from "@/components/blog/PostCardSkeleton";
 import { NewsletterForm } from "@/components/common/NewsletterForm";
+import { getLatestPosts } from "@/lib/api/posts";
 import { getSettings } from "@/lib/settings";
 import { SectionDisabled } from "@/components/common/SectionDisabled";
 import { JsonLd } from "@/components/common/JsonLd";
 import { buildCollectionPageSchema } from "@/lib/structured-data";
+import { db } from "@/lib/db";
+import { GistInfiniteGrid } from "./GistInfiniteGrid";
 
 export async function generateMetadata(): Promise<Metadata> {
   const s = await getSettings();
@@ -62,12 +64,7 @@ export default async function GistPage() {
             </div>
 
             <Suspense fallback={<MasonrySkeleton />}>
-              <CategoryMasonryGrid
-                type="GIST"
-                heroCount={3}
-                emptyTitle="No gist yet"
-                emptyMessage="The gist is coming soon!"
-              />
+              <GistGridLoader />
             </Suspense>
 
             <div className="mt-8 space-y-5 lg:hidden">
@@ -103,6 +100,35 @@ export default async function GistPage() {
         </div>
       </div>
     </>
+  );
+}
+
+const HERO_COUNT = 3;
+const INITIAL_LIMIT = 15;
+
+async function GistGridLoader() {
+  const settings = await getSettings();
+  const [posts, total] = await Promise.all([
+    getLatestPosts({
+      type: "GIST",
+      limit: INITIAL_LIMIT + HERO_COUNT,
+      permalinkStructure: settings.permalinkStructure,
+    }),
+    db.post.count({
+      where: { status: "PUBLISHED", isUserGenerated: false, type: "GIST" },
+    }),
+  ]);
+
+  // Skip the hero posts (first 3) — they're shown by CategoryHero
+  const gridPosts = posts.slice(HERO_COUNT);
+  const hasNext = INITIAL_LIMIT + HERO_COUNT < total;
+
+  return (
+    <GistInfiniteGrid
+      initialPosts={gridPosts}
+      initialHasNext={hasNext}
+      permalinkStructure={settings.permalinkStructure}
+    />
   );
 }
 

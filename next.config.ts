@@ -40,6 +40,10 @@ const nextConfig: NextConfig = {
         protocol: "http",
         hostname: "localhost",
       },
+      {
+        protocol: "https",
+        hostname: "**",
+      },
     ],
     formats: ["image/avif", "image/webp"],
     minimumCacheTTL: 60,

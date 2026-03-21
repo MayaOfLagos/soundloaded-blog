@@ -30,6 +30,7 @@ interface ArtistFormDialogProps {
     slug: string;
     bio: string | null;
     photo: string | null;
+    coverImage: string | null;
     country: string | null;
     genre: string | null;
     instagram: string | null;
@@ -37,6 +38,7 @@ interface ArtistFormDialogProps {
     facebook: string | null;
     spotify: string | null;
     appleMusic: string | null;
+    verified: boolean;
   };
   trigger?: React.ReactNode;
 }
@@ -60,6 +62,7 @@ export function ArtistFormDialog({ mode, artist, trigger }: ArtistFormDialogProp
       slug: artist?.slug ?? "",
       bio: artist?.bio ?? "",
       photo: artist?.photo ?? "",
+      coverImage: artist?.coverImage ?? "",
       country: artist?.country ?? "Nigeria",
       genre: artist?.genre ?? "",
       instagram: artist?.instagram ?? "",
@@ -67,6 +70,7 @@ export function ArtistFormDialog({ mode, artist, trigger }: ArtistFormDialogProp
       facebook: artist?.facebook ?? "",
       spotify: artist?.spotify ?? "",
       appleMusic: artist?.appleMusic ?? "",
+      verified: artist?.verified ?? false,
     },
   });
 
@@ -159,10 +163,16 @@ export function ArtistFormDialog({ mode, artist, trigger }: ArtistFormDialogProp
             />
           </div>
 
-          {/* Photo */}
-          <div className="space-y-1.5">
-            <Label htmlFor="photo">Photo URL</Label>
-            <Input id="photo" {...register("photo")} placeholder="https://..." />
+          {/* Photo & Cover Image */}
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="photo">Profile Photo URL</Label>
+              <Input id="photo" {...register("photo")} placeholder="https://..." />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="coverImage">Cover Image URL</Label>
+              <Input id="coverImage" {...register("coverImage")} placeholder="https://..." />
+            </div>
           </div>
 
           <Separator />
@@ -190,6 +200,21 @@ export function ArtistFormDialog({ mode, artist, trigger }: ArtistFormDialogProp
               <Label htmlFor="appleMusic">Apple Music</Label>
               <Input id="appleMusic" {...register("appleMusic")} placeholder="Profile URL" />
             </div>
+          </div>
+
+          <Separator />
+
+          {/* Verified */}
+          <div className="flex items-center gap-3">
+            <input
+              type="checkbox"
+              id="verified"
+              {...register("verified")}
+              className="text-brand focus:ring-brand h-4 w-4 rounded border-gray-300"
+            />
+            <Label htmlFor="verified" className="cursor-pointer text-sm">
+              Verified Artist
+            </Label>
           </div>
 
           {/* Submit */}

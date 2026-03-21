@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { getSettings } from "@/lib/settings";
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
+import { notifyComment, notifyCommentReply } from "@/lib/services/notifications";
 
 // Rate limit: 5 comments per hour per IP
 const commentRatelimit =
@@ -84,7 +85,7 @@ export async function GET(req: NextRequest) {
     const userLike = currentUserId
       ? (likes.find((l) => l.userId === currentUserId)?.type ?? null)
       : null;
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
     const { likes: _likes, ...rest } = comment as (typeof comments)[number] & { likes: unknown };
     return { ...rest, likeCount, dislikeCount, userLike };
   };
@@ -170,7 +171,7 @@ export async function POST(req: NextRequest) {
     // Verify post exists, is published, and comments are still open
     const post = await db.post.findUnique({
       where: { id: data.postId },
-      select: { id: true, status: true, publishedAt: true },
+      select: { id: true, status: true, publishedAt: true, authorId: true },
     });
     if (!post || post.status !== "PUBLISHED") {
       return NextResponse.json({ error: "Post not found." }, { status: 404 });
@@ -186,14 +187,16 @@ export async function POST(req: NextRequest) {
     }
 
     // Verify parent comment belongs to same post
+    let parentCommentAuthorId: string | null = null;
     if (data.parentId) {
       const parent = await db.comment.findUnique({
         where: { id: data.parentId },
-        select: { postId: true },
+        select: { postId: true, authorId: true },
       });
       if (!parent || parent.postId !== data.postId) {
         return NextResponse.json({ error: "Invalid parent comment." }, { status: 400 });
       }
+      parentCommentAuthorId = parent.authorId;
     }
 
     // Check blocklist (reject immediately)
@@ -277,6 +280,21 @@ export async function POST(req: NextRequest) {
         author: { select: { name: true, image: true } },
       },
     });
+
+    // In-app notifications (fire-and-forget)
+    if (userId && comment.status === "APPROVED" && session?.user) {
+      const actorName = (session.user as { name?: string }).name ?? "Someone";
+
+      // Notify post owner about the comment
+      if (post.authorId) {
+        notifyComment(userId, actorName, post.authorId, data.postId).catch(() => {});
+      }
+
+      // Notify parent comment author about the reply
+      if (parentCommentAuthorId) {
+        notifyCommentReply(userId, actorName, parentCommentAuthorId, data.postId).catch(() => {});
+      }
+    }
 
     // Send email notifications (fire-and-forget)
     const emailOnNew = fullSettings?.emailOnNewComment ?? true;

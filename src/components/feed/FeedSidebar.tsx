@@ -2,80 +2,52 @@ import { Suspense } from "react";
 import { TrendingSidebar } from "@/components/blog/TrendingSidebar";
 import { PopularMusicSidebar } from "@/components/music/PopularMusicSidebar";
 import { NewsletterForm } from "@/components/common/NewsletterForm";
+import { SuggestedUsers, type SuggestedUser } from "./SuggestedUsers";
 import { db } from "@/lib/db";
 
-// ── Suggested users to follow ──
-async function fetchSuggestedUsers() {
+async function fetchSuggestedUsers(): Promise<SuggestedUser[]> {
   try {
-    return await db.user.findMany({
+    const users = await db.user.findMany({
       where: {
-        role: { in: ["CONTRIBUTOR", "EDITOR", "ADMIN", "SUPER_ADMIN"] },
         name: { not: null },
+        OR: [
+          { role: { in: ["CONTRIBUTOR", "EDITOR", "ADMIN", "SUPER_ADMIN"] } },
+          { posts: { some: { status: "PUBLISHED" } } },
+        ],
       },
-      take: 5,
-      orderBy: { createdAt: "desc" },
       select: {
         id: true,
         name: true,
+        username: true,
         image: true,
         bio: true,
-        _count: { select: { posts: true, followers: true } },
+        _count: { select: { followers: true, posts: true } },
       },
+      orderBy: { followers: { _count: "desc" } },
+      take: 10,
     });
+    return users.map((u) => ({
+      id: u.id,
+      name: u.name,
+      username: u.username,
+      image: u.image,
+      bio: u.bio,
+      followerCount: u._count.followers,
+      postCount: u._count.posts,
+    }));
   } catch {
     return [];
   }
 }
 
-async function SuggestedUsers() {
-  const users = await fetchSuggestedUsers();
-
-  if (users.length === 0) return null;
-
-  return (
-    <div className="bg-card/50 ring-border/40 rounded-2xl p-4 ring-1 backdrop-blur-sm">
-      <h3 className="text-foreground mb-3 text-sm font-bold">Suggested for you</h3>
-      <div className="space-y-3">
-        {users.map((user) => (
-          <div key={user.id} className="flex items-center gap-3">
-            <div className="bg-muted flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full">
-              {user.image ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={user.image}
-                  alt={user.name || ""}
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                <span className="text-muted-foreground text-xs font-semibold">
-                  {user.name?.charAt(0)?.toUpperCase()}
-                </span>
-              )}
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-foreground truncate text-[13px] font-semibold">{user.name}</p>
-              <p className="text-muted-foreground text-[11px]">
-                {user._count.posts} posts · {user._count.followers} followers
-              </p>
-            </div>
-            <button className="bg-brand/10 text-brand hover:bg-brand/20 rounded-full px-3 py-1 text-[11px] font-semibold transition-colors">
-              Follow
-            </button>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
 // ── Feed Sidebar (admin-managed blocks displayed on /feed) ──
-export function FeedSidebar() {
+export async function FeedSidebar() {
+  const initialUsers = await fetchSuggestedUsers();
+
   return (
     <aside className="sticky top-16 hidden h-[calc(100vh-4rem)] space-y-5 overflow-y-auto pb-8 lg:block">
-      {/* Suggested users */}
-      <Suspense fallback={<SidebarSkeleton />}>
-        <SuggestedUsers />
-      </Suspense>
+      {/* Suggested users — server-fetched, client-enhanced with follow buttons */}
+      <SuggestedUsers initialUsers={initialUsers} />
 
       {/* Trending posts */}
       <Suspense fallback={<SidebarSkeleton />}>

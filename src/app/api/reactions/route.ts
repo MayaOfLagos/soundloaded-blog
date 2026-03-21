@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { reactionSchema, reactionDeleteSchema } from "@/lib/validations/reactions";
 import type { ReactionState } from "@/lib/api/reactions";
+import { notifyReaction } from "@/lib/services/notifications";
 
 async function getReactionState(postId: string, userId: string): Promise<ReactionState> {
   const [userReaction, counts] = await Promise.all([
@@ -70,6 +71,13 @@ export async function POST(request: NextRequest) {
     create: { userId, postId, emoji },
     update: { emoji },
   });
+
+  // Fire-and-forget notification to post owner
+  const post = await db.post.findUnique({ where: { id: postId }, select: { authorId: true } });
+  if (post?.authorId) {
+    const actorName = (session.user as { name?: string }).name ?? "Someone";
+    notifyReaction(userId, actorName, post.authorId, postId, emoji).catch(() => {});
+  }
 
   const state = await getReactionState(postId, userId);
   return NextResponse.json(state);

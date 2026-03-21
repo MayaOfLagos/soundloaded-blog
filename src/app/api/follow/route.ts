@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { Prisma } from "@prisma/client";
+import { notifyNewFollower } from "@/lib/services/notifications";
+import { isBlocked } from "@/lib/services/blocks";
 
 /** POST — follow a user */
 export async function POST(request: NextRequest) {
@@ -21,10 +23,25 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Cannot follow yourself" }, { status: 400 });
   }
 
+  // Prevent following if either user has blocked the other
+  const [theyBlockedUs, weBlockedThem] = await Promise.all([
+    isBlocked(userId, followerId),
+    isBlocked(followerId, userId),
+  ]);
+  if (theyBlockedUs || weBlockedThem) {
+    return NextResponse.json({ error: "Unable to follow this user" }, { status: 403 });
+  }
+
   try {
     await db.follow.create({
       data: { followerId, followingId: userId },
     });
+
+    // Fire-and-forget notification
+    const actorName = (session.user as { name?: string }).name ?? "Someone";
+    const actorUsername = (session.user as { username?: string }).username;
+    notifyNewFollower(followerId, actorName, userId, actorUsername).catch(() => {});
+
     return NextResponse.json({ following: true });
   } catch (err) {
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {

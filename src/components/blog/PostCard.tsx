@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Clock, Eye } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn, formatRelativeDate } from "@/lib/utils";
 
 export interface PostCardData {
@@ -113,9 +114,12 @@ export function PostCard({ post, variant = "default", hideExcerpt, className }: 
             <div className="mt-4 flex items-center gap-3">
               {post.author && (
                 <div className="flex items-center gap-2">
-                  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-white/20 text-xs font-bold text-white backdrop-blur-sm">
-                    {post.author.name.charAt(0).toUpperCase()}
-                  </div>
+                  <Avatar className="h-7 w-7 ring-1 ring-white/30">
+                    <AvatarImage src={post.author.avatar ?? undefined} />
+                    <AvatarFallback className="bg-white/20 text-xs font-bold text-white backdrop-blur-sm">
+                      {post.author.name.charAt(0).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
                   <span className="text-xs font-medium text-white/80">{post.author.name}</span>
                 </div>
               )}
@@ -187,7 +191,15 @@ export function PostCard({ post, variant = "default", hideExcerpt, className }: 
 
         <div className="text-muted-foreground mt-auto flex items-center gap-2 pt-3 text-[11px]">
           {post.author && (
-            <span className="text-foreground/80 font-semibold">{post.author.name}</span>
+            <div className="flex items-center gap-1.5">
+              <Avatar className="h-5 w-5">
+                <AvatarImage src={post.author.avatar ?? undefined} />
+                <AvatarFallback className="text-[9px] font-bold">
+                  {post.author.name.charAt(0).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              <span className="text-foreground/80 font-semibold">{post.author.name}</span>
+            </div>
           )}
           <span className="ml-auto">{formatRelativeDate(post.publishedAt)}</span>
           {post.viewCount !== undefined && post.viewCount > 0 && (

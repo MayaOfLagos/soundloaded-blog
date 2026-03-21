@@ -41,8 +41,8 @@ export async function GET(req: NextRequest) {
         title: p.title,
         excerpt: p.excerpt ?? null,
         coverImage: p.coverImage ?? null,
-        category: p.categoryName ?? null,
-        categorySlug: p.categorySlug ?? null,
+        publishedAt: p.publishedAt ?? p.createdAt ?? null,
+        category: p.categoryName ? { name: p.categoryName, slug: p.categorySlug } : null,
         type: p.type ?? null,
         href: getPostUrl(
           {
@@ -68,6 +68,9 @@ export async function GET(req: NextRequest) {
         name: a.name,
         photo: a.photo ?? null,
         genre: a.genre ?? null,
+        verified: a.verified ?? false,
+        songCount: (a.songCount as number) ?? 0,
+        followerCount: 0,
         href: `/artists/${a.slug}`,
       })),
     });
@@ -101,6 +104,8 @@ async function fallbackSearch(q: string, ip: string | null) {
           title: true,
           excerpt: true,
           coverImage: true,
+          publishedAt: true,
+          createdAt: true,
           category: { select: { name: true, slug: true } },
         },
       }),
@@ -124,7 +129,7 @@ async function fallbackSearch(q: string, ip: string | null) {
       db.artist.findMany({
         where: { name: { contains: q, mode: "insensitive" } },
         take: 3,
-        select: { id: true, slug: true, name: true, photo: true, genre: true },
+        include: { _count: { select: { music: true, artistFollows: true } } },
       }),
     ]);
 
@@ -137,8 +142,8 @@ async function fallbackSearch(q: string, ip: string | null) {
         title: p.title,
         excerpt: p.excerpt,
         coverImage: p.coverImage,
+        publishedAt: p.publishedAt ?? p.createdAt,
         category: p.category?.name ?? null,
-        categorySlug: p.category?.slug ?? null,
         href: getPostUrl(p, permalinkStructure),
       })),
       music: music.map((m) => ({
@@ -156,6 +161,9 @@ async function fallbackSearch(q: string, ip: string | null) {
         name: a.name,
         photo: a.photo,
         genre: a.genre,
+        verified: a.verified,
+        songCount: a._count.music,
+        followerCount: a._count.artistFollows,
         href: `/artists/${a.slug}`,
       })),
     });

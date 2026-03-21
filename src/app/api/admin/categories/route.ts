@@ -3,7 +3,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
 
-const ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN", "EDITOR"];
+const ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN"];
 
 async function requireAdmin() {
   const session = await auth();
@@ -27,7 +27,14 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const data = schema.parse(body);
-    const category = await db.category.create({ data });
+
+    // Auto-assign sortOrder to place new category at the end
+    const maxOrder = await db.category.aggregate({ _max: { sortOrder: true } });
+    const nextOrder = (maxOrder._max.sortOrder ?? -1) + 1;
+
+    const category = await db.category.create({
+      data: { ...data, sortOrder: nextOrder },
+    });
     return NextResponse.json(category, { status: 201 });
   } catch (err) {
     if (err instanceof z.ZodError) return NextResponse.json({ error: err.errors }, { status: 422 });

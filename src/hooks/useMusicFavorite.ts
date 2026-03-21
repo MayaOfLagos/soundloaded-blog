@@ -56,6 +56,7 @@ export function useMusicFavorite(musicId: string) {
     onSuccess: (result) => {
       // Immediately set cache with real server data (real favoriteId)
       queryClient.setQueryData<FavoriteCheckResponse>(queryKey, result);
+      notify.success(result.favorited ? "Added to favorites" : "Removed from favorites");
     },
     onError: (_err, _vars, context) => {
       if (context?.prev) {

@@ -6,7 +6,6 @@ import { PopularMusicSidebar } from "@/components/music/PopularMusicSidebar";
 import { NewsletterForm } from "@/components/common/NewsletterForm";
 import { ExploreFeed } from "@/components/explore/ExploreFeed";
 import { ExploreCardSkeleton } from "@/components/explore/ExploreCardSkeleton";
-import { StoryTraySkeleton } from "@/components/stories/StoryTraySkeleton";
 import { getSettings } from "@/lib/settings";
 import { SectionDisabled } from "@/components/common/SectionDisabled";
 import { JsonLd } from "@/components/common/JsonLd";
@@ -66,7 +65,7 @@ export default async function ExplorePage() {
 
           <main className="min-w-0">
             <Suspense fallback={<ExploreFeedSkeleton />}>
-              <ExploreFeed enableStories={settings.enableStories} />
+              <ExploreFeed />
             </Suspense>
           </main>
 
@@ -95,11 +94,26 @@ export default async function ExplorePage() {
   );
 }
 
+function ExploreTabBarSkeleton() {
+  return (
+    <div className="-mx-1 px-1">
+      <div className="bg-muted border-border flex w-fit rounded-full border p-1">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="flex items-center gap-2 rounded-full px-4 py-2">
+            <div className="bg-muted-foreground/15 h-4 w-4 animate-pulse rounded-full" />
+            <div className="bg-muted-foreground/15 hidden h-4 w-12 animate-pulse rounded sm:block" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function ExploreFeedSkeleton() {
   return (
     <div className="mx-auto w-full max-w-lg space-y-4 sm:max-w-xl">
-      {/* Story tray skeleton */}
-      <StoryTraySkeleton />
+      {/* Tab bar skeleton */}
+      <ExploreTabBarSkeleton />
       {/* Cards skeleton */}
       {Array.from({ length: 3 }).map((_, i) => (
         <ExploreCardSkeleton key={i} />

@@ -3,7 +3,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { deleteFromR2, MEDIA_BUCKET, MUSIC_BUCKET } from "@/lib/r2";
 
-const ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN", "EDITOR"];
+const ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN"];
 
 async function requireAdmin() {
   const session = await auth();

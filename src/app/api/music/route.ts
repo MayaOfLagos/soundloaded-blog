@@ -5,6 +5,7 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const page = parseInt(searchParams.get("page") ?? "1", 10);
   const limit = Math.min(parseInt(searchParams.get("limit") ?? "12", 10), 50);
+  const sort = searchParams.get("sort") ?? "latest";
   const genre = searchParams.get("genre") ?? undefined;
   const artistId = searchParams.get("artist") ?? undefined;
   const q = searchParams.get("q") ?? undefined;
@@ -26,10 +27,22 @@ export async function GET(req: NextRequest) {
     const [tracks, total] = await Promise.all([
       db.music.findMany({
         where,
-        orderBy: { createdAt: "desc" },
+        orderBy: sort === "popular" ? { downloadCount: "desc" } : { createdAt: "desc" },
         take: limit,
         skip: (page - 1) * limit,
-        include: {
+        select: {
+          id: true,
+          title: true,
+          slug: true,
+          r2Key: true,
+          coverArt: true,
+          fileSize: true,
+          duration: true,
+          genre: true,
+          year: true,
+          downloadCount: true,
+          enableDownload: true,
+          createdAt: true,
           artist: { select: { name: true, slug: true } },
           album: { select: { title: true, slug: true } },
         },
@@ -37,8 +50,14 @@ export async function GET(req: NextRequest) {
       db.music.count({ where }),
     ]);
 
+    // Convert BigInt fileSize to Number for JSON serialization
+    const serializedTracks = tracks.map((t) => ({
+      ...t,
+      fileSize: t.fileSize ? Number(t.fileSize) : null,
+    }));
+
     return NextResponse.json({
-      tracks,
+      tracks: serializedTracks,
       pagination: {
         page,
         limit,

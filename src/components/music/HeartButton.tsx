@@ -49,7 +49,7 @@ export function HeartButton({ musicId, size = 20, className }: HeartButtonProps)
         size={size}
         className={cn(
           "heart-icon transition-colors duration-200",
-          isFavorited ? "fill-red-500 text-red-500" : "fill-transparent text-white drop-shadow-md"
+          isFavorited ? "fill-red-500 text-red-500" : "text-muted-foreground fill-transparent"
         )}
       />
     </button>

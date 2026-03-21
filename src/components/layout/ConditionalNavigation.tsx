@@ -3,7 +3,7 @@
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 import { Navbar } from "./Navbar";
-import { Footer } from "./Footer";
+
 import { MusicPlayer } from "@/components/music/MusicPlayer";
 import { MobileBottomNav } from "./MobileBottomNav";
 
@@ -28,7 +28,6 @@ export function ConditionalNavigation({ children }: ConditionalNavigationProps) 
       <main className="flex-1 pb-40 md:pb-20">{children}</main>
       <MusicPlayer />
       <MobileBottomNav />
-      <Footer />
     </div>
   );
 }

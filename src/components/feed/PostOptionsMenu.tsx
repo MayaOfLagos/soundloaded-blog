@@ -12,6 +12,8 @@ import {
   // ExternalLink, // TODO: re-enable when dedicated post page exists
   EyeOff,
   Flag,
+  Ban,
+  VolumeX,
 } from "lucide-react";
 import useMeasure from "react-use-measure";
 import { useSession } from "next-auth/react";
@@ -20,8 +22,10 @@ import { cn } from "@/lib/utils";
 import { useBookmarkCheck } from "@/hooks/useUserDashboard";
 import { useToggleBookmark } from "@/hooks/useUserMutations";
 import { useFollowCheck, useToggleFollow } from "@/hooks/useFollow";
+import { useBlockCheck, useToggleBlock } from "@/hooks/useUserBlock";
 import { ReportDialog } from "@/components/feed/ReportDialog";
 import { EmbedDialog } from "@/components/feed/EmbedDialog";
+import toast from "react-hot-toast";
 
 const easeOutQuint: [number, number, number, number] = [0.23, 1, 0.32, 1];
 
@@ -67,6 +71,11 @@ export function PostOptionsMenu({
   const { data: followData } = useFollowCheck(isOwnPost ? undefined : authorId);
   const toggleFollow = useToggleFollow();
   const isFollowing = followData?.following ?? false;
+
+  const { data: blockData } = useBlockCheck(isOwnPost ? undefined : authorId);
+  const toggleBlock = useToggleBlock();
+  const isBlocked = blockData?.blocked ?? false;
+  const isMuted = blockData?.muted ?? false;
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -128,6 +137,21 @@ export function PostOptionsMenu({
     items.push({ id: "hide", label: "Hide this post", icon: EyeOff });
   }
 
+  // Block / Mute (not on own posts)
+  if (!isOwnPost) {
+    items.push({
+      id: "mute",
+      label: isMuted ? `Unmute ${authorName ?? "author"}` : `Mute ${authorName ?? "author"}`,
+      icon: VolumeX,
+    });
+    items.push({
+      id: "block",
+      label: isBlocked ? `Unblock ${authorName ?? "author"}` : `Block ${authorName ?? "author"}`,
+      icon: Ban,
+      isDanger: !isBlocked,
+    });
+  }
+
   // Report (not on own posts)
   if (!isOwnPost) {
     items.push({ id: "report", label: "Report post", icon: Flag, isDanger: true });
@@ -149,6 +173,26 @@ export function PostOptionsMenu({
         break;
       case "hide":
         onHide?.();
+        break;
+      case "block":
+        toggleBlock.mutate(
+          { userId: authorId, isBlocked, type: "BLOCK" },
+          {
+            onSuccess: () => {
+              toast.success(isBlocked ? "User unblocked" : "User blocked");
+            },
+          }
+        );
+        break;
+      case "mute":
+        toggleBlock.mutate(
+          { userId: authorId, isBlocked: isMuted, type: "MUTE" },
+          {
+            onSuccess: () => {
+              toast.success(isMuted ? "User unmuted" : "User muted");
+            },
+          }
+        );
         break;
       case "report":
         setReportOpen(true);

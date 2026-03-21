@@ -23,11 +23,14 @@ export async function PostPageContent({ post, settings, currentPath }: PostPageC
     redirect(canonicalPath);
   }
 
+  // Gist/News pages need more related posts (3 grid + remaining list)
+  const relatedLimit =
+    post.type === "GIST" || post.type === "NEWS" || post.type === "VIDEO" ? 11 : 4;
   const related = await getRelatedPostsByType(
     post.id,
     post.type,
     post.category?.slug,
-    4,
+    relatedLimit,
     settings.permalinkStructure
   );
 

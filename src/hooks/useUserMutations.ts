@@ -64,6 +64,7 @@ export function useUpdateProfile() {
   return useMutation({
     mutationFn: async (data: {
       name?: string;
+      username?: string;
       bio?: string;
       location?: string;
       socialLinks?: { twitter?: string; instagram?: string };
@@ -76,8 +77,12 @@ export function useUpdateProfile() {
       queryClient.invalidateQueries({ queryKey: ["user-profile"] });
       notify.success("Profile updated");
     },
-    onError: () => {
-      notify.error("Failed to update profile");
+    onError: (error: unknown) => {
+      const msg =
+        axios.isAxiosError(error) && error.response?.data?.error
+          ? error.response.data.error
+          : "Failed to update profile";
+      notify.error(msg);
     },
   });
 }

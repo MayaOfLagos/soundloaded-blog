@@ -1,7 +1,9 @@
 "use client";
 
+import { useMemo } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useSession } from "next-auth/react";
 import {
   LayoutDashboard,
   Library,
@@ -10,14 +12,34 @@ import {
   Bell,
   Settings,
   ExternalLink,
+  Music,
+  Disc3,
+  Mic2,
+  Users,
+  Building2,
 } from "lucide-react";
 import { Logo } from "@/components/common/Logo";
 import { cn } from "@/lib/utils";
 import { Separator } from "@/components/ui/separator";
 
-const NAV = [
+const BASE_NAV = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/library", label: "Library", icon: Library },
+];
+
+const ARTIST_NAV = [
+  { href: "/dashboard/music", label: "My Music", icon: Music },
+  { href: "/dashboard/albums", label: "My Albums", icon: Disc3 },
+  { href: "/dashboard/artist-profile", label: "Artist Profile", icon: Mic2 },
+];
+
+const LABEL_NAV = [
+  { href: "/dashboard/label-artists", label: "My Artists", icon: Users },
+  { href: "/dashboard/releases", label: "Releases", icon: Disc3 },
+  { href: "/dashboard/label-profile", label: "Label Profile", icon: Building2 },
+];
+
+const COMMON_NAV = [
   { href: "/comments", label: "Comments", icon: MessageSquare },
   { href: "/billing", label: "Billing", icon: CreditCard },
   { href: "/notifications", label: "Notifications", icon: Bell },
@@ -30,6 +52,22 @@ interface DashboardMobileNavProps {
 
 export function DashboardMobileNav({ onClose }: DashboardMobileNavProps) {
   const pathname = usePathname();
+  const { data: session } = useSession();
+
+  const user = session?.user as
+    | {
+        artistProfileId?: string | null;
+        labelProfileId?: string | null;
+      }
+    | undefined;
+
+  const navItems = useMemo(() => {
+    const items = [...BASE_NAV];
+    if (user?.artistProfileId) items.push(...ARTIST_NAV);
+    else if (user?.labelProfileId) items.push(...LABEL_NAV);
+    items.push(...COMMON_NAV);
+    return items;
+  }, [user?.artistProfileId, user?.labelProfileId]);
 
   return (
     <div className="flex h-full flex-col">
@@ -38,8 +76,9 @@ export function DashboardMobileNav({ onClose }: DashboardMobileNavProps) {
       </div>
 
       <nav className="flex-1 space-y-0.5 overflow-y-auto px-3 py-4">
-        {NAV.map(({ href, label, icon: Icon }) => {
-          const isActive = pathname === href;
+        {navItems.map(({ href, label, icon: Icon }) => {
+          const isActive =
+            href === "/dashboard" ? pathname === "/dashboard" : pathname.startsWith(href);
           return (
             <Link
               key={href}

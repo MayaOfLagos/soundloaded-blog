@@ -1,16 +1,10 @@
 import { notFound } from "next/navigation";
-import Image from "next/image";
 import type { Metadata } from "next";
-import { Instagram, Twitter } from "lucide-react";
 import { getArtistBySlug } from "@/lib/api/music";
 import { getSettings } from "@/lib/settings";
-import { MusicCard } from "@/components/music/MusicCard";
-import { AlbumCard } from "@/components/music/AlbumCard";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { Mic2 } from "lucide-react";
 import { JsonLd } from "@/components/common/JsonLd";
 import { buildMusicGroupSchema, buildBreadcrumbSchema } from "@/lib/structured-data";
+import { ArtistDetailClient } from "./ArtistDetailClient";
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -47,119 +41,75 @@ export default async function ArtistPage({ params }: Props) {
     settings.siteUrl
   );
 
-  const socialLinks = [
-    { url: artist.instagram, icon: Instagram, label: "Instagram" },
-    { url: artist.twitter, icon: Twitter, label: "Twitter" },
-  ].filter((s) => !!s.url);
+  // Sort tracks by download count for popular tracks
+  const popularTracks = [...artist.music]
+    .sort((a, b) => b.downloadCount - a.downloadCount)
+    .slice(0, 5);
+
+  // Total downloads across all tracks
+  const totalDownloads = artist.music.reduce((sum, t) => sum + t.downloadCount, 0);
 
   return (
     <>
       <JsonLd schema={[artistSchema, breadcrumbSchema]} />
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
-        {/* Artist header */}
-        <div className="mb-8 flex flex-col items-center gap-6 sm:flex-row sm:items-start">
-          <div className="bg-muted ring-border relative h-32 w-32 flex-shrink-0 overflow-hidden rounded-full ring-4 sm:h-40 sm:w-40">
-            {artist.photo ? (
-              <Image
-                src={artist.photo}
-                alt={artist.name}
-                fill
-                className="object-cover"
-                priority
-                sizes="160px"
-              />
-            ) : (
-              <div className="flex h-full items-center justify-center">
-                <Mic2 className="text-muted-foreground/30 h-16 w-16" />
-              </div>
-            )}
-          </div>
-          <div className="text-center sm:text-left">
-            <h1 className="text-foreground text-3xl font-black">{artist.name}</h1>
-            {artist.genre && (
-              <Badge className="bg-brand text-brand-foreground mt-2">{artist.genre}</Badge>
-            )}
-            {artist.bio && (
-              <p className="text-muted-foreground mt-3 max-w-2xl leading-relaxed">{artist.bio}</p>
-            )}
-            {socialLinks.length > 0 && (
-              <div className="mt-4 flex justify-center gap-2 sm:justify-start">
-                {socialLinks.map(({ url, icon: Icon, label }) => (
-                  <a
-                    key={label}
-                    href={url!}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="border-border text-muted-foreground hover:text-brand hover:border-brand flex h-9 w-9 items-center justify-center rounded-lg border transition-colors"
-                  >
-                    <Icon className="h-4 w-4" />
-                  </a>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Albums */}
-        {artist.albums.length > 0 && (
-          <section className="mb-10">
-            <h2 className="mb-4 text-xl font-bold">Albums & EPs</h2>
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-              {artist.albums.map((album) => (
-                <AlbumCard
-                  key={album.id}
-                  album={{
-                    id: album.id,
-                    slug: album.slug,
-                    title: album.title,
-                    artistName: artist.name,
-                    coverArt: album.coverArt,
-                    releaseYear: album.releaseDate
-                      ? new Date(album.releaseDate).getFullYear()
-                      : null,
-                    trackCount: 0,
-                    totalDownloads: 0,
-                  }}
-                />
-              ))}
-            </div>
-          </section>
-        )}
-
-        {/* Songs */}
-        {artist.music.length > 0 && (
-          <section>
-            <Separator className="mb-6" />
-            <h2 className="mb-4 text-xl font-bold">Songs</h2>
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
-              {artist.music.map((track) => (
-                <MusicCard
-                  key={track.id}
-                  track={{
-                    id: track.id,
-                    slug: track.slug,
-                    title: track.title,
-                    artistName: artist.name,
-                    albumTitle: track.album?.title,
-                    coverArt: track.coverArt,
-                    genre: track.genre,
-                    downloadCount: track.downloadCount,
-                    enableDownload: track.enableDownload,
-                    fileSize: track.fileSize,
-                    releaseYear: track.year,
-                  }}
-                />
-              ))}
-            </div>
-          </section>
-        )}
-
-        {artist.music.length === 0 && artist.albums.length === 0 && (
-          <div className="py-16 text-center">
-            <p className="text-muted-foreground">No content uploaded yet for this artist.</p>
-          </div>
-        )}
-      </div>
+      <ArtistDetailClient
+        artist={{
+          id: artist.id,
+          name: artist.name,
+          slug: artist.slug,
+          bio: artist.bio,
+          photo: artist.photo,
+          coverImage: artist.coverImage,
+          country: artist.country,
+          genre: artist.genre,
+          instagram: artist.instagram,
+          twitter: artist.twitter,
+          facebook: artist.facebook,
+          spotify: artist.spotify,
+          appleMusic: artist.appleMusic,
+        }}
+        stats={{
+          songCount: artist._count.music,
+          albumCount: artist._count.albums,
+          totalDownloads,
+        }}
+        popularTracks={popularTracks.map((t) => ({
+          id: t.id,
+          title: t.title,
+          slug: t.slug,
+          r2Key: t.r2Key,
+          coverArt: t.coverArt,
+          duration: t.duration,
+          downloadCount: t.downloadCount,
+          albumTitle: t.album?.title ?? null,
+          enableDownload: t.enableDownload,
+        }))}
+        allTracks={artist.music.map((t) => ({
+          id: t.id,
+          slug: t.slug,
+          title: t.title,
+          artistName: artist.name,
+          albumTitle: t.album?.title ?? null,
+          coverArt: t.coverArt,
+          genre: t.genre,
+          downloadCount: t.downloadCount,
+          enableDownload: t.enableDownload,
+          fileSize: t.fileSize,
+          releaseYear: t.year,
+        }))}
+        albums={artist.albums.map((a) => ({
+          id: a.id,
+          slug: a.slug,
+          title: a.title,
+          artistName: artist.name,
+          artistSlug: artist.slug,
+          coverArt: a.coverArt,
+          releaseYear: a.releaseDate ? new Date(a.releaseDate).getFullYear() : null,
+          trackCount: a._count.tracks,
+          totalDownloads: a.tracks.reduce((sum, t) => sum + t.downloadCount, 0),
+        }))}
+        siteUrl={settings.siteUrl}
+      />
     </>
   );
 }

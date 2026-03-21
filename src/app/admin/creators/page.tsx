@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { Metadata } from "next";
 import { db } from "@/lib/db";
 import { CreatorsTable } from "./_components/CreatorsTable";

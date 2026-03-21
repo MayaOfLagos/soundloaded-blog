@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { db } from "@/lib/db";
 import { FileText, Music, Download, Users, MessageSquare, Mail, Flag, Camera } from "lucide-react";
 import { StatWidget } from "@/components/admin/StatWidget";

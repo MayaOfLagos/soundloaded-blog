@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import { Suspense } from "react";
 import type { Metadata } from "next";
 import { LeftSidebar } from "@/components/home/LeftSidebar";

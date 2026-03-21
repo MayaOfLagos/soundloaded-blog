@@ -1,3 +1,5 @@
+export const dynamic = "force-dynamic";
+
 import type { Metadata } from "next";
 import { Eye, Download, TrendingUp, FileText, Music } from "lucide-react";
 import { db } from "@/lib/db";

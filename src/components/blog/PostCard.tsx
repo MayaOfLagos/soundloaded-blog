@@ -1,8 +1,8 @@
 import Link from "next/link";
-import Image from "next/image";
 import { Clock, Eye } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn, formatRelativeDate } from "@/lib/utils";
+import { PostImage } from "./PostImage";
 
 export interface PostCardData {
   id: string;
@@ -34,19 +34,15 @@ export function PostCard({ post, variant = "default", hideExcerpt, className }: 
     return (
       <Link href={href} className={cn("group flex gap-3 py-3", className)}>
         <div className="bg-muted relative h-16 w-20 flex-shrink-0 overflow-hidden rounded-xl">
-          {post.coverImage ? (
-            <Image
-              src={post.coverImage}
-              alt={post.title}
-              fill
-              className="object-cover transition-transform duration-300 group-hover:scale-110"
-              sizes="80px"
-            />
-          ) : (
-            <div className="from-brand/20 to-muted flex h-full items-center justify-center bg-gradient-to-br">
-              <span className="text-lg">🎵</span>
-            </div>
-          )}
+          <PostImage
+            src={post.coverImage}
+            alt={post.title}
+            fill
+            className="object-cover transition-transform duration-300 group-hover:scale-110"
+            sizes="80px"
+            category={post.category?.name}
+            author={post.author?.name}
+          />
         </div>
         <div className="min-w-0 flex-1">
           <p className="text-foreground group-hover:text-brand line-clamp-2 text-[13px] leading-snug font-semibold transition-colors">
@@ -72,20 +68,16 @@ export function PostCard({ post, variant = "default", hideExcerpt, className }: 
         )}
       >
         <div className="relative aspect-[16/9] overflow-hidden sm:aspect-[21/9]">
-          {post.coverImage ? (
-            <Image
-              src={post.coverImage}
-              alt={post.title}
-              fill
-              className="object-cover transition-transform duration-700 group-hover:scale-105"
-              sizes="(max-width: 768px) 100vw, 70vw"
-              priority
-            />
-          ) : (
-            <div className="from-brand/30 via-background to-muted flex h-full items-center justify-center bg-gradient-to-br">
-              <span className="text-6xl opacity-50">🎵</span>
-            </div>
-          )}
+          <PostImage
+            src={post.coverImage}
+            alt={post.title}
+            fill
+            className="object-cover transition-transform duration-700 group-hover:scale-105"
+            sizes="(max-width: 768px) 100vw, 70vw"
+            priority
+            category={post.category?.name}
+            author={post.author?.name}
+          />
 
           {/* Multi-stop gradient overlay */}
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
@@ -157,19 +149,15 @@ export function PostCard({ post, variant = "default", hideExcerpt, className }: 
       )}
     >
       <div className="relative aspect-[16/9] overflow-hidden">
-        {post.coverImage ? (
-          <Image
-            src={post.coverImage}
-            alt={post.title}
-            fill
-            className="object-cover transition-transform duration-500 group-hover:scale-105"
-            sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-          />
-        ) : (
-          <div className="from-brand/10 to-muted flex h-full items-center justify-center bg-gradient-to-br">
-            <span className="text-3xl opacity-60">🎵</span>
-          </div>
-        )}
+        <PostImage
+          src={post.coverImage}
+          alt={post.title}
+          fill
+          className="object-cover transition-transform duration-500 group-hover:scale-105"
+          sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+          category={post.category?.name}
+          author={post.author?.name}
+        />
         {post.category && (
           <div className="absolute top-2.5 left-2.5">
             <span className="rounded-full bg-black/50 px-2.5 py-0.5 text-[10px] font-bold tracking-wide text-white uppercase backdrop-blur-md">

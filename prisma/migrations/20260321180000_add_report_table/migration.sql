@@ -1,5 +1,8 @@
--- CreateEnum
-CREATE TYPE "ReportStatus" AS ENUM ('PENDING', 'REVIEWED', 'DISMISSED', 'ACTION_TAKEN');
+-- CreateEnum (IF NOT EXISTS to handle re-runs)
+DO $$ BEGIN
+  CREATE TYPE "ReportStatus" AS ENUM ('PENDING', 'REVIEWED', 'DISMISSED', 'ACTION_TAKEN');
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
 -- CreateTable
 CREATE TABLE "Report" (

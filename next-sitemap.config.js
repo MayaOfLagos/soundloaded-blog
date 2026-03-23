@@ -1,5 +1,5 @@
 /** @type {import('next-sitemap').IConfig} */
-const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://soundloadedblog.ng";
+const siteUrl = process.env.NEXT_PUBLIC_APP_URL || "https://soundloaded.blog";
 
 module.exports = {
   siteUrl,

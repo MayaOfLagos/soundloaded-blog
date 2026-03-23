@@ -18,14 +18,20 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-export function DeletePostButton({ postId }: { postId: string }) {
+export function DeletePostButton({
+  postId,
+  isArchived = false,
+}: {
+  postId: string;
+  isArchived?: boolean;
+}) {
   const [open, setOpen] = useState(false);
   const router = useRouter();
 
   const { mutate, isPending } = useMutation({
     mutationFn: () => axios.delete(`/api/admin/posts/${postId}`),
     onSuccess: () => {
-      toast.success("Post archived");
+      toast.success(isArchived ? "Post permanently deleted" : "Post archived");
       setOpen(false);
       router.refresh();
     },
@@ -49,10 +55,13 @@ export function DeletePostButton({ postId }: { postId: string }) {
       <AlertDialog open={open} onOpenChange={setOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete this post?</AlertDialogTitle>
+            <AlertDialogTitle>
+              {isArchived ? "Permanently delete this post?" : "Delete this post?"}
+            </AlertDialogTitle>
             <AlertDialogDescription>
-              The post will be archived and removed from the public site. You can restore it later
-              from the Archived tab.
+              {isArchived
+                ? "This post will be permanently deleted. This action cannot be undone."
+                : "The post will be archived and removed from the public site. You can restore it later from the Archived tab."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -70,7 +79,7 @@ export function DeletePostButton({ postId }: { postId: string }) {
               ) : (
                 <Trash2 className="mr-2 h-4 w-4" />
               )}
-              Delete
+              {isArchived ? "Delete Forever" : "Delete"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

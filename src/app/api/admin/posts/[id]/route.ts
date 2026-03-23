@@ -153,6 +153,16 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
 
   const { id } = await params;
 
+  const existing = await db.post.findUnique({ where: { id }, select: { status: true } });
+  if (!existing) return NextResponse.json({ error: "Post not found" }, { status: 404 });
+
+  if (existing.status === "ARCHIVED") {
+    // Permanently delete archived posts
+    await db.post.delete({ where: { id } });
+    removeFromIndex(INDEXES.POSTS, id);
+    return NextResponse.json({ deleted: true });
+  }
+
   // Archive instead of hard delete to preserve data integrity
   const post = await db.post.update({
     where: { id },

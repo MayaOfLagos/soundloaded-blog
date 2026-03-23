@@ -93,14 +93,19 @@ export function PostsTable({ posts }: PostsTableProps) {
   const { mutate: bulkDelete, isPending } = useMutation({
     mutationFn: () => axios.post("/api/admin/posts/bulk-delete", { ids: Array.from(selected) }),
     onSuccess: (res) => {
-      const count = res.data.archived ?? selected.size;
-      toast.success(`${count} post${count !== 1 ? "s" : ""} archived`);
+      const { archived = 0, deleted = 0 } = res.data;
+      const parts = [];
+      if (archived > 0) parts.push(`${archived} archived`);
+      if (deleted > 0) parts.push(`${deleted} permanently deleted`);
+      toast.success(
+        parts.join(", ") || `${selected.size} post${selected.size !== 1 ? "s" : ""} processed`
+      );
       setSelected(new Set());
       setBulkDeleteOpen(false);
       router.refresh();
     },
     onError: () => {
-      toast.error("Failed to archive posts");
+      toast.error("Failed to delete posts");
     },
   });
 
@@ -230,7 +235,10 @@ export function PostsTable({ posts }: PostsTableProps) {
                             </Button>
                           </Link>
                         )}
-                        <DeletePostButton postId={post.id} />
+                        <DeletePostButton
+                          postId={post.id}
+                          isArchived={post.status === "ARCHIVED"}
+                        />
                       </div>
                     </TableCell>
                   </TableRow>

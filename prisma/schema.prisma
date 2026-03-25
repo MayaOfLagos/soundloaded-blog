@@ -77,7 +77,8 @@ model Post {
   type        PostType   @default(NEWS)
   publishedAt DateTime?
   views       Int        @default(0)
-  wpPostId    Int?       @unique // WordPress post ID for import tracing
+  wpPostId       Int?       @unique // WordPress post ID for import tracing
+  bloggerPostId  String?    @unique // Blogger post ID for import tracing
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
 

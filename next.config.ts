@@ -20,7 +20,7 @@ const nextConfig: NextConfig = {
     return config;
   },
   // Allow phones/devices on the same LAN to access dev server without CORS warnings
-  allowedDevOrigins: ["192.168.1.*", "192.168.0.*", "10.*"],
+  allowedDevOrigins: ["192.168.1.*", "192.168.0.*", "10.*", "127.*"],
   transpilePackages: ["filepond", "react-filepond"],
   images: {
     remotePatterns: [

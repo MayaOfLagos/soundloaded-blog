@@ -59,13 +59,19 @@ export async function getFeaturedPosts({
   permalinkStructure,
 }: { limit?: number; permalinkStructure?: string } = {}): Promise<PostCardData[]> {
   try {
+    // Fetch more than needed so we can shuffle and pick
     const posts = await db.post.findMany({
-      where: { status: "PUBLISHED", isUserGenerated: false, music: null },
+      where: { status: "PUBLISHED", isUserGenerated: false, music: { isNot: null } },
       orderBy: { publishedAt: "desc" },
-      take: limit,
+      take: limit * 4,
       select: SELECT,
     });
-    return posts.map((p) => mapPost(p, permalinkStructure));
+    // Shuffle (Fisher-Yates)
+    for (let i = posts.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [posts[i], posts[j]] = [posts[j], posts[i]];
+    }
+    return posts.slice(0, limit).map((p) => mapPost(p, permalinkStructure));
   } catch {
     return [];
   }
@@ -539,6 +545,22 @@ export async function getVideoCategories(): Promise<
     return cats.map((c) => ({ name: c.name, slug: c.slug, postCount: c._count.posts }));
   } catch {
     return [];
+  }
+}
+
+export async function getPostCount(categorySlug?: string, type?: string): Promise<number> {
+  try {
+    return await db.post.count({
+      where: {
+        status: "PUBLISHED",
+        isUserGenerated: false,
+        music: null,
+        ...(categorySlug ? { category: { slug: categorySlug } } : {}),
+        ...(type ? { type: type as never } : {}),
+      },
+    });
+  } catch {
+    return 0;
   }
 }
 

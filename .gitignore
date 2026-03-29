@@ -55,11 +55,11 @@ prisma/dev.db-journal
 src/payload/payload-types.ts
 
 # WordPress import scripts & data (one-time migration tools)
-scripts/wp-data/
-scripts/wp-import.ts
-scripts/wp-media-upload.ts
-scripts/wp-bulk-media.ts
-
+scripts/
+/scripts/wp-data/
+/scripts/wp-import.ts
+/scripts/wp-media-upload.ts
+/scripts/wp-bulk-media.ts
 # vercel
 .vercel
 

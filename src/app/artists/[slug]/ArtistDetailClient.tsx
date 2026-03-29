@@ -607,7 +607,8 @@ function OverviewTab({
 /* ─── Tab Content: Songs ─── */
 
 function SongsTab({ tracks, artistName }: { tracks: MusicCardData[]; artistName: string }) {
-  const { currentTrack, isPlaying, isBuffering, setTrack, togglePlay, setQueue } = usePlayerStore();
+  const { currentTrack, isPlaying, isBuffering, setTrack, togglePlay, setContextQueue } =
+    usePlayerStore();
 
   const handlePlay = (track: MusicCardData, index: number) => {
     if (currentTrack?.id === track.id) {
@@ -619,11 +620,11 @@ function SongsTab({ tracks, artistName }: { tracks: MusicCardData[]; artistName:
       title: t.title,
       artist: t.artistName,
       coverArt: t.coverArt ?? null,
-      r2Key: "",
+      r2Key: t.r2Key,
       duration: 0,
       slug: t.slug,
     }));
-    setQueue(queue);
+    setContextQueue(queue, artistName);
     setTrack(queue[index]);
   };
 
@@ -853,7 +854,8 @@ function StatItem({
 /* ─── Popular Tracks List ─── */
 
 function PopularTracksList({ tracks, artistName }: { tracks: PopularTrack[]; artistName: string }) {
-  const { currentTrack, isPlaying, isBuffering, setTrack, togglePlay, setQueue } = usePlayerStore();
+  const { currentTrack, isPlaying, isBuffering, setTrack, togglePlay, setContextQueue } =
+    usePlayerStore();
 
   const handlePlay = (track: PopularTrack, index: number) => {
     if (currentTrack?.id === track.id) {
@@ -870,7 +872,7 @@ function PopularTracksList({ tracks, artistName }: { tracks: PopularTrack[]; art
       duration: t.duration ?? 0,
       slug: t.slug,
     }));
-    setQueue(queue);
+    setContextQueue(queue, artistName);
     setTrack(queue[index]);
   };
 

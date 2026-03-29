@@ -10,6 +10,7 @@ import {
   Mic2,
   Disc3,
   Building2,
+  ListMusic,
   Rss,
   Tags,
   MessageSquare,
@@ -52,6 +53,7 @@ const mainNav = [
   { title: "Artists", href: "/admin/artists", icon: Mic2 },
   { title: "Albums", href: "/admin/albums", icon: Disc3 },
   { title: "Labels", href: "/admin/labels", icon: Building2 },
+  { title: "Playlists", href: "/admin/playlists", icon: ListMusic },
 ];
 
 const manageNav = [

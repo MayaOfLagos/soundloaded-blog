@@ -66,3 +66,30 @@ export const preferencesSchema = z.object({
 export const deleteAccountSchema = z.object({
   password: z.string().min(1, "Password is required to delete account"),
 });
+
+// ── Playlists ──
+export const createPlaylistSchema = z.object({
+  title: z.string().min(1, "Title is required").max(100),
+  description: z.string().max(500).optional(),
+  isPublic: z.boolean().optional(),
+});
+
+export const updatePlaylistSchema = z.object({
+  title: z.string().min(1).max(100).optional(),
+  description: z.string().max(500).nullable().optional(),
+  isPublic: z.boolean().optional(),
+  coverImage: z.string().nullable().optional(),
+});
+
+export const addTrackToPlaylistSchema = z.object({
+  musicId: z.string().min(1, "musicId is required"),
+});
+
+export const reorderPlaylistSchema = z.object({
+  tracks: z.array(
+    z.object({
+      id: z.string(),
+      position: z.number().int().min(0),
+    })
+  ),
+});

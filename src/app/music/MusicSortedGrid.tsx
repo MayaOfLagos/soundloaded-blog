@@ -56,7 +56,7 @@ function toPlayerTrack(t: TracksResponse["tracks"][number]): Track {
 
 export function MusicSortedGrid({ sort }: MusicSortedGridProps) {
   const observerRef = useRef<IntersectionObserver | null>(null);
-  const { currentTrack, isPlaying, setTrack, togglePlay, setQueue } = usePlayerStore();
+  const { currentTrack, isPlaying, setTrack, togglePlay, setContextQueue } = usePlayerStore();
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
     useInfiniteQuery<TracksResponse>({
@@ -105,9 +105,8 @@ export function MusicSortedGrid({ sort }: MusicSortedGridProps) {
     } else {
       const playerTrack = toPlayerTrack(track);
       setTrack(playerTrack);
-      // Set remaining tracks as queue
       const queue = allTracks.slice(index).map(toPlayerTrack);
-      setQueue(queue);
+      setContextQueue(queue, sort === "latest" ? "New Releases" : "Trending");
     }
   };
 

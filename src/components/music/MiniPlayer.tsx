@@ -1,72 +1,131 @@
 "use client";
 
 import Image from "next/image";
-import { Play, Pause, SkipForward, ChevronDown, Music } from "lucide-react";
+import { Play, Pause, Music, ChevronUp } from "lucide-react";
 import { usePlayerStore } from "@/store/player.store";
-import { Button } from "@/components/ui/button";
+import { useDominantColor } from "@/hooks/useDominantColor";
+import { HeartButton } from "./HeartButton";
 
 export function MiniPlayer() {
-  const { currentTrack, isPlaying, togglePlay, playNext, toggleMinimize } = usePlayerStore();
+  const { currentTrack, isPlaying, currentTime, duration, togglePlay, toggleMinimize } =
+    usePlayerStore();
+  const dominantColor = useDominantColor(currentTrack?.coverArt);
 
   if (!currentTrack) return null;
 
-  return (
-    <div className="border-border bg-card/95 fixed right-0 bottom-0 left-0 z-50 border-t backdrop-blur-md">
-      <div className="flex h-14 items-center gap-3 px-4 py-2">
-        {/* Track info */}
-        <div className="flex min-w-0 flex-1 items-center gap-2">
-          <div className="bg-muted relative h-8 w-8 flex-shrink-0 overflow-hidden rounded">
-            {currentTrack.coverArt ? (
-              <Image
-                src={currentTrack.coverArt}
-                alt={currentTrack.title}
-                fill
-                className="object-cover"
-              />
-            ) : (
-              <div className="flex h-full w-full items-center justify-center">
-                <Music className="text-muted-foreground h-4 w-4" />
-              </div>
-            )}
-          </div>
-          <div className="min-w-0">
-            <p className="text-foreground truncate text-xs font-medium">{currentTrack.title}</p>
-            <p className="text-muted-foreground truncate text-[11px]">{currentTrack.artist}</p>
-          </div>
+  const progress = duration > 0 ? currentTime / duration : 0;
+  const mobileBg = dominantColor ? `rgb(${dominantColor})` : "hsl(var(--brand))";
+
+  const cover = (
+    <button
+      type="button"
+      onClick={toggleMinimize}
+      className="relative h-10 w-10 flex-shrink-0 self-center overflow-hidden rounded"
+      aria-label="Expand player"
+    >
+      {currentTrack.coverArt ? (
+        <Image
+          src={currentTrack.coverArt}
+          alt={currentTrack.title}
+          fill
+          className="object-cover object-center"
+        />
+      ) : (
+        <div className="bg-muted flex h-full w-full items-center justify-center">
+          <Music className="text-muted-foreground h-5 w-5" />
         </div>
+      )}
+    </button>
+  );
 
-        {/* Controls */}
-        <div className="flex items-center gap-1">
-          <Button
-            size="icon"
-            className="bg-brand hover:bg-brand/90 text-brand-foreground h-8 w-8 rounded-full"
-            onClick={togglePlay}
-            aria-label={isPlaying ? "Pause" : "Play"}
-          >
-            {isPlaying ? <Pause className="h-3 w-3" /> : <Play className="h-3 w-3" />}
-          </Button>
+  const playBtn = (playing: boolean, textClass: string) => (
+    <button
+      type="button"
+      onClick={togglePlay}
+      className={`flex items-center px-2 ${textClass}`}
+      aria-label={playing ? "Pause" : "Play"}
+    >
+      {playing ? (
+        <Pause className="h-[22px] w-[22px]" fill="currentColor" strokeWidth={0} />
+      ) : (
+        <Play className="h-[22px] w-[22px]" fill="currentColor" strokeWidth={0} />
+      )}
+    </button>
+  );
 
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            onClick={playNext}
-            aria-label="Next"
-          >
-            <SkipForward className="text-muted-foreground h-4 w-4" />
-          </Button>
-
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
+  return (
+    <>
+      {/* Mobile — dominant color bg */}
+      <div className="fixed right-0 bottom-[calc(3.5rem+env(safe-area-inset-bottom))] left-0 z-50 px-2 md:hidden">
+        <div
+          className="relative grid h-14 items-center gap-x-2 overflow-hidden rounded-md px-2 transition-colors duration-500"
+          style={{ backgroundColor: mobileBg, gridTemplateColumns: "auto 1fr auto" }}
+        >
+          <div className="absolute right-0 bottom-0 left-0 h-[2px] bg-white/30">
+            <div
+              className="h-full origin-left bg-white transition-transform duration-100 ease-linear"
+              style={{ transform: `scaleX(${progress})` }}
+            />
+          </div>
+          {cover}
+          <button
+            type="button"
             onClick={toggleMinimize}
+            className="min-w-0 self-center overflow-hidden text-left"
             aria-label="Expand player"
           >
-            <ChevronDown className="text-muted-foreground h-4 w-4" />
-          </Button>
+            <p className="truncate text-[13px] font-bold whitespace-nowrap text-white">
+              {currentTrack.title}
+            </p>
+            <p className="truncate text-[11px] whitespace-nowrap text-white/70">
+              {currentTrack.artist}
+            </p>
+          </button>
+          <div className="flex items-center gap-2">
+            <HeartButton
+              musicId={currentTrack.id}
+              size={20}
+              className="p-2 text-white/70 hover:text-white [&_.heart-icon]:text-white/70 [&_.heart-icon.fill-red-500]:text-red-500"
+            />
+            {playBtn(isPlaying, "text-white")}
+          </div>
         </div>
       </div>
-    </div>
+
+      {/* Desktop — anchored panel bottom-right */}
+      <div className="border-border bg-card/95 fixed right-0 bottom-0 z-50 hidden w-[340px] overflow-hidden rounded-tl-xl border-t border-l shadow-2xl backdrop-blur-md md:block">
+        <div className="relative flex items-center gap-3 px-4 py-3">
+          <div className="bg-border absolute top-0 right-0 left-0 h-[2px]">
+            <div
+              className="bg-brand h-full origin-left transition-transform duration-100 ease-linear"
+              style={{ transform: `scaleX(${progress})` }}
+            />
+          </div>
+          {cover}
+          <button
+            type="button"
+            onClick={toggleMinimize}
+            className="min-w-0 flex-1 text-left"
+            aria-label="Expand player"
+          >
+            <p className="text-foreground truncate text-[13px] font-semibold">
+              {currentTrack.title}
+            </p>
+            <p className="text-muted-foreground truncate text-[11px]">{currentTrack.artist}</p>
+          </button>
+          <div className="flex items-center gap-1">
+            {playBtn(isPlaying, "text-foreground")}
+            <button
+              type="button"
+              onClick={toggleMinimize}
+              className="text-muted-foreground hover:text-foreground flex items-center p-1 transition-colors"
+              aria-label="Expand player"
+            >
+              <ChevronUp className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      </div>
+    </>
   );
 }

@@ -12,10 +12,12 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
       select: { r2Key: true, filename: true },
     });
     if (!music) return NextResponse.json({ error: "Not found" }, { status: 404 });
+    if (!music.r2Key)
+      return NextResponse.json({ error: "No audio file available" }, { status: 404 });
 
     const url = await getPresignedDownloadUrl(MUSIC_BUCKET, music.r2Key, music.filename);
 
-    // Increment stream count (fire-and-forget)
+    // Increment stream count only after successful URL generation
     db.music.update({ where: { id }, data: { streamCount: { increment: 1 } } }).catch(() => {});
 
     return NextResponse.redirect(url);

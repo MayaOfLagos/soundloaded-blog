@@ -78,7 +78,8 @@ export function AlbumDetailClient({
 }: AlbumDetailClientProps) {
   const [shareCopied, setShareCopied] = useState(false);
 
-  const { currentTrack, isPlaying, isBuffering, setTrack, setQueue, togglePlay } = usePlayerStore();
+  const { currentTrack, isPlaying, isBuffering, setTrack, setContextQueue, togglePlay } =
+    usePlayerStore();
 
   const playerTracks: Track[] = tracks.map((t) => ({
     id: t.id,
@@ -98,7 +99,7 @@ export function AlbumDetailClient({
       togglePlay();
       return;
     }
-    setQueue(playerTracks);
+    setContextQueue(playerTracks, album.title);
     setTrack(playerTracks[0]);
   };
 
@@ -107,7 +108,7 @@ export function AlbumDetailClient({
       togglePlay();
       return;
     }
-    setQueue(playerTracks);
+    setContextQueue(playerTracks, album.title);
     setTrack(playerTracks[index]);
   };
 

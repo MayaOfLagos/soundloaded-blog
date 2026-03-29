@@ -14,6 +14,8 @@ interface MusicShelfCardProps {
   track: MusicCardData;
   /** All tracks in this shelf — used to set queue when playing */
   shelfTracks?: MusicCardData[];
+  /** Label for the context queue (e.g. "New Releases") */
+  shelfLabel?: string;
   className?: string;
 }
 
@@ -23,7 +25,7 @@ function toPlayerTrack(t: MusicCardData): Track {
     title: t.title,
     artist: t.artistName,
     coverArt: t.coverArt ?? null,
-    r2Key: "",
+    r2Key: t.r2Key,
     duration: 0,
     slug: t.slug,
   };
@@ -39,8 +41,8 @@ function EqualizerBars() {
   );
 }
 
-export function MusicShelfCard({ track, shelfTracks, className }: MusicShelfCardProps) {
-  const { currentTrack, isPlaying, setTrack, setQueue, togglePlay } = usePlayerStore();
+export function MusicShelfCard({ track, shelfTracks, shelfLabel, className }: MusicShelfCardProps) {
+  const { currentTrack, isPlaying, setTrack, setContextQueue, togglePlay } = usePlayerStore();
 
   const isCurrentTrack = currentTrack?.id === track.id;
   const isActivelyPlaying = isCurrentTrack && isPlaying;
@@ -54,9 +56,8 @@ export function MusicShelfCard({ track, shelfTracks, className }: MusicShelfCard
       return;
     }
 
-    // Set queue from shelf context, then play this track
     if (shelfTracks?.length) {
-      setQueue(shelfTracks.map(toPlayerTrack));
+      setContextQueue(shelfTracks.map(toPlayerTrack), shelfLabel || "");
     }
     setTrack(toPlayerTrack(track));
   };

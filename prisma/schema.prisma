@@ -53,6 +53,7 @@ model User {
   blockedBy         UserBlock[]  @relation("UserBlocked")
   artistProfile        Artist?              @relation("UserArtistProfile")
   labelProfile         Label?               @relation("UserLabelProfile")
+  playlists            Playlist[]
   creatorApplications  CreatorApplication[]
   reviewedApplications CreatorApplication[] @relation("ApplicationReviewer")
 }
@@ -169,8 +170,9 @@ model Music {
   downloads    Download[]
   transactions Transaction[]
   price        Int?            // kobo, null = use default
-  bookmarks    Bookmark[]
-  favorites    Favorite[]
+  bookmarks      Bookmark[]
+  favorites      Favorite[]
+  playlistTracks PlaylistTrack[]
 
   @@index([slug])
   @@index([artistId])
@@ -954,4 +956,36 @@ model UserBlock {
 enum BlockType {
   BLOCK
   MUTE
+}
+
+// ── Playlists ─────────────────────────────────────────────────────────
+model Playlist {
+  id          String          @id @default(cuid())
+  title       String
+  slug        String
+  description String?
+  coverImage  String?
+  isPublic    Boolean         @default(false)
+  userId      String
+  user        User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tracks      PlaylistTrack[]
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@unique([userId, slug])
+  @@index([userId, updatedAt])
+  @@index([isPublic, updatedAt])
+}
+
+model PlaylistTrack {
+  id         String   @id @default(cuid())
+  playlistId String
+  playlist   Playlist @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+  musicId    String
+  music      Music    @relation(fields: [musicId], references: [id], onDelete: Cascade)
+  position   Int
+  addedAt    DateTime @default(now())
+
+  @@unique([playlistId, musicId])
+  @@index([playlistId, position])
 }

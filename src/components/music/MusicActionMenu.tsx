@@ -3,11 +3,12 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { motion } from "motion/react";
-import { MoreHorizontal, ListPlus, Share2, Download, User } from "lucide-react";
+import { MoreHorizontal, ListPlus, ListEnd, ListMusic, Share2, Download, User } from "lucide-react";
 import useMeasure from "react-use-measure";
 import { usePlayerStore } from "@/store/player.store";
 import { notify } from "@/hooks/useToast";
 import { cn } from "@/lib/utils";
+import { PlaylistPicker } from "./PlaylistPicker";
 import type { MusicCardData } from "@/lib/api/music";
 import type { Track } from "@/store/player.store";
 import type { LucideIcon } from "lucide-react";
@@ -30,14 +31,16 @@ function toPlayerTrack(t: MusicCardData): Track {
     title: t.title,
     artist: t.artistName,
     coverArt: t.coverArt ?? null,
-    r2Key: "",
+    r2Key: t.r2Key,
     duration: 0,
     slug: t.slug,
   };
 }
 
 const allMenuItems: MenuItem[] = [
-  { id: "queue", label: "Add to Queue", icon: ListPlus },
+  { id: "play-next", label: "Play Next", icon: ListPlus },
+  { id: "queue", label: "Add to Queue", icon: ListEnd },
+  { id: "playlist", label: "Add to Playlist", icon: ListMusic },
   { id: "artist", label: "Go to Artist", icon: User },
   { id: "share", label: "Share", icon: Share2 },
   { id: "download", label: "Download", icon: Download },
@@ -54,10 +57,12 @@ export function MusicActionMenu({ track, size = 20, className }: MusicActionMenu
   const [portalReady, setPortalReady] = useState(false);
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [anchor, setAnchor] = useState({ top: 0, left: 0 });
+  const [showPlaylistPicker, setShowPlaylistPicker] = useState(false);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [contentRef, contentBounds] = useMeasure();
   const addToQueue = usePlayerStore((s) => s.addToQueue);
+  const playNextInQueue = usePlayerStore((s) => s.playNextInQueue);
 
   const handleToggle = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -105,9 +110,16 @@ export function MusicActionMenu({ track, size = 20, className }: MusicActionMenu
   const handleAction = useCallback(
     (id: string) => {
       switch (id) {
+        case "play-next":
+          playNextInQueue(toPlayerTrack(track));
+          notify.success(`"${track.title}" will play next`);
+          break;
         case "queue":
           addToQueue(toPlayerTrack(track));
           notify.success(`Added "${track.title}" to queue`);
+          break;
+        case "playlist":
+          setShowPlaylistPicker(true);
           break;
         case "artist":
           window.location.href = `/artists?q=${encodeURIComponent(track.artistName)}`;
@@ -141,7 +153,7 @@ export function MusicActionMenu({ track, size = 20, className }: MusicActionMenu
       }
       setIsOpen(false);
     },
-    [track, addToQueue]
+    [track, addToQueue, playNextInQueue]
   );
 
   const visibleItems = allMenuItems.filter(
@@ -285,6 +297,12 @@ export function MusicActionMenu({ track, size = 20, className }: MusicActionMenu
           </div>,
           document.body
         )}
+
+      <PlaylistPicker
+        musicId={track.id}
+        open={showPlaylistPicker}
+        onOpenChange={setShowPlaylistPicker}
+      />
     </>
   );
 }

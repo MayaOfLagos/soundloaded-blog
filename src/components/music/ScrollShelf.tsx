@@ -6,7 +6,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface ScrollShelfProps {
-  title: string;
+  title: React.ReactNode;
   href?: string;
   children: React.ReactNode;
   className?: string;
@@ -49,7 +49,7 @@ export function ScrollShelf({ title, href, children, className }: ScrollShelfPro
     <section className={cn("group/shelf relative", className)}>
       {/* Header */}
       <div className="mb-3 flex items-center justify-between px-1">
-        <h2 className="text-foreground text-xl font-bold tracking-tight">{title}</h2>
+        <div className="text-foreground text-xl font-bold tracking-tight">{title}</div>
         {href && (
           <Link
             href={href}

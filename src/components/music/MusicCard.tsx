@@ -23,7 +23,7 @@ export function MusicCard({ track, className }: MusicCardProps) {
       title: track.title,
       artist: track.artistName,
       coverArt: track.coverArt ?? null,
-      r2Key: "",
+      r2Key: track.r2Key,
       duration: 0,
       slug: track.slug,
     });

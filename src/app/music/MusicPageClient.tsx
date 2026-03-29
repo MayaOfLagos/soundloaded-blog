@@ -8,40 +8,50 @@ import { EmptyState } from "@/components/common/EmptyState";
 import { GenreChips } from "@/components/music/GenreChips";
 import { ScrollShelf, ShelfItem } from "@/components/music/ScrollShelf";
 import { MusicShelfCard } from "@/components/music/MusicShelfCard";
+import { MusicListItem } from "@/components/music/MusicListItem";
+import { MorphingTitle } from "@/components/blog/MorphingTitle";
 import { Badge } from "@/components/ui/badge";
-import type { MusicCardData, AlbumCardData, ArtistCardData } from "@/lib/api/music";
+import { PlaylistCard } from "@/components/music/PlaylistCard";
+import type {
+  MusicCardData,
+  AlbumCardData,
+  ArtistCardData,
+  PublicPlaylistData,
+} from "@/lib/api/music";
+import type { PlaylistSummary } from "@/hooks/usePlaylist";
 
 interface MusicPageClientProps {
   newReleases: MusicCardData[];
   trending: MusicCardData[];
+  mostStreamed: MusicCardData[];
   albums: AlbumCardData[];
   artists: ArtistCardData[];
   genres: string[];
   genreShelves: { genre: string; tracks: MusicCardData[] }[];
+  playlists: PublicPlaylistData[];
 }
 
 export function MusicPageClient({
   newReleases,
   trending,
+  mostStreamed,
   albums,
   artists,
   genres,
   genreShelves,
+  playlists,
 }: MusicPageClientProps) {
   const [selectedGenre, setSelectedGenre] = useState<string | null>(null);
 
-  // Filter track shelves by genre when a chip is selected
   const filterTracks = (tracks: MusicCardData[]) =>
     selectedGenre ? tracks.filter((t) => t.genre === selectedGenre) : tracks;
 
   const filteredNewReleases = filterTracks(newReleases);
   const filteredTrending = filterTracks(trending);
-
-  // When a genre is selected, hide album/artist/genre shelves (show only filtered tracks)
   const showAllSections = selectedGenre === null;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-10">
       {/* Genre filter chips */}
       {genres.length > 0 && (
         <div className="border-border/40 bg-background/95 sticky top-14 z-30 -mx-4 border-b px-4 backdrop-blur-sm sm:-mx-6 sm:px-6">
@@ -59,42 +69,88 @@ export function MusicPageClient({
         </p>
       </div>
 
-      {/* New Releases */}
+      {/* ── Section 1: New Releases — GRID ── */}
       {filteredNewReleases.length > 0 && (
-        <ScrollShelf title="New Releases" href="/music?sort=latest">
-          {filteredNewReleases.map((track) => (
-            <ShelfItem key={track.id}>
-              <MusicShelfCard track={track} shelfTracks={filteredNewReleases} />
-            </ShelfItem>
-          ))}
-        </ScrollShelf>
+        <section>
+          <SectionHeader
+            titles={["New Releases", "Just Dropped", "Fresh Music", "Latest Drops"]}
+            href="/music?sort=latest"
+          />
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+            {filteredNewReleases.slice(0, 12).map((track) => (
+              <MusicShelfCard
+                key={track.id}
+                track={track}
+                shelfTracks={filteredNewReleases}
+                shelfLabel="New Releases"
+              />
+            ))}
+          </div>
+        </section>
       )}
 
-      {/* Trending Now */}
+      {/* ── Section 2: Trending Now — SCROLL SHELF ── */}
       {filteredTrending.length > 0 && (
-        <ScrollShelf title="Trending Now" href="/music?sort=popular">
+        <ScrollShelf
+          title={
+            <MorphingTitle
+              titles={["Trending Now", "Hot Right Now", "What's Poppin", "Fire Tracks"]}
+              className="text-xl font-bold"
+              as="h2"
+            />
+          }
+          href="/music?sort=popular"
+        >
           {filteredTrending.map((track) => (
             <ShelfItem key={track.id}>
-              <MusicShelfCard track={track} shelfTracks={filteredTrending} />
+              <MusicShelfCard track={track} shelfTracks={filteredTrending} shelfLabel="Trending" />
             </ShelfItem>
           ))}
         </ScrollShelf>
       )}
 
-      {/* Albums */}
+      {/* ── Section 3: Most Streamed — LIST (chart) ── */}
+      {showAllSections && mostStreamed.length > 0 && (
+        <section>
+          <SectionHeader titles={["Most Streamed", "Top Charts", "Fan Favorites", "Hit Tracks"]} />
+          <div className="divide-border/30 divide-y rounded-lg">
+            {mostStreamed.slice(0, 10).map((track, i) => (
+              <MusicListItem
+                key={track.id}
+                track={track}
+                rank={i + 1}
+                listTracks={mostStreamed}
+                listLabel="Most Streamed"
+              />
+            ))}
+          </div>
+        </section>
+      )}
+
+      {/* ── Section 4: Top Albums — GRID ── */}
       {showAllSections && albums.length > 0 && (
-        <ScrollShelf title="Albums" href="/albums">
-          {albums.map((album) => (
-            <ShelfItem key={album.id}>
-              <AlbumShelfCard album={album} />
-            </ShelfItem>
-          ))}
-        </ScrollShelf>
+        <section>
+          <SectionHeader titles={["Top Albums", "Album Picks", "Full Projects"]} href="/albums" />
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+            {albums.map((album) => (
+              <AlbumShelfCard key={album.id} album={album} />
+            ))}
+          </div>
+        </section>
       )}
 
-      {/* Artists */}
+      {/* ── Section 5: Rising Artists — SCROLL SHELF ── */}
       {showAllSections && artists.length > 0 && (
-        <ScrollShelf title="Artists" href="/artists">
+        <ScrollShelf
+          title={
+            <MorphingTitle
+              titles={["Rising Artists", "New Voices", "Artists to Watch"]}
+              className="text-xl font-bold"
+              as="h2"
+            />
+          }
+          href="/artists"
+        >
           {artists.map((artist) => (
             <ShelfItem key={artist.id}>
               <ArtistShelfCard artist={artist} />
@@ -103,13 +159,33 @@ export function MusicPageClient({
         </ScrollShelf>
       )}
 
-      {/* Genre shelves */}
+      {/* ── Section 6: Playlists — SCROLL SHELF ── */}
+      {showAllSections && playlists.length > 0 && (
+        <ScrollShelf
+          title={
+            <MorphingTitle
+              titles={["Community Playlists", "Curated Collections", "Playlist Picks"]}
+              className="text-xl font-bold"
+              as="h2"
+            />
+          }
+          href="/playlists"
+        >
+          {playlists.map((pl) => (
+            <ShelfItem key={pl.id}>
+              <PlaylistCard playlist={pl as unknown as PlaylistSummary} showCreator publicLink />
+            </ShelfItem>
+          ))}
+        </ScrollShelf>
+      )}
+
+      {/* ── Section 7: Genre shelves — SCROLL SHELF per genre ── */}
       {showAllSections &&
         genreShelves.map(({ genre, tracks }) => (
           <ScrollShelf key={genre} title={genre}>
             {tracks.map((track) => (
               <ShelfItem key={track.id}>
-                <MusicShelfCard track={track} shelfTracks={tracks} />
+                <MusicShelfCard track={track} shelfTracks={tracks} shelfLabel={genre} />
               </ShelfItem>
             ))}
           </ScrollShelf>
@@ -127,7 +203,24 @@ export function MusicPageClient({
   );
 }
 
-// ── Album card adapted for shelf layout ──
+// ── Section header with MorphingTitle + "Show all" link ──
+function SectionHeader({ titles, href }: { titles: string[]; href?: string }) {
+  return (
+    <div className="mb-4 flex items-center justify-between px-1">
+      <MorphingTitle titles={titles} className="text-xl font-bold" as="h2" />
+      {href && (
+        <Link
+          href={href}
+          className="text-muted-foreground hover:text-foreground text-sm font-semibold transition-colors"
+        >
+          Show all
+        </Link>
+      )}
+    </div>
+  );
+}
+
+// ── Album card adapted for grid layout ──
 function AlbumShelfCard({ album }: { album: AlbumCardData }) {
   return (
     <div className="group/card hover:bg-muted/50 rounded-lg p-3 transition-colors">

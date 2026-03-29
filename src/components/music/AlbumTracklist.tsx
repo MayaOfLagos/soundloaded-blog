@@ -44,14 +44,16 @@ function TrackRow({
   isDetailTrack,
   allTracks,
   artistName,
+  albumTitle,
 }: {
   track: AlbumTrack;
   index: number;
   isDetailTrack: boolean;
   allTracks: AlbumTrack[];
   artistName: string;
+  albumTitle: string;
 }) {
-  const { currentTrack, isPlaying, setTrack, setQueue, togglePlay } = usePlayerStore();
+  const { currentTrack, isPlaying, setTrack, setContextQueue, togglePlay } = usePlayerStore();
 
   const isCurrentTrack = currentTrack?.id === track.id;
   const isActivelyPlaying = isCurrentTrack && isPlaying;
@@ -75,7 +77,7 @@ function TrackRow({
       slug: t.slug,
     }));
 
-    setQueue(playerTracks);
+    setContextQueue(playerTracks, albumTitle);
     setTrack(playerTracks[index]);
   };
 
@@ -186,6 +188,7 @@ export function AlbumTracklist({
             isDetailTrack={track.id === currentTrackId}
             allTracks={tracks}
             artistName={artistName}
+            albumTitle={albumTitle}
           />
         ))}
       </div>

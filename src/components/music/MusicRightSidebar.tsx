@@ -15,7 +15,7 @@ function toPlayerTrack(t: MusicCardData): Track {
     title: t.title,
     artist: t.artistName,
     coverArt: t.coverArt ?? null,
-    r2Key: "",
+    r2Key: t.r2Key,
     duration: 0,
     slug: t.slug,
   };
@@ -42,7 +42,7 @@ function TrackListItem({
   allTracks: MusicCardData[];
   showDownloads?: boolean;
 }) {
-  const { currentTrack, isPlaying, setTrack, setQueue, togglePlay } = usePlayerStore();
+  const { currentTrack, isPlaying, setTrack, setContextQueue, togglePlay } = usePlayerStore();
 
   const isCurrentTrack = currentTrack?.id === track.id;
   const isActivelyPlaying = isCurrentTrack && isPlaying;
@@ -56,7 +56,7 @@ function TrackListItem({
       return;
     }
 
-    setQueue(allTracks.map(toPlayerTrack));
+    setContextQueue(allTracks.map(toPlayerTrack), showDownloads ? "Hot Downloads" : "Trending");
     setTrack(toPlayerTrack(track));
   };
 

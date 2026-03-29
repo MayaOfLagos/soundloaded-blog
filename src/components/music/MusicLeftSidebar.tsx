@@ -51,6 +51,12 @@ const NAV_ITEMS: NavItem[] = [
     icon: TrendingUp,
     match: (p, sp) => p === "/music" && sp.get("sort") === "popular",
   },
+  {
+    href: "/playlists",
+    label: "Playlists",
+    icon: ListMusic,
+    match: (p) => p === "/playlists" || p.startsWith("/playlists/"),
+  },
 ];
 
 const LIBRARY_ITEMS: NavItem[] = [
@@ -80,7 +86,7 @@ const LIBRARY_ITEMS: NavItem[] = [
   },
   {
     href: "/library/playlists",
-    label: "Playlists",
+    label: "My Playlists",
     icon: ListMusic,
     match: (p) => p.startsWith("/library/playlists"),
   },
@@ -102,7 +108,7 @@ const GENRE_TAGS = [
 export function MusicLeftSidebar() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const { currentTrack, queue } = usePlayerStore();
+  const { currentTrack, userQueue, contextQueue, contextLabel } = usePlayerStore();
 
   const renderItem = ({ href, label, icon: Icon, match }: NavItem) => {
     const isActive = match ? match(pathname, searchParams) : pathname === href;
@@ -183,10 +189,11 @@ export function MusicLeftSidebar() {
                 <p className="text-muted-foreground truncate text-[10px]">{currentTrack.artist}</p>
               </div>
             </div>
-            {queue.length > 1 && (
-              <p className="text-muted-foreground mt-2 text-[10px]">
+            {(userQueue.length > 0 || contextQueue.length > 1) && (
+              <p className="text-muted-foreground mt-2 truncate text-[10px]">
                 <Radio className="mr-1 inline h-3 w-3" />
-                {queue.length} tracks in queue
+                {userQueue.length + contextQueue.length} tracks
+                {contextLabel && <> &middot; {contextLabel}</>}
               </p>
             )}
           </div>

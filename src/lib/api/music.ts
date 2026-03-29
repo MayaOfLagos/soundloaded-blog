@@ -9,9 +9,11 @@ export interface MusicCardData {
   coverArt?: string | null;
   genre?: string | null;
   downloadCount: number;
+  streamCount: number;
   enableDownload: boolean;
   fileSize?: bigint | null;
   releaseYear?: number | null;
+  r2Key: string;
 }
 
 export interface ArtistCardData {
@@ -55,9 +57,41 @@ export async function getPopularMusic({ limit = 5 }: { limit?: number } = {}): P
       coverArt: t.coverArt,
       genre: t.genre,
       downloadCount: t.downloadCount,
+      streamCount: t.streamCount,
       enableDownload: t.enableDownload,
       fileSize: t.fileSize,
       releaseYear: t.year,
+      r2Key: t.r2Key,
+    }));
+  } catch {
+    return [];
+  }
+}
+
+export async function getMostStreamedMusic({ limit = 20 }: { limit?: number } = {}): Promise<
+  MusicCardData[]
+> {
+  try {
+    const tracks = await db.music.findMany({
+      where: { streamCount: { gt: 0 } },
+      orderBy: { streamCount: "desc" },
+      take: limit,
+      include: { artist: { select: { name: true } }, album: { select: { title: true } } },
+    });
+    return tracks.map((t) => ({
+      id: t.id,
+      slug: t.slug,
+      title: t.title,
+      artistName: t.artist.name,
+      albumTitle: t.album?.title,
+      coverArt: t.coverArt,
+      genre: t.genre,
+      downloadCount: t.downloadCount,
+      streamCount: t.streamCount,
+      enableDownload: t.enableDownload,
+      fileSize: t.fileSize,
+      releaseYear: t.year,
+      r2Key: t.r2Key,
     }));
   } catch {
     return [];
@@ -86,9 +120,11 @@ export async function getLatestMusic({
       coverArt: t.coverArt,
       genre: t.genre,
       downloadCount: t.downloadCount,
+      streamCount: t.streamCount,
       enableDownload: t.enableDownload,
       fileSize: t.fileSize,
       releaseYear: t.year,
+      r2Key: t.r2Key,
     }));
   } catch {
     return [];
@@ -282,9 +318,11 @@ export async function getMoreByArtist({
       coverArt: t.coverArt,
       genre: t.genre,
       downloadCount: t.downloadCount,
+      streamCount: t.streamCount,
       enableDownload: t.enableDownload,
       fileSize: t.fileSize,
       releaseYear: t.year,
+      r2Key: t.r2Key,
     }));
   } catch {
     return [];
@@ -317,9 +355,11 @@ export async function getRelatedByGenre({
       coverArt: t.coverArt,
       genre: t.genre,
       downloadCount: t.downloadCount,
+      streamCount: t.streamCount,
       enableDownload: t.enableDownload,
       fileSize: t.fileSize,
       releaseYear: t.year,
+      r2Key: t.r2Key,
     }));
   } catch {
     return [];
@@ -332,6 +372,53 @@ export async function getMusicFavoriteCount(musicId: string): Promise<number> {
     return await db.favorite.count({ where: { musicId } });
   } catch {
     return 0;
+  }
+}
+
+export interface PublicPlaylistData {
+  id: string;
+  title: string;
+  slug: string;
+  description: string | null;
+  coverImage: string | null;
+  isPublic: boolean;
+  trackCount: number;
+  coverArts: (string | null)[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export async function getPublicPlaylists({ limit = 10 }: { limit?: number } = {}): Promise<
+  PublicPlaylistData[]
+> {
+  try {
+    const playlists = await db.playlist.findMany({
+      where: { isPublic: true },
+      include: {
+        _count: { select: { tracks: true } },
+        tracks: {
+          orderBy: { position: "asc" },
+          take: 4,
+          include: { music: { select: { coverArt: true } } },
+        },
+      },
+      orderBy: { updatedAt: "desc" },
+      take: limit,
+    });
+    return playlists.map((p) => ({
+      id: p.id,
+      title: p.title,
+      slug: p.slug,
+      description: p.description,
+      coverImage: p.coverImage,
+      isPublic: p.isPublic,
+      trackCount: p._count.tracks,
+      coverArts: p.tracks.map((t) => t.music.coverArt).filter(Boolean),
+      createdAt: p.createdAt,
+      updatedAt: p.updatedAt,
+    }));
+  } catch {
+    return [];
   }
 }
 

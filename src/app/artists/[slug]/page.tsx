@@ -93,9 +93,11 @@ export default async function ArtistPage({ params }: Props) {
           coverArt: t.coverArt,
           genre: t.genre,
           downloadCount: t.downloadCount,
+          streamCount: t.streamCount,
           enableDownload: t.enableDownload,
           fileSize: t.fileSize,
           releaseYear: t.year,
+          r2Key: t.r2Key,
         }))}
         albums={artist.albums.map((a) => ({
           id: a.id,

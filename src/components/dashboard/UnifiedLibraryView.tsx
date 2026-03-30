@@ -181,6 +181,7 @@ function FilterBar({
       </div>
       <div className="flex items-center gap-2">
         <select
+          aria-label="Sort order"
           value={sort}
           onChange={(e) => onSortChange(e.target.value as "newest" | "oldest")}
           className="bg-background rounded-md border px-3 py-2 text-sm"

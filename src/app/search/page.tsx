@@ -6,9 +6,11 @@ import { Search, Loader2, FileText, Music, Mic2, AlertCircle } from "lucide-reac
 import { PostCard, type PostCardData } from "@/components/blog/PostCard";
 import { MusicCard } from "@/components/music/MusicCard";
 import { ArtistCard } from "@/components/music/ArtistCard";
+import { GenreBrowseCard } from "@/components/music/GenreBrowseCard";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { BROWSE_CATEGORIES, BROWSE_GENRES, getGenreGradient } from "@/lib/genre-colors";
 import type { MusicCardData, ArtistCardData } from "@/lib/api/music";
 
 interface SearchResults {
@@ -118,38 +120,43 @@ function SearchContent() {
         </div>
       )}
 
-      {/* No query — suggest popular searches */}
+      {/* No query — browse all */}
       {!loading && !q && (
-        <div className="py-16 text-center">
-          <Search className="text-muted-foreground/30 mx-auto mb-4 h-16 w-16" />
-          <p className="text-foreground text-xl font-bold">Search Soundloaded Blog</p>
-          <p className="text-muted-foreground mt-2">
-            Find the latest music downloads, news, artists, and gist
-          </p>
-          <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
+        <div>
+          {/* Popular searches */}
+          <div className="mb-8 flex flex-wrap items-center gap-2">
             {POPULAR_SEARCHES.map((term) => (
               <button
                 key={term}
+                type="button"
                 onClick={() => handleSuggestion(term)}
-                className="bg-muted text-muted-foreground hover:bg-brand/10 hover:text-brand rounded-full px-4 py-2 text-sm transition-colors"
+                className="bg-muted text-muted-foreground hover:bg-brand/10 hover:text-brand rounded-full px-4 py-2 text-sm font-medium transition-colors"
               >
                 {term}
               </button>
             ))}
           </div>
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-4 text-sm">
-            <span className="text-muted-foreground text-xs tracking-wide uppercase">
-              Browse sections:
-            </span>
-            {[
-              { href: "/music", label: "Free Music" },
-              { href: "/news", label: "Music News" },
-              { href: "/gist", label: "Gist" },
-              { href: "/artists", label: "Artists" },
-            ].map(({ href, label }) => (
-              <a key={href} href={href} className="text-brand font-medium hover:underline">
-                {label}
-              </a>
+
+          {/* Browse All */}
+          <h2 className="text-foreground mb-4 text-xl font-bold">Browse All</h2>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+            {/* Special categories first */}
+            {BROWSE_CATEGORIES.map((cat) => (
+              <GenreBrowseCard
+                key={cat.label}
+                label={cat.label}
+                href={cat.href}
+                gradient={cat.bg}
+              />
+            ))}
+            {/* Genre cards */}
+            {BROWSE_GENRES.map((genre) => (
+              <GenreBrowseCard
+                key={genre}
+                label={genre}
+                href={`/search?q=${encodeURIComponent(genre)}`}
+                gradient={getGenreGradient(genre)}
+              />
             ))}
           </div>
         </div>

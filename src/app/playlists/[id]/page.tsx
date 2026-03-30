@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { db } from "@/lib/db";
-import { MusicLeftSidebar } from "@/components/music/MusicLeftSidebar";
+import { MusicPageLayout } from "@/components/music/MusicPageLayout";
 import { PlaylistPageClient } from "./PlaylistPageClient";
 
 interface PlaylistPageProps {
@@ -32,13 +32,8 @@ export async function generateMetadata({ params }: PlaylistPageProps): Promise<M
 export default async function PlaylistPage({ params }: PlaylistPageProps) {
   const { id } = await params;
   return (
-    <div className="mx-auto max-w-[1440px] px-4 sm:px-6">
-      <div className="grid grid-cols-1 gap-6 py-5 xl:grid-cols-[220px_1fr]">
-        <MusicLeftSidebar />
-        <main className="min-w-0">
-          <PlaylistPageClient playlistId={id} />
-        </main>
-      </div>
-    </div>
+    <MusicPageLayout>
+      <PlaylistPageClient playlistId={id} />
+    </MusicPageLayout>
   );
 }

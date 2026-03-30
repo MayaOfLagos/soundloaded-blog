@@ -14,7 +14,7 @@ interface PostResult {
   title: string;
   excerpt?: string | null;
   coverImage?: string | null;
-  category?: string | null;
+  category?: string | { name: string; slug?: string } | null;
   href: string;
 }
 
@@ -280,7 +280,11 @@ export function SearchBar() {
                         active={activeIndex === idx}
                         thumbnail={post.coverImage}
                         title={post.title}
-                        subtitle={post.category ?? undefined}
+                        subtitle={
+                          typeof post.category === "string"
+                            ? post.category
+                            : (post.category?.name ?? undefined)
+                        }
                         onClick={() => navigate(post.href)}
                         onMouseEnter={() => setActiveIndex(idx)}
                       />

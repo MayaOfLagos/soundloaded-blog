@@ -3,10 +3,15 @@ import { db } from "@/lib/db";
 import { getPostUrl } from "@/lib/urls";
 import { searchAll } from "@/lib/meilisearch";
 
-function trackSearch(query: string, results: number, ip: string | null) {
+function trackSearch(
+  query: string,
+  results: number,
+  ip: string | null,
+  engine: string = "meilisearch"
+) {
   db.searchQuery
     .create({
-      data: { query: query.toLowerCase().slice(0, 200), results, ip },
+      data: { query: query.toLowerCase().slice(0, 200), results, ip, engine },
     })
     .catch(() => {});
 }
@@ -95,9 +100,12 @@ async function fallbackSearch(q: string, ip: string | null) {
           OR: [
             { title: { contains: q, mode: "insensitive" } },
             { excerpt: { contains: q, mode: "insensitive" } },
+            { category: { name: { contains: q, mode: "insensitive" } } },
+            { tags: { some: { tag: { name: { contains: q, mode: "insensitive" } } } } },
           ],
         },
-        take: 5,
+        take: 10,
+        orderBy: { publishedAt: "desc" },
         select: {
           id: true,
           slug: true,
@@ -113,10 +121,13 @@ async function fallbackSearch(q: string, ip: string | null) {
         where: {
           OR: [
             { title: { contains: q, mode: "insensitive" } },
+            { genre: { contains: q, mode: "insensitive" } },
             { artist: { name: { contains: q, mode: "insensitive" } } },
+            { album: { title: { contains: q, mode: "insensitive" } } },
           ],
         },
-        take: 3,
+        take: 8,
+        orderBy: { createdAt: "desc" },
         select: {
           id: true,
           slug: true,
@@ -127,13 +138,19 @@ async function fallbackSearch(q: string, ip: string | null) {
         },
       }),
       db.artist.findMany({
-        where: { name: { contains: q, mode: "insensitive" } },
-        take: 3,
+        where: {
+          OR: [
+            { name: { contains: q, mode: "insensitive" } },
+            { genre: { contains: q, mode: "insensitive" } },
+            { bio: { contains: q, mode: "insensitive" } },
+          ],
+        },
+        take: 6,
         include: { _count: { select: { music: true, artistFollows: true } } },
       }),
     ]);
 
-    trackSearch(q, posts.length + music.length + artists.length, ip);
+    trackSearch(q, posts.length + music.length + artists.length, ip, "postgresql");
 
     return NextResponse.json({
       posts: posts.map((p) => ({

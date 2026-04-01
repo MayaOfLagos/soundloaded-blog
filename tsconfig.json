@@ -30,5 +30,5 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules", "old_admin", "old_admin2"]
+  "exclude": ["node_modules", "old_admin", "old_admin2", "scripts"]
 }

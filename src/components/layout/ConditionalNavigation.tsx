@@ -6,8 +6,6 @@ import { Navbar } from "./Navbar";
 
 import { MusicPlayer } from "@/components/music/MusicPlayer";
 import { MobileBottomNav } from "./MobileBottomNav";
-import { QueuePanel } from "@/components/music/QueuePanel";
-import { usePlayerStore } from "@/store/player.store";
 
 interface ConditionalNavigationProps {
   children: ReactNode;
@@ -19,7 +17,6 @@ const EXCLUDE_PATHS = ["/admin", "/payload-admin", "/login", "/register"];
 export function ConditionalNavigation({ children }: ConditionalNavigationProps) {
   const pathname = usePathname();
   const isExcluded = EXCLUDE_PATHS.some((p) => pathname === p || pathname.startsWith(p + "/"));
-  const isQueueOpen = usePlayerStore((s) => s.isQueueOpen);
 
   if (isExcluded) {
     return <>{children}</>;

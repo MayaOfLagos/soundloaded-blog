@@ -1,9 +1,19 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useSyncExternalStore } from "react";
-import { FastAverageColor } from "fast-average-color";
+import type { FastAverageColor as FAC } from "fast-average-color";
 
-const fac = new FastAverageColor();
+let fac: FAC | null = null;
+function getFac(): FAC {
+  if (!fac) {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { FastAverageColor } = require("fast-average-color") as {
+      FastAverageColor: new () => FAC;
+    };
+    fac = new FastAverageColor();
+  }
+  return fac;
+}
 const cache = new Map<string, string>();
 const listeners = new Set<() => void>();
 const FALLBACK = "30,30,30";
@@ -29,15 +39,15 @@ function darken(r: number, g: number, b: number, factor = 0.45) {
 
 function pickColor(img: HTMLImageElement): string {
   try {
-    const dominant = fac.getColor(img, { algorithm: "dominant" });
+    const dominant = getFac().getColor(img, { algorithm: "dominant" });
     const [dr, dg, db] = dominant.value;
     if (luminance(dr, dg, db) < 0.55) return `${dr},${dg},${db}`;
 
-    const square = fac.getColor(img, { algorithm: "sqrt" });
+    const square = getFac().getColor(img, { algorithm: "sqrt" });
     const [sr, sg, sb] = square.value;
     if (luminance(sr, sg, sb) < 0.55) return `${sr},${sg},${sb}`;
 
-    const simple = fac.getColor(img, { algorithm: "simple" });
+    const simple = getFac().getColor(img, { algorithm: "simple" });
     const [ar, ag, ab] = simple.value;
     if (luminance(ar, ag, ab) < 0.55) return `${ar},${ag},${ab}`;
 

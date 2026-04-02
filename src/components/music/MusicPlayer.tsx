@@ -63,7 +63,8 @@ export function MusicPlayer() {
   const howlRef = useRef<Howl | null>(null);
   const animFrameRef = useRef<number>(0);
   const seekBarRef = useRef<HTMLDivElement>(null);
-  const isRestoredRef = useRef(true);
+  // Only treat as "restored from localStorage" if there was a track but not playing on mount
+  const isRestoredRef = useRef(!!currentTrack && !isPlaying);
   const [, setSeeking] = useState(false);
   const [hoverTime, setHoverTime] = useState<{ time: number; x: number } | null>(null);
 

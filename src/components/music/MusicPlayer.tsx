@@ -63,8 +63,6 @@ export function MusicPlayer() {
   const howlRef = useRef<Howl | null>(null);
   const animFrameRef = useRef<number>(0);
   const seekBarRef = useRef<HTMLDivElement>(null);
-  // Only treat as "restored from localStorage" if there was a track but not playing on mount
-  const isRestoredRef = useRef(!!currentTrack && !isPlaying);
   const [, setSeeking] = useState(false);
   const [hoverTime, setHoverTime] = useState<{ time: number; x: number } | null>(null);
 
@@ -82,27 +80,12 @@ export function MusicPlayer() {
       return;
     }
 
-    // On page restore, load audio but don't auto-play
-    const isRestored = isRestoredRef.current;
-    isRestoredRef.current = false;
-    const savedTime = isRestored ? currentTime : 0;
-    if (isRestored) {
-      usePlayerStore.getState().setPlaying(false);
-      setBuffering(true);
-    }
-
     const streamUrl = `/api/music/${currentTrack.id}/stream`;
     howlRef.current = new Howl({
       src: [streamUrl],
       html5: true,
       volume: isMuted ? 0 : volume,
-      onload: () => {
-        setDuration(howlRef.current?.duration() ?? 0);
-        if (isRestored && savedTime > 0 && howlRef.current) {
-          howlRef.current.seek(savedTime);
-          setBuffering(false);
-        }
-      },
+      onload: () => setDuration(howlRef.current?.duration() ?? 0),
       onplay: () => {
         setBuffering(false);
         const tick = () => {
@@ -136,7 +119,7 @@ export function MusicPlayer() {
       onpause: () => cancelAnimationFrame(animFrameRef.current),
       onstop: () => cancelAnimationFrame(animFrameRef.current),
     });
-    if (isPlaying && !isRestored) howlRef.current.play();
+    if (isPlaying) howlRef.current.play();
     return () => {
       cancelAnimationFrame(animFrameRef.current);
     };
@@ -206,7 +189,7 @@ export function MusicPlayer() {
   return (
     <>
       {/* Mobile — dominant color bg */}
-      <div className="fixed inset-x-0 z-50 md:hidden" style={{ bottom: "4rem" }}>
+      <div className="fixed inset-x-0 z-50 md:hidden" style={{ bottom: "4.3rem" }}>
         <div
           className="mx-2 overflow-hidden rounded-xl shadow-lg transition-colors duration-500"
           style={{ backgroundColor: mobileBg }}

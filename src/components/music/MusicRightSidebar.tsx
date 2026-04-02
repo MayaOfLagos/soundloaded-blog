@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { Download, Flame, Music, Play, Pause, TrendingUp } from "lucide-react";
+import { Download, Flame, Music, Play, Pause, TrendingUp, Loader2 } from "lucide-react";
 import { usePlayerStore } from "@/store/player.store";
 import { cn } from "@/lib/utils";
 import { HeartButton } from "./HeartButton";
@@ -42,10 +42,18 @@ function TrackListItem({
   allTracks: MusicCardData[];
   showDownloads?: boolean;
 }) {
-  const { currentTrack, isPlaying, setTrack, setContextQueue, togglePlay } = usePlayerStore();
+  const {
+    currentTrack,
+    isPlaying,
+    isBuffering: storeBuffering,
+    setTrack,
+    setContextQueue,
+    togglePlay,
+  } = usePlayerStore();
 
   const isCurrentTrack = currentTrack?.id === track.id;
   const isActivelyPlaying = isCurrentTrack && isPlaying;
+  const isLoading = isCurrentTrack && storeBuffering;
 
   const handlePlay = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -82,7 +90,9 @@ function TrackListItem({
               className="hidden group-hover:block"
               aria-label={`Play ${track.title}`}
             >
-              {isCurrentTrack ? (
+              {isLoading ? (
+                <Loader2 className="text-brand h-3.5 w-3.5 animate-spin" />
+              ) : isActivelyPlaying ? (
                 <Pause className="text-brand h-3.5 w-3.5" />
               ) : (
                 <Play className="text-foreground h-3.5 w-3.5 fill-current" />

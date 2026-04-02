@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { Play, Pause, Music } from "lucide-react";
+import { Play, Pause, Music, Loader2 } from "lucide-react";
 import { usePlayerStore } from "@/store/player.store";
 import { cn } from "@/lib/utils";
 import { HeartButton } from "./HeartButton";
@@ -42,10 +42,12 @@ function EqualizerBars() {
 }
 
 export function MusicShelfCard({ track, shelfTracks, shelfLabel, className }: MusicShelfCardProps) {
-  const { currentTrack, isPlaying, setTrack, setContextQueue, togglePlay } = usePlayerStore();
+  const { currentTrack, isPlaying, isBuffering, setTrack, setContextQueue, togglePlay } =
+    usePlayerStore();
 
   const isCurrentTrack = currentTrack?.id === track.id;
   const isActivelyPlaying = isCurrentTrack && isPlaying;
+  const isLoading = isCurrentTrack && isBuffering;
 
   const handlePlay = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -110,7 +112,9 @@ export function MusicShelfCard({ track, shelfTracks, shelfLabel, className }: Mu
             className="bg-brand text-brand-foreground flex h-14 w-14 items-center justify-center rounded-full shadow-[0_8px_8px_rgba(0,0,0,0.3)] transition-transform duration-150 hover:scale-110 hover:brightness-110"
             aria-label={isActivelyPlaying ? `Pause ${track.title}` : `Play ${track.title}`}
           >
-            {isActivelyPlaying ? (
+            {isLoading ? (
+              <Loader2 className="h-6 w-6 animate-spin" />
+            ) : isActivelyPlaying ? (
               <Pause className="h-6 w-6" />
             ) : (
               <Play className="ml-0.5 h-6 w-6" />

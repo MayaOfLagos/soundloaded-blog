@@ -56,7 +56,14 @@ function toPlayerTrack(t: TracksResponse["tracks"][number]): Track {
 
 export function MusicSortedGrid({ sort }: MusicSortedGridProps) {
   const observerRef = useRef<IntersectionObserver | null>(null);
-  const { currentTrack, isPlaying, setTrack, togglePlay, setContextQueue } = usePlayerStore();
+  const {
+    currentTrack,
+    isPlaying,
+    isBuffering: storeBuffering,
+    setTrack,
+    togglePlay,
+    setContextQueue,
+  } = usePlayerStore();
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
     useInfiniteQuery<TracksResponse>({
@@ -151,6 +158,7 @@ export function MusicSortedGrid({ sort }: MusicSortedGridProps) {
         {allTracks.map((track, index) => {
           const isCurrentTrack = currentTrack?.id === track.id;
           const isTrackPlaying = isCurrentTrack && isPlaying;
+          const isTrackLoading = isCurrentTrack && storeBuffering;
 
           return (
             <div key={track.id} className="group">
@@ -181,7 +189,9 @@ export function MusicSortedGrid({ sort }: MusicSortedGridProps) {
                   )}
                 >
                   <div className="flex h-11 w-11 items-center justify-center rounded-full bg-white/90 shadow-lg">
-                    {isTrackPlaying ? (
+                    {isTrackLoading ? (
+                      <Loader2 className="h-5 w-5 animate-spin text-black" />
+                    ) : isTrackPlaying ? (
                       <Pause className="h-5 w-5 fill-black text-black" />
                     ) : (
                       <Play className="ml-0.5 h-5 w-5 fill-black text-black" />

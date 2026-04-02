@@ -1,17 +1,29 @@
 import Link from "next/link";
-import { getLatestPosts } from "@/lib/api/posts";
+import { getLatestPosts, getPostCount } from "@/lib/api/posts";
 import { getSettings } from "@/lib/settings";
 import { Button } from "@/components/ui/button";
 import { FeedViewToggle } from "./FeedViewToggle";
 
-export async function LatestPostsGrid() {
-  const settings = await getSettings();
-  const posts = await getLatestPosts({
-    limit: settings.postsPerPage,
-    permalinkStructure: settings.permalinkStructure,
-  });
+interface LatestPostsGridProps {
+  page?: number;
+}
 
-  if (!posts.length) {
+export async function LatestPostsGrid({ page = 1 }: LatestPostsGridProps) {
+  const settings = await getSettings();
+  const limit = settings.postsPerPage;
+
+  const [posts, total] = await Promise.all([
+    getLatestPosts({
+      limit,
+      page,
+      permalinkStructure: settings.permalinkStructure,
+    }),
+    getPostCount(),
+  ]);
+
+  const totalPages = Math.ceil(total / limit);
+
+  if (!posts.length && page === 1) {
     return (
       <div className="border-border bg-card rounded-xl border p-10 text-center">
         <p className="mb-2 text-3xl">📝</p>
@@ -28,5 +40,7 @@ export async function LatestPostsGrid() {
     );
   }
 
-  return <FeedViewToggle posts={posts} />;
+  return (
+    <FeedViewToggle posts={posts} initialPage={page} postsPerPage={limit} totalPages={totalPages} />
+  );
 }

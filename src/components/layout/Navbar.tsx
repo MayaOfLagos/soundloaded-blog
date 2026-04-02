@@ -7,9 +7,8 @@ import { Logo } from "@/components/common/Logo";
 import { SearchBar } from "@/components/search/SearchBar";
 import { NotificationBell } from "./NotificationBell";
 import { UserMenu } from "./UserMenu";
-import { MobileMenuDropdown } from "./MobileMenuDropdown";
+import { MobileNav } from "./MobileNav";
 import { useSettings } from "@/hooks/useSettings";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 const ALL_NAV_LINKS = [
@@ -30,6 +29,9 @@ export function Navbar() {
   return (
     <header className="bg-background/95 supports-[backdrop-filter]:bg-background/80 sticky top-0 z-50 w-full backdrop-blur">
       <div className="mx-auto flex h-14 max-w-7xl items-center gap-4 px-4 sm:px-6">
+        {/* Mobile hamburger */}
+        <MobileNav />
+
         {/* Logo */}
         <Logo
           logoLightUrl={settings?.logoLight}
@@ -59,21 +61,8 @@ export function Navbar() {
           })}
         </nav>
 
-        {/* Mobile right actions */}
-        <div className="ml-auto flex items-center gap-2 md:hidden">
-          <Button
-            variant="default"
-            size="sm"
-            className="bg-brand hover:bg-brand/90 h-8 rounded-full px-4 text-xs font-semibold text-white"
-            asChild
-          >
-            <Link href="/subscribe">Subscribe</Link>
-          </Button>
-          <MobileMenuDropdown />
-        </div>
-
-        {/* Desktop right actions */}
-        <div className="ml-auto hidden items-center gap-2 md:flex">
+        {/* Right actions */}
+        <div className="ml-auto flex items-center gap-2">
           <SearchBar />
           <NotificationBell />
           <UserMenu />

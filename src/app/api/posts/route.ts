@@ -422,18 +422,7 @@ export async function GET(req: NextRequest) {
     ]);
 
     return NextResponse.json({
-      posts: posts.map((p) => ({
-        id: p.id,
-        slug: p.slug,
-        title: p.title,
-        excerpt: p.excerpt,
-        coverImage: p.coverImage,
-        publishedAt: p.publishedAt,
-        viewCount: p.views,
-        type: p.type,
-        category: p.category,
-        author: p.author,
-      })),
+      posts,
       pagination: {
         page,
         limit,

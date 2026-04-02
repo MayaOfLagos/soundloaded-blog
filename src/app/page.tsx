@@ -11,25 +11,15 @@ import { getSettings } from "@/lib/settings";
 import { JsonLd } from "@/components/common/JsonLd";
 import { buildWebSiteSchema, buildOrganizationSchema } from "@/lib/structured-data";
 
-interface HomePageProps {
-  searchParams: Promise<{ page?: string }>;
-}
-
-export async function generateMetadata({ searchParams }: HomePageProps): Promise<Metadata> {
+export async function generateMetadata(): Promise<Metadata> {
   const s = await getSettings();
-  const { page } = await searchParams;
-  const pageNum = Math.max(1, parseInt(page ?? "1", 10) || 1);
-  const title = pageNum > 1 ? `${s.siteName} — Page ${pageNum}` : `${s.siteName} — ${s.tagline}`;
-
   return {
-    title,
-    alternates: { canonical: pageNum > 1 ? `/?page=${pageNum}` : "/" },
+    title: `${s.siteName} — ${s.tagline}`,
+    alternates: { canonical: "/" },
   };
 }
 
-export default async function HomePage({ searchParams }: HomePageProps) {
-  const { page } = await searchParams;
-  const currentPage = Math.max(1, parseInt(page ?? "1", 10) || 1);
+export default async function HomePage() {
   const settings = await getSettings();
   const websiteSchema = buildWebSiteSchema(settings.siteName, settings.siteUrl);
   const orgSchema = buildOrganizationSchema(
@@ -62,7 +52,7 @@ export default async function HomePage({ searchParams }: HomePageProps) {
 
             {/* Feed grid with view toggle */}
             <Suspense fallback={<FeedSkeleton />}>
-              <LatestPostsGrid page={currentPage} />
+              <LatestPostsGrid />
             </Suspense>
 
             {/* ── Mobile-only: Right sidebar content below feed ── */}

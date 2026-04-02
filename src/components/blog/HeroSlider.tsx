@@ -104,9 +104,9 @@ export function HeroSlider({ posts, interval = SLIDE_DURATION }: HeroSliderProps
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
               <div className="absolute inset-0 bg-gradient-to-r from-black/30 to-transparent" />
 
-              {/* Category pill — desktop only */}
+              {/* Category pill */}
               {post.category && (
-                <div className="absolute top-4 left-4 hidden sm:block">
+                <div className="absolute top-4 left-4">
                   <span className="bg-brand shadow-brand/30 rounded-full px-3 py-1 text-[11px] font-bold tracking-wide text-white uppercase shadow-lg">
                     {post.category.name}
                   </span>
@@ -118,34 +118,35 @@ export function HeroSlider({ posts, interval = SLIDE_DURATION }: HeroSliderProps
                 <h2 className="line-clamp-3 text-xl leading-tight font-extrabold text-white drop-shadow-lg sm:text-2xl lg:text-3xl">
                   {post.title}
                 </h2>
+                {post.excerpt && (
+                  <p className="mt-2 line-clamp-2 hidden text-sm text-white/70 sm:block">
+                    {post.excerpt}
+                  </p>
+                )}
+
                 <div className="mt-4 flex items-center gap-3">
-                  {/* Author */}
                   {post.author && (
-                    <div className="hidden items-center gap-2 sm:flex">
+                    <div className="flex items-center gap-2">
                       <div className="flex h-7 w-7 items-center justify-center rounded-full bg-white/20 text-xs font-bold text-white backdrop-blur-sm">
                         {post.author.name.charAt(0).toUpperCase()}
                       </div>
                       <span className="text-xs font-medium text-white/80">{post.author.name}</span>
                     </div>
                   )}
-
-                  {/* Mobile: date left, views right */}
-                  <div className="flex w-full items-center justify-between text-[11px] text-white/60 sm:ml-auto sm:w-auto sm:justify-end sm:gap-3">
+                  <div className="ml-auto flex items-center gap-3 text-[11px] text-white/60">
+                    {post.readingTime && (
+                      <span className="flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        {post.readingTime}m
+                      </span>
+                    )}
+                    {post.viewCount !== undefined && (
+                      <span className="flex items-center gap-1">
+                        <Eye className="h-3 w-3" />
+                        {post.viewCount.toLocaleString()}
+                      </span>
+                    )}
                     <time>{formatRelativeDate(post.publishedAt)}</time>
-                    <div className="flex items-center gap-3">
-                      {post.readingTime && (
-                        <span className="hidden items-center gap-1 sm:flex">
-                          <Clock className="h-3 w-3" />
-                          {post.readingTime}m
-                        </span>
-                      )}
-                      {post.viewCount !== undefined && (
-                        <span className="flex items-center gap-1">
-                          <Eye className="h-3 w-3" />
-                          {post.viewCount.toLocaleString()}
-                        </span>
-                      )}
-                    </div>
                   </div>
                 </div>
               </div>

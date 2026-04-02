@@ -3,12 +3,10 @@ import type { Metadata } from "next";
 import {
   getLatestMusic,
   getPopularMusic,
-  getMostStreamedMusic,
   getLatestAlbums,
   getLatestArtists,
   getDistinctGenres,
   getTopGenresWithTracks,
-  getPublicPlaylists,
 } from "@/lib/api/music";
 import { getSettings } from "@/lib/settings";
 import { SectionDisabled } from "@/components/common/SectionDisabled";
@@ -86,24 +84,13 @@ export default async function MusicPage({ searchParams }: MusicPageProps) {
 }
 
 async function MusicShelves() {
-  const [
-    newReleases,
-    trending,
-    mostStreamed,
-    albumsResult,
-    artists,
-    genres,
-    genreShelves,
-    playlists,
-  ] = await Promise.all([
+  const [newReleases, trending, albumsResult, artists, genres, genreShelves] = await Promise.all([
     getLatestMusic({ limit: 20 }),
     getPopularMusic({ limit: 20 }),
-    getMostStreamedMusic({ limit: 15 }),
     getLatestAlbums({ limit: 15 }),
     getLatestArtists({ limit: 15 }),
     getDistinctGenres(),
     getTopGenresWithTracks({ genreLimit: 3, trackLimit: 20 }),
-    getPublicPlaylists({ limit: 10 }),
   ]);
   const albums = albumsResult.albums;
 
@@ -121,12 +108,10 @@ async function MusicShelves() {
     <MusicPageClient
       newReleases={newReleases}
       trending={trending}
-      mostStreamed={mostStreamed}
       albums={albums}
       artists={artists}
       genres={genres}
       genreShelves={genreShelves}
-      playlists={playlists}
     />
   );
 }
@@ -160,52 +145,23 @@ function MusicPageSkeleton() {
         <div className="skeleton-shimmer mt-2 h-4 w-80 rounded" />
       </div>
 
-      {/* Grid skeleton (New Releases) */}
-      <div>
-        <div className="skeleton-shimmer mb-4 h-6 w-40 rounded" />
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="p-3">
-              <div className="skeleton-shimmer aspect-square w-full rounded-md" />
-              <div className="mt-2 space-y-1.5">
-                <div className="skeleton-shimmer h-3.5 w-full rounded" />
-                <div className="skeleton-shimmer h-3 w-2/3 rounded" />
+      {/* Shelf skeletons */}
+      {Array.from({ length: 3 }).map((_, s) => (
+        <div key={s}>
+          <div className="skeleton-shimmer mb-3 h-6 w-40 rounded" />
+          <div className="flex gap-4 overflow-hidden">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="w-[180px] min-w-[180px] flex-shrink-0">
+                <div className="skeleton-shimmer aspect-square w-full rounded-md" />
+                <div className="mt-2 space-y-1.5">
+                  <div className="skeleton-shimmer h-3.5 w-full rounded" />
+                  <div className="skeleton-shimmer h-3 w-2/3 rounded" />
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Shelf skeleton (Trending) */}
-      <div>
-        <div className="skeleton-shimmer mb-3 h-6 w-40 rounded" />
-        <div className="flex gap-4 overflow-hidden">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div key={i} className="w-[180px] min-w-[180px] flex-shrink-0">
-              <div className="skeleton-shimmer aspect-square w-full rounded-md" />
-              <div className="mt-2 space-y-1.5">
-                <div className="skeleton-shimmer h-3.5 w-full rounded" />
-                <div className="skeleton-shimmer h-3 w-2/3 rounded" />
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* List skeleton (Most Streamed) */}
-      <div>
-        <div className="skeleton-shimmer mb-4 h-6 w-40 rounded" />
-        {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="flex items-center gap-3 px-3 py-2.5">
-            <div className="skeleton-shimmer h-5 w-5 rounded" />
-            <div className="skeleton-shimmer h-10 w-10 flex-shrink-0 rounded" />
-            <div className="min-w-0 flex-1 space-y-1.5">
-              <div className="skeleton-shimmer h-3.5 w-3/4 rounded" />
-              <div className="skeleton-shimmer h-3 w-1/2 rounded" />
-            </div>
+            ))}
           </div>
-        ))}
-      </div>
+        </div>
+      ))}
     </div>
   );
 }

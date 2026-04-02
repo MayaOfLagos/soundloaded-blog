@@ -111,10 +111,12 @@ const withPWA = withSerwist({
 });
 
 export default withSentryConfig(withPWA(withPayload(nextConfig)), {
-  org: "soundloadedblog",
-  project: "javascript-nextjs",
+  org: process.env.SENTRY_ORG,
+  project: process.env.SENTRY_PROJECT,
   silent: !process.env.CI,
   widenClientFileUpload: true,
   tunnelRoute: "/monitoring",
+  sourcemaps: { disable: true },
+  disableLogger: true,
   automaticVercelMonitors: true,
 });

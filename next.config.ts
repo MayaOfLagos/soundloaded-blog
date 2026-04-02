@@ -113,6 +113,7 @@ const withPWA = withSerwist({
 export default withSentryConfig(withPWA(withPayload(nextConfig)), {
   org: process.env.SENTRY_ORG,
   project: process.env.SENTRY_PROJECT,
+  // Only upload source maps during CI builds
   silent: !process.env.CI,
   widenClientFileUpload: true,
   sourcemaps: { disable: true },

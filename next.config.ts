@@ -115,7 +115,6 @@ export default withSentryConfig(withPWA(withPayload(nextConfig)), {
   project: process.env.SENTRY_PROJECT,
   silent: !process.env.CI,
   widenClientFileUpload: true,
-  tunnelRoute: "/monitoring",
   sourcemaps: { disable: true },
   disableLogger: true,
   automaticVercelMonitors: true,

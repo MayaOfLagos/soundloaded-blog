@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import type { Metadata } from "next";
-import { MusicPageLayout } from "@/components/music/MusicPageLayout";
+import { MusicLeftSidebar } from "@/components/music/MusicLeftSidebar";
 import { TrendingSidebar } from "@/components/blog/TrendingSidebar";
 import { PopularMusicSidebar } from "@/components/music/PopularMusicSidebar";
 import { NewsletterForm } from "@/components/common/NewsletterForm";
@@ -42,8 +42,33 @@ export default async function ArtistsPage() {
   return (
     <>
       <JsonLd schema={[schema]} />
-      <MusicPageLayout
-        rightSidebar={
+      <div className="mx-auto max-w-[1440px] px-4 sm:px-6">
+        <div className="grid grid-cols-1 gap-6 py-5 lg:grid-cols-[1fr_300px] xl:grid-cols-[220px_1fr_300px]">
+          <MusicLeftSidebar />
+
+          <main className="min-w-0">
+            <div className="mb-5">
+              <h1 className="text-foreground text-2xl font-black">Artists</h1>
+              <p className="text-muted-foreground mt-1 text-sm">
+                Browse Nigerian and African artists.
+              </p>
+            </div>
+
+            <Suspense fallback={<ArtistsGridSkeleton />}>
+              <ArtistsGridLoader />
+            </Suspense>
+
+            <div className="mt-8 space-y-5 lg:hidden">
+              <Suspense fallback={<SidebarBlockSkeleton />}>
+                <TrendingSidebar />
+              </Suspense>
+              <Suspense fallback={<SidebarBlockSkeleton />}>
+                <PopularMusicSidebar />
+              </Suspense>
+              <MobileNewsletter />
+            </div>
+          </main>
+
           <aside className="sticky top-16 hidden h-[calc(100vh-4rem)] space-y-5 overflow-y-auto pb-8 lg:block">
             <Suspense fallback={<SidebarBlockSkeleton />}>
               <TrendingSidebar />
@@ -63,27 +88,8 @@ export default async function ArtistsPage() {
               </div>
             </div>
           </aside>
-        }
-      >
-        <div className="mb-5">
-          <h1 className="text-foreground text-2xl font-black">Artists</h1>
-          <p className="text-muted-foreground mt-1 text-sm">Browse Nigerian and African artists.</p>
         </div>
-
-        <Suspense fallback={<ArtistsGridSkeleton />}>
-          <ArtistsGridLoader />
-        </Suspense>
-
-        <div className="mt-8 space-y-5 lg:hidden">
-          <Suspense fallback={<SidebarBlockSkeleton />}>
-            <TrendingSidebar />
-          </Suspense>
-          <Suspense fallback={<SidebarBlockSkeleton />}>
-            <PopularMusicSidebar />
-          </Suspense>
-          <MobileNewsletter />
-        </div>
-      </MusicPageLayout>
+      </div>
     </>
   );
 }

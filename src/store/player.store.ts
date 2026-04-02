@@ -289,14 +289,9 @@ export const usePlayerStore = create<PlayerState>()(
         userQueue: s.userQueue,
         contextQueue: s.contextQueue,
         contextLabel: s.contextLabel,
-        originalContextQueue: s.originalContextQueue,
         shuffle: s.shuffle,
         repeatMode: s.repeatMode,
         playHistory: s.playHistory,
-        currentTrack: s.currentTrack,
-        currentTime: s.currentTime,
-        duration: s.duration,
-        isMinimized: s.isMinimized,
       }),
       // Migrate from old single queue format
       migrate: (persisted) => {

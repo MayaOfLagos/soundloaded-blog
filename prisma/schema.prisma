@@ -651,7 +651,6 @@ model SearchQuery {
   id        String   @id @default(cuid())
   query     String
   results   Int      @default(0) // total hits returned
-  engine    String   @default("meilisearch") // "meilisearch" or "postgresql"
   userId    String?
   user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
   ip        String?

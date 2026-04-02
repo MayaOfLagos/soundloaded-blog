@@ -6,6 +6,7 @@ import { Navbar } from "./Navbar";
 
 import { MusicPlayer } from "@/components/music/MusicPlayer";
 import { MobileBottomNav } from "./MobileBottomNav";
+import { QueuePanel } from "@/components/music/QueuePanel";
 
 interface ConditionalNavigationProps {
   children: ReactNode;
@@ -28,6 +29,7 @@ export function ConditionalNavigation({ children }: ConditionalNavigationProps) 
       <main className="flex-1 pb-16 md:pb-0">{children}</main>
       <MobileBottomNav />
       <MusicPlayer />
+      <QueuePanel />
     </div>
   );
 }

@@ -14,7 +14,7 @@ import { getSettings } from "@/lib/settings";
 import { SectionDisabled } from "@/components/common/SectionDisabled";
 import { JsonLd } from "@/components/common/JsonLd";
 import { buildCollectionPageSchema } from "@/lib/structured-data";
-import { MusicPageLayout } from "@/components/music/MusicPageLayout";
+import { MusicLeftSidebar } from "@/components/music/MusicLeftSidebar";
 import { MusicPageClient } from "./MusicPageClient";
 import { MusicSortedGrid } from "./MusicSortedGrid";
 import { Music2 } from "lucide-react";
@@ -59,21 +59,28 @@ export default async function MusicPage({ searchParams }: MusicPageProps) {
   return (
     <>
       <JsonLd schema={[schema]} />
-      <MusicPageLayout
-        rightSidebar={
+      <div className="mx-auto max-w-[1440px] px-4 sm:px-6">
+        <div className="grid grid-cols-1 gap-6 py-5 lg:grid-cols-[1fr_300px] xl:grid-cols-[220px_1fr_300px]">
+          {/* Left sidebar — music navigation */}
+          <MusicLeftSidebar />
+
+          {/* Main content */}
+          <main className="min-w-0">
+            {isSorted ? (
+              <MusicSortedGrid sort={sort as "latest" | "popular"} />
+            ) : (
+              <Suspense fallback={<MusicPageSkeleton />}>
+                <MusicShelves />
+              </Suspense>
+            )}
+          </main>
+
+          {/* Right sidebar — trending & popular (server-rendered) */}
           <Suspense fallback={<RightSidebarSkeleton />}>
             <MusicRightSidebarWrapper />
           </Suspense>
-        }
-      >
-        {isSorted ? (
-          <MusicSortedGrid sort={sort as "latest" | "popular"} />
-        ) : (
-          <Suspense fallback={<MusicPageSkeleton />}>
-            <MusicShelves />
-          </Suspense>
-        )}
-      </MusicPageLayout>
+        </div>
+      </div>
     </>
   );
 }

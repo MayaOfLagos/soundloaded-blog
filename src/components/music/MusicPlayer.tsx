@@ -63,7 +63,6 @@ export function MusicPlayer() {
   const howlRef = useRef<Howl | null>(null);
   const animFrameRef = useRef<number>(0);
   const seekBarRef = useRef<HTMLDivElement>(null);
-  const isRestoredRef = useRef(true); // true on first mount = restored from localStorage
   const [, setSeeking] = useState(false);
   const [hoverTime, setHoverTime] = useState<{ time: number; x: number } | null>(null);
 
@@ -81,28 +80,12 @@ export function MusicPlayer() {
       return;
     }
 
-    // On page restore, load audio but don't auto-play — pause at saved position
-    const isRestored = isRestoredRef.current;
-    isRestoredRef.current = false;
-    const savedTime = isRestored ? currentTime : 0;
-    if (isRestored) {
-      usePlayerStore.getState().setPlaying(false);
-      setBuffering(true);
-    }
-
     const streamUrl = `/api/music/${currentTrack.id}/stream`;
     howlRef.current = new Howl({
       src: [streamUrl],
       html5: true,
       volume: isMuted ? 0 : volume,
-      onload: () => {
-        setDuration(howlRef.current?.duration() ?? 0);
-        // On restore: seek to saved position and stay paused
-        if (isRestored && savedTime > 0 && howlRef.current) {
-          howlRef.current.seek(savedTime);
-          setBuffering(false);
-        }
-      },
+      onload: () => setDuration(howlRef.current?.duration() ?? 0),
       onplay: () => {
         setBuffering(false);
         const tick = () => {
@@ -136,8 +119,7 @@ export function MusicPlayer() {
       onpause: () => cancelAnimationFrame(animFrameRef.current),
       onstop: () => cancelAnimationFrame(animFrameRef.current),
     });
-    // Don't auto-play on page restore — user taps play to resume
-    if (isPlaying && !isRestored) howlRef.current.play();
+    if (isPlaying) howlRef.current.play();
     return () => {
       cancelAnimationFrame(animFrameRef.current);
     };

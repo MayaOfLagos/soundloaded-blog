@@ -1,19 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useSyncExternalStore } from "react";
-import type { FastAverageColor as FAC } from "fast-average-color";
 
-let fac: FAC | null = null;
-function getFac(): FAC {
-  if (!fac) {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { FastAverageColor } = require("fast-average-color") as {
-      FastAverageColor: new () => FAC;
-    };
-    fac = new FastAverageColor();
-  }
-  return fac;
-}
+let facInstance: import("fast-average-color").FastAverageColor | null = null;
+
 const cache = new Map<string, string>();
 const listeners = new Set<() => void>();
 const FALLBACK = "30,30,30";
@@ -37,17 +27,20 @@ function darken(r: number, g: number, b: number, factor = 0.45) {
   return `${Math.round(r * factor)},${Math.round(g * factor)},${Math.round(b * factor)}`;
 }
 
-function pickColor(img: HTMLImageElement): string {
+function pickColor(
+  fac: import("fast-average-color").FastAverageColor,
+  img: HTMLImageElement
+): string {
   try {
-    const dominant = getFac().getColor(img, { algorithm: "dominant" });
+    const dominant = fac.getColor(img, { algorithm: "dominant" });
     const [dr, dg, db] = dominant.value;
     if (luminance(dr, dg, db) < 0.55) return `${dr},${dg},${db}`;
 
-    const square = getFac().getColor(img, { algorithm: "sqrt" });
+    const square = fac.getColor(img, { algorithm: "sqrt" });
     const [sr, sg, sb] = square.value;
     if (luminance(sr, sg, sb) < 0.55) return `${sr},${sg},${sb}`;
 
-    const simple = getFac().getColor(img, { algorithm: "simple" });
+    const simple = fac.getColor(img, { algorithm: "simple" });
     const [ar, ag, ab] = simple.value;
     if (luminance(ar, ag, ab) < 0.55) return `${ar},${ag},${ab}`;
 
@@ -59,7 +52,13 @@ function pickColor(img: HTMLImageElement): string {
   return FALLBACK;
 }
 
-function resolveColor(src: string) {
+async function resolveColor(src: string) {
+  // Lazy-init FastAverageColor on first use (client-side only)
+  if (!facInstance) {
+    const { FastAverageColor } = await import("fast-average-color");
+    facInstance = new FastAverageColor();
+  }
+
   // Route through Next.js image proxy to avoid CORS issues with R2/CDN
   const proxiedSrc = `/_next/image?url=${encodeURIComponent(src)}&w=64&q=50`;
 
@@ -68,7 +67,7 @@ function resolveColor(src: string) {
   img.src = proxiedSrc;
 
   img.onload = () => {
-    const rgb = pickColor(img);
+    const rgb = pickColor(facInstance!, img);
     cache.set(src, rgb);
     notify();
   };

@@ -14,7 +14,7 @@ export function MiniPlayer() {
   if (!currentTrack) return null;
 
   const progress = duration > 0 ? currentTime / duration : 0;
-  const mobileBg = dominantColor ? `rgb(${dominantColor})` : "hsl(var(--brand))";
+  const mobileBg = dominantColor ? `rgb(${dominantColor})` : "var(--brand)";
 
   const cover = (
     <button

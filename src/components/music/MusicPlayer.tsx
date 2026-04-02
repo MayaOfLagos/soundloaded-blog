@@ -171,7 +171,7 @@ export function MusicPlayer() {
   if (!currentTrack) return null;
   if (isMinimized) return <MiniPlayer />;
 
-  const mobileBg = dominantColor ? `rgb(${dominantColor})` : "hsl(var(--brand))";
+  const mobileBg = dominantColor ? `rgb(${dominantColor})` : "var(--brand)";
 
   const mobileCover = (
     <div className="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded">

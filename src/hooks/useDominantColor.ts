@@ -59,8 +59,8 @@ async function resolveColor(src: string) {
     facInstance = new FastAverageColor();
   }
 
-  // Route through Next.js image proxy to avoid CORS issues with R2/CDN
-  const proxiedSrc = `/_next/image?url=${encodeURIComponent(src)}&w=64&q=50`;
+  // Route through our image proxy to avoid CORS issues with R2/CDN
+  const proxiedSrc = `/api/image-proxy?url=${encodeURIComponent(src)}`;
 
   const img = new Image();
   img.crossOrigin = "anonymous";

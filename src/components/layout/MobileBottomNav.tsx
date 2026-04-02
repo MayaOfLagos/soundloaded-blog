@@ -17,8 +17,8 @@ export function MobileBottomNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="bg-background/95 supports-[backdrop-filter]:bg-background/80 border-border/40 fixed right-0 bottom-0 left-0 z-40 border-t pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden">
-      <div className="flex items-center justify-between px-4 py-2">
+    <nav className="bg-background/95 supports-[backdrop-filter]:bg-background/80 border-border/20 fixed right-0 bottom-0 left-0 z-40 border-t pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden">
+      <div className="flex items-center justify-between px-4 py-1.5">
         {NAV_ITEMS.map(({ href, icon: Icon, label }) => {
           const isActive = href === "/" ? pathname === "/" : pathname.startsWith(href);
           return (

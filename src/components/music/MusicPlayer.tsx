@@ -206,9 +206,9 @@ export function MusicPlayer() {
   return (
     <>
       {/* Mobile — dominant color bg */}
-      <div className="fixed right-0 bottom-[calc(3.5rem+env(safe-area-inset-bottom))] left-0 z-50 px-2 md:hidden">
+      <div className="fixed right-0 bottom-[calc(3rem+env(safe-area-inset-bottom))] left-0 z-50 md:hidden">
         <div
-          className="overflow-hidden rounded-md transition-colors duration-500"
+          className="mx-2 overflow-hidden rounded-xl shadow-lg transition-colors duration-500"
           style={{ backgroundColor: mobileBg }}
         >
           <div className="flex items-center justify-between px-3 pt-2">

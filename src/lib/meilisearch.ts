@@ -136,9 +136,9 @@ export async function searchAll(
   query: string,
   limits?: { posts?: number; music?: number; artists?: number }
 ) {
-  const postLimit = limits?.posts ?? 5;
-  const musicLimit = limits?.music ?? 3;
-  const artistLimit = limits?.artists ?? 3;
+  const postLimit = limits?.posts ?? 10;
+  const musicLimit = limits?.music ?? 8;
+  const artistLimit = limits?.artists ?? 6;
 
   const response = await searchClient.multiSearch({
     queries: [

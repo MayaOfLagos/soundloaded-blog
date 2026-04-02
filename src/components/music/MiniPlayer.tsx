@@ -14,7 +14,13 @@ export function MiniPlayer() {
   if (!currentTrack) return null;
 
   const progress = duration > 0 ? currentTime / duration : 0;
-  const mobileBg = dominantColor ? `rgb(${dominantColor})` : "var(--brand)";
+  // Darken the dominant color to 60% intensity for a dimmer bg
+  const mobileBg = dominantColor
+    ? `rgb(${dominantColor
+        .split(",")
+        .map((c) => Math.round(Number(c.trim()) * 0.6))
+        .join(",")})`
+    : "var(--brand)";
 
   const cover = (
     <button

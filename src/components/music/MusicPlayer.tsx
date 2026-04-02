@@ -171,7 +171,13 @@ export function MusicPlayer() {
   if (!currentTrack) return null;
   if (isMinimized) return <MiniPlayer />;
 
-  const mobileBg = dominantColor ? `rgb(${dominantColor})` : "var(--brand)";
+  // Darken the dominant color to 60% intensity for a dimmer bg
+  const mobileBg = dominantColor
+    ? `rgb(${dominantColor
+        .split(",")
+        .map((c) => Math.round(Number(c.trim()) * 0.6))
+        .join(",")})`
+    : "var(--brand)";
 
   const mobileCover = (
     <div className="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded">

@@ -71,3 +71,6 @@ scripts/
 next-env.d.ts
 .claude/
 .env*.local
+
+# Sentry Config File
+.env.sentry-build-plugin

@@ -27,7 +27,7 @@ export async function generateMetadata({ searchParams }: HomePageProps): Promise
   };
 }
 
-export const maxDuration = 30;
+export const maxDuration = 10;
 
 export default async function HomePage({ searchParams }: HomePageProps) {
   const { page } = await searchParams;

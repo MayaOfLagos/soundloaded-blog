@@ -23,12 +23,12 @@ import type { PlaylistSummary } from "@/hooks/usePlaylist";
 interface MusicPageClientProps {
   newReleases: MusicCardData[];
   trending: MusicCardData[];
-  mostStreamed: MusicCardData[];
+  mostStreamed?: MusicCardData[];
   albums: AlbumCardData[];
   artists: ArtistCardData[];
   genres: string[];
   genreShelves: { genre: string; tracks: MusicCardData[] }[];
-  playlists: PublicPlaylistData[];
+  playlists?: PublicPlaylistData[];
 }
 
 export function MusicPageClient({
@@ -110,7 +110,7 @@ export function MusicPageClient({
       )}
 
       {/* ── Section 3: Most Streamed — LIST (chart) ── */}
-      {showAllSections && mostStreamed.length > 0 && (
+      {showAllSections && mostStreamed && mostStreamed.length > 0 && (
         <section>
           <SectionHeader titles={["Most Streamed", "Top Charts", "Fan Favorites", "Hit Tracks"]} />
           <div className="divide-border/30 divide-y rounded-lg">
@@ -160,7 +160,7 @@ export function MusicPageClient({
       )}
 
       {/* ── Section 6: Playlists — SCROLL SHELF ── */}
-      {showAllSections && playlists.length > 0 && (
+      {showAllSections && playlists && playlists.length > 0 && (
         <ScrollShelf
           title={
             <MorphingTitle

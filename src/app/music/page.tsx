@@ -36,7 +36,6 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export const revalidate = 60;
-export const maxDuration = 10;
 
 interface MusicPageProps {
   searchParams: Promise<{ sort?: string }>;

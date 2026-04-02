@@ -27,8 +27,6 @@ export async function generateMetadata({ searchParams }: HomePageProps): Promise
   };
 }
 
-export const maxDuration = 10;
-
 export default async function HomePage({ searchParams }: HomePageProps) {
   const { page } = await searchParams;
   const currentPage = Math.max(1, parseInt(page ?? "1", 10) || 1);

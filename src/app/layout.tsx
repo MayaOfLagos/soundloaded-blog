@@ -9,7 +9,12 @@ import { ConditionalNavigation } from "@/components/layout/ConditionalNavigation
 import { getSettings } from "@/lib/settings";
 import Script from "next/script";
 import { Suspense } from "react";
-import { HeadScripts, FooterScripts, CustomCss } from "@/components/common/CodeInjection";
+import {
+  HeadScripts,
+  FooterScripts,
+  CustomCss,
+  BrandColorStyle,
+} from "@/components/common/CodeInjection";
 import { InstallPrompt } from "@/components/pwa/InstallPrompt";
 import { NotificationPrompt } from "@/components/pwa/NotificationPrompt";
 import "./globals.css";
@@ -126,6 +131,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           media="(device-width: 1024px) and (device-height: 1366px) and (-webkit-device-pixel-ratio: 2)"
         />
         <Suspense>
+          <BrandColorStyle />
           <HeadScripts />
           <CustomCss />
         </Suspense>

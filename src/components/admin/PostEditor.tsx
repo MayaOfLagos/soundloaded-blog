@@ -136,7 +136,7 @@ function PanelSection({
   defaultOpen = true,
   children,
 }: {
-  title: string;
+  title: React.ReactNode;
   defaultOpen?: boolean;
   children: React.ReactNode;
 }) {
@@ -602,7 +602,14 @@ export function PostEditor({ mode, postId, defaultValues, post }: PostEditorProp
                   name="categoryId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-muted-foreground text-xs">Category</FormLabel>
+                      <FormLabel className="text-muted-foreground text-xs">
+                        Category
+                        {!field.value && (
+                          <span className="ml-1.5 text-[10px] font-medium text-amber-500">
+                            Missing
+                          </span>
+                        )}
+                      </FormLabel>
                       <Select
                         onValueChange={(val) => field.onChange(val === "__none__" ? "" : val)}
                         value={field.value || "__none__"}
@@ -632,7 +639,16 @@ export function PostEditor({ mode, postId, defaultValues, post }: PostEditorProp
               <Separator />
 
               {/* Featured Image */}
-              <PanelSection title="Featured Image">
+              <PanelSection
+                title={
+                  <span className="flex items-center gap-1.5">
+                    Featured Image
+                    {!form.watch("coverImage") && (
+                      <span className="text-[10px] font-medium text-amber-500">Missing</span>
+                    )}
+                  </span>
+                }
+              >
                 <FormField
                   control={form.control}
                   name="coverImage"
@@ -684,7 +700,16 @@ export function PostEditor({ mode, postId, defaultValues, post }: PostEditorProp
               <Separator />
 
               {/* Excerpt */}
-              <PanelSection title="Excerpt">
+              <PanelSection
+                title={
+                  <span className="flex items-center gap-1.5">
+                    Excerpt
+                    {!form.watch("excerpt") && (
+                      <span className="text-[10px] font-medium text-amber-500">Missing</span>
+                    )}
+                  </span>
+                }
+              >
                 <FormField
                   control={form.control}
                   name="excerpt"

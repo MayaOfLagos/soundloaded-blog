@@ -7,9 +7,9 @@ Disallow: /login
 Disallow: /register
 
 # Host
-Host: https://soundloadedblog.ng
+Host: https://soundloaded.ng
 
 # Sitemaps
-Sitemap: https://soundloadedblog.ng/sitemap.xml
-Sitemap: https://soundloadedblog.ng/server-sitemap.xml
-Sitemap: https://soundloadedblog.ng/news-sitemap.xml
+Sitemap: https://soundloaded.ng/sitemap.xml
+Sitemap: https://soundloaded.ng/server-sitemap.xml
+Sitemap: https://soundloaded.ng/news-sitemap.xml

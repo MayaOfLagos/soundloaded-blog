@@ -33,6 +33,20 @@ export async function getPresignedUploadUrl(
   return getSignedUrl(r2Client, command, { expiresIn });
 }
 
+export async function getPresignedStreamUrl(
+  bucket: string,
+  key: string,
+  expiresIn = 120
+): Promise<string> {
+  const { GetObjectCommand } = await import("@aws-sdk/client-s3");
+  const command = new GetObjectCommand({
+    Bucket: bucket,
+    Key: key,
+    ResponseContentDisposition: "inline",
+  });
+  return getSignedUrl(r2Client, command, { expiresIn });
+}
+
 export async function getPresignedDownloadUrl(
   bucket: string,
   key: string,

@@ -30,7 +30,7 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: "https",
-        hostname: "cdn.soundloadedblog.ng",
+        hostname: "cdn.soundloaded.ng",
       },
       {
         protocol: "https",

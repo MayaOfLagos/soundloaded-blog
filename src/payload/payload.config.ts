@@ -50,7 +50,7 @@ export default buildConfig({
       },
     }),
   ],
-  cors: [process.env.NEXT_PUBLIC_APP_URL ?? "https://soundloadedblog.ng"],
-  csrf: [process.env.NEXT_PUBLIC_APP_URL ?? "https://soundloadedblog.ng"],
+  cors: [process.env.NEXT_PUBLIC_APP_URL ?? "https://soundloaded.ng"],
+  csrf: [process.env.NEXT_PUBLIC_APP_URL ?? "https://soundloaded.ng"],
   globals: [],
 });

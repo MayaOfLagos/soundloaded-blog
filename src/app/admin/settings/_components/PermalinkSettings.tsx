@@ -23,7 +23,7 @@ const EXAMPLE_POST = {
 export function PermalinkSettings({ form }: Props) {
   const currentStructure = form.watch("permalinkStructure");
   const currentBase = form.watch("categoryBase");
-  const siteUrl = form.watch("siteUrl") || "https://soundloadedblog.ng";
+  const siteUrl = form.watch("siteUrl") || "https://soundloaded.ng";
 
   const previewUrl = getPostUrl(EXAMPLE_POST, currentStructure);
   const isValid = isValidPermalinkStructure(currentStructure);

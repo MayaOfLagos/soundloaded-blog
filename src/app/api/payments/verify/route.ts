@@ -4,7 +4,7 @@ import { verifyTransaction } from "@/lib/paystack";
 
 export async function GET(req: NextRequest) {
   const reference = req.nextUrl.searchParams.get("reference");
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://soundloadedblog.ng";
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://soundloaded.ng";
 
   if (!reference) {
     return NextResponse.redirect(new URL("/?payment=invalid", appUrl));

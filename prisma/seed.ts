@@ -1004,7 +1004,7 @@ async function main() {
       id: "default",
       siteName: "Soundloaded Blog",
       tagline: "Nigeria's #1 music download & entertainment blog",
-      siteUrl: "https://soundloadedblog.ng",
+      siteUrl: "https://soundloaded.ng",
       contactEmail: "hello@soundloaded.ng",
       copyrightText: "Soundloaded Nigeria. All rights reserved.",
       instagram: "soundloadedng",

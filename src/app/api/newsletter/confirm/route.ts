@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 
 export async function GET(req: NextRequest) {
   const token = req.nextUrl.searchParams.get("token");
-  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://soundloadedblog.ng";
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "https://soundloaded.ng";
 
   if (!token) {
     return NextResponse.redirect(new URL("/?newsletter=invalid", baseUrl));

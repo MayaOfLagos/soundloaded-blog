@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
     }
 
     const reference = `sl_${body.type}_${randomUUID().replace(/-/g, "").slice(0, 16)}`;
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://soundloadedblog.ng";
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://soundloaded.ng";
 
     await db.transaction.create({
       data: {

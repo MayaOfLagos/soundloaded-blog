@@ -2,7 +2,7 @@ import { getServerSideSitemap } from "next-sitemap";
 import { db } from "@/lib/db";
 import { getPostUrl } from "@/lib/urls";
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://soundloadedblog.ng";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://soundloaded.ng";
 
 export async function GET() {
   const [posts, artists, albums, music, settingsRaw] = await Promise.all([

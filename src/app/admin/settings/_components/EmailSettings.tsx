@@ -54,7 +54,7 @@ export function EmailSettings({ form }: Props) {
             <FormItem>
               <FormLabel>From Email</FormLabel>
               <FormControl>
-                <Input type="email" placeholder="hello@soundloadedblog.ng" {...field} />
+                <Input type="email" placeholder="hello@soundloaded.ng" {...field} />
               </FormControl>
               <p className="text-muted-foreground text-xs">
                 Sender email address (must be verified with your email provider)

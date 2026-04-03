@@ -89,7 +89,7 @@ export interface PublicSettings {
 const DEFAULTS: PublicSettings = {
   siteName: "Soundloaded Blog",
   tagline: "Nigeria's #1 music download & entertainment blog",
-  siteUrl: "https://soundloadedblog.ng",
+  siteUrl: "https://soundloaded.ng",
   contactEmail: "",
   copyrightText: "Soundloaded Nigeria. All rights reserved.",
   logoLight: null,

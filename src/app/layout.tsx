@@ -24,9 +24,7 @@ export async function generateMetadata(): Promise<Metadata> {
   const s = await getSettings();
 
   return {
-    metadataBase: new URL(
-      s.siteUrl || process.env.NEXT_PUBLIC_APP_URL || "https://soundloadedblog.ng"
-    ),
+    metadataBase: new URL(s.siteUrl || process.env.NEXT_PUBLIC_APP_URL || "https://soundloaded.ng"),
     title: {
       default: `${s.siteName} — ${s.tagline}`,
       template: s.metaTitleTemplate,

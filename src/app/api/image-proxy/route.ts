@@ -5,7 +5,7 @@ export async function GET(req: NextRequest) {
   if (!url) return new NextResponse("Missing url", { status: 400 });
 
   // Only allow R2 domains
-  const allowed = ["soundloaded.store", "r2.dev", "r2.cloudflarestorage.com", "soundloadedblog.ng"];
+  const allowed = ["soundloaded.store", "r2.dev", "r2.cloudflarestorage.com", "soundloaded.ng"];
   const parsed = new URL(url);
   if (!allowed.some((d) => parsed.hostname.endsWith(d))) {
     return new NextResponse("Forbidden domain", { status: 403 });

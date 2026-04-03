@@ -63,7 +63,7 @@ export function GeneralSettings({ form }: Props) {
                 Site URL
               </FormLabel>
               <FormControl>
-                <Input placeholder="https://soundloadedblog.ng" {...field} />
+                <Input placeholder="https://soundloaded.ng" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>

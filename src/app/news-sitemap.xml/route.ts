@@ -1,7 +1,7 @@
 import { db } from "@/lib/db";
 import { getPostUrl } from "@/lib/urls";
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://soundloadedblog.ng";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://soundloaded.ng";
 
 function escapeXml(str: string): string {
   return str

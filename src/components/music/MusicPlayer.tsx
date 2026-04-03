@@ -62,8 +62,9 @@ export function MusicPlayer() {
   const dominantColor = useDominantColor(currentTrack?.coverArt);
   const howlRef = useRef<Howl | null>(null);
   const animFrameRef = useRef<number>(0);
-  const playCountTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const playCountedRef = useRef<string | null>(null);
+  const listenedSecondsRef = useRef(0);
+  const lastTickTimeRef = useRef(0);
   const seekBarRef = useRef<HTMLDivElement>(null);
   const [, setSeeking] = useState(false);
   const [hoverTime, setHoverTime] = useState<{ time: number; x: number } | null>(null);
@@ -74,8 +75,9 @@ export function MusicPlayer() {
       howlRef.current.stop();
       howlRef.current.unload();
     }
-    if (playCountTimerRef.current) clearTimeout(playCountTimerRef.current);
     playCountedRef.current = null;
+    listenedSecondsRef.current = 0;
+    lastTickTimeRef.current = 0;
 
     // Skip tracks without an audio file
     if (!currentTrack.r2Key) {
@@ -103,23 +105,24 @@ export function MusicPlayer() {
       onplay: () => {
         setBuffering(false);
         usePlayerStore.getState().setPlaying(true);
-        // Start 30s timer for play count
-        const trackId = usePlayerStore.getState().currentTrack?.id;
-        if (trackId && playCountedRef.current !== trackId) {
-          if (playCountTimerRef.current) clearTimeout(playCountTimerRef.current);
-          playCountTimerRef.current = setTimeout(() => {
-            if (
-              howlRef.current?.playing() &&
-              usePlayerStore.getState().currentTrack?.id === trackId
-            ) {
-              playCountedRef.current = trackId;
-              fetch(`/api/music/${trackId}/play-count`, { method: "POST" }).catch(() => {});
-            }
-          }, 30_000);
-        }
+        lastTickTimeRef.current = Date.now();
         const tick = () => {
           if (howlRef.current?.playing()) {
             setCurrentTime(howlRef.current.seek() as number);
+            // Track actual listen time (real elapsed time, not seek position)
+            const now = Date.now();
+            const elapsed = (now - lastTickTimeRef.current) / 1000;
+            lastTickTimeRef.current = now;
+            // Only count small increments (< 2s) to ignore seek jumps
+            if (elapsed < 2) {
+              listenedSecondsRef.current += elapsed;
+            }
+            // Count play after 30s of real listening
+            const trackId = usePlayerStore.getState().currentTrack?.id;
+            if (trackId && listenedSecondsRef.current >= 30 && playCountedRef.current !== trackId) {
+              playCountedRef.current = trackId;
+              fetch(`/api/music/${trackId}/play-count`, { method: "POST" }).catch(() => {});
+            }
             animFrameRef.current = requestAnimationFrame(tick);
           }
         };
@@ -145,14 +148,8 @@ export function MusicPlayer() {
         setBuffering(false);
         usePlayerStore.getState().setPlaying(false);
       },
-      onpause: () => {
-        cancelAnimationFrame(animFrameRef.current);
-        if (playCountTimerRef.current) clearTimeout(playCountTimerRef.current);
-      },
-      onstop: () => {
-        cancelAnimationFrame(animFrameRef.current);
-        if (playCountTimerRef.current) clearTimeout(playCountTimerRef.current);
-      },
+      onpause: () => cancelAnimationFrame(animFrameRef.current),
+      onstop: () => cancelAnimationFrame(animFrameRef.current),
     });
     // Only auto-play if user initiated (isBuffering=true from setTrack)
     // On page restore, isBuffering is false (not persisted) — just load, don't play

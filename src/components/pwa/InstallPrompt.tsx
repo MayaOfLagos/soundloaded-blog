@@ -47,15 +47,16 @@ export function InstallPrompt() {
     const handler = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);
+      setVisible(true);
     };
     window.addEventListener("beforeinstallprompt", handler);
 
-    // Show after 30s delay
+    // iOS — show guide after 30s delay
     const timer = setTimeout(() => {
       if (isIOS()) {
         setShowIOSGuide(true);
+        setVisible(true);
       }
-      setVisible(true);
     }, 30_000);
 
     return () => {

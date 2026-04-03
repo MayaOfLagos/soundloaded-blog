@@ -15,7 +15,9 @@ const customCache: RuntimeCaching[] = [
   // CDN images — cache-first, 30 days, max 200
   {
     matcher: ({ url }) =>
-      url.hostname.includes("cdn.soundloaded") || url.hostname.includes("r2.dev"),
+      url.hostname.includes("soundloaded.store") ||
+      url.hostname.includes("cdn.soundloaded") ||
+      url.hostname.includes("r2.dev"),
     handler: new CacheFirst({
       cacheName: "cdn-images",
       plugins: [new ExpirationPlugin({ maxEntries: 200, maxAgeSeconds: 30 * 24 * 60 * 60 })],

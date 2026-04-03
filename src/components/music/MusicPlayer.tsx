@@ -84,12 +84,22 @@ export function MusicPlayer() {
       return;
     }
 
+    // Save the current position before creating a new Howl
+    // On page restore, currentTime has the persisted value from localStorage
+    const seekTo = currentTime > 0 ? currentTime : 0;
+
     const streamUrl = `/api/music/${currentTrack.id}/stream`;
     howlRef.current = new Howl({
       src: [streamUrl],
       html5: true,
       volume: isMuted ? 0 : volume,
-      onload: () => setDuration(howlRef.current?.duration() ?? 0),
+      onload: () => {
+        setDuration(howlRef.current?.duration() ?? 0);
+        // Seek to saved position (from page restore or track resume)
+        if (seekTo > 0 && howlRef.current) {
+          howlRef.current.seek(seekTo);
+        }
+      },
       onplay: () => {
         setBuffering(false);
         usePlayerStore.getState().setPlaying(true);
@@ -144,8 +154,9 @@ export function MusicPlayer() {
         if (playCountTimerRef.current) clearTimeout(playCountTimerRef.current);
       },
     });
-    // Always start playing when a new track is set
-    howlRef.current.play();
+    // Only auto-play if user initiated (isBuffering=true from setTrack)
+    // On page restore, isBuffering is false (not persisted) — just load, don't play
+    if (isBuffering) howlRef.current.play();
     return () => {
       cancelAnimationFrame(animFrameRef.current);
     };

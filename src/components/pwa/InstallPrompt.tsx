@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { X, Download, Share } from "lucide-react";
+import { usePathname } from "next/navigation";
+import { X, Download, Share, Smartphone } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 
 interface BeforeInstallPromptEvent extends Event {
@@ -36,14 +37,20 @@ function isDismissed(): boolean {
 }
 
 export function InstallPrompt() {
+  const pathname = usePathname();
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [showIOSGuide, setShowIOSGuide] = useState(false);
   const [visible, setVisible] = useState(false);
 
-  useEffect(() => {
-    if (isStandalone() || isDismissed()) return;
+  // Don't show on admin, login, register pages
+  const isExcluded =
+    pathname.startsWith("/admin") ||
+    pathname.startsWith("/login") ||
+    pathname.startsWith("/register");
 
-    // Android / Chrome — intercept beforeinstallprompt
+  useEffect(() => {
+    if (isStandalone() || isDismissed() || isExcluded) return;
+
     const handler = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);
@@ -63,7 +70,7 @@ export function InstallPrompt() {
       window.removeEventListener("beforeinstallprompt", handler);
       clearTimeout(timer);
     };
-  }, []);
+  }, [isExcluded]);
 
   const handleInstall = useCallback(async () => {
     if (!deferredPrompt) return;
@@ -80,6 +87,7 @@ export function InstallPrompt() {
     localStorage.setItem(DISMISS_KEY, Date.now().toString());
   }, []);
 
+  if (isExcluded) return null;
   const showBanner = visible && (deferredPrompt || showIOSGuide);
 
   return (
@@ -90,50 +98,64 @@ export function InstallPrompt() {
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: 100, opacity: 0 }}
           transition={{ type: "spring", damping: 25, stiffness: 300 }}
-          className="fixed inset-x-0 bottom-20 z-50 mx-auto max-w-md px-4 sm:bottom-6"
+          className="fixed inset-x-0 bottom-20 z-50 mx-auto max-w-sm px-4 sm:bottom-6"
         >
-          <div className="bg-card/95 ring-border/40 relative overflow-hidden rounded-2xl p-4 shadow-2xl ring-1 backdrop-blur-xl">
-            <button
-              onClick={handleDismiss}
-              className="text-muted-foreground hover:text-foreground absolute top-3 right-3 rounded-full p-1 transition-colors"
-              aria-label="Dismiss"
-            >
-              <X className="h-4 w-4" />
-            </button>
+          <div className="bg-card ring-border/30 relative overflow-hidden rounded-2xl shadow-2xl ring-1 backdrop-blur-xl">
+            {/* Gradient accent bar */}
+            <div className="from-brand via-brand/80 h-1 w-full bg-gradient-to-r to-rose-500" />
 
-            {showIOSGuide ? (
-              <div className="flex items-start gap-3 pr-6">
-                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-rose-500/10">
-                  <Share className="h-5 w-5 text-rose-500" />
-                </div>
-                <div>
-                  <p className="text-foreground text-sm font-semibold">Install Soundloaded</p>
-                  <p className="text-muted-foreground mt-0.5 text-xs leading-relaxed">
-                    Tap the <span className="font-medium">Share</span> button, then{" "}
-                    <span className="font-medium">&quot;Add to Home Screen&quot;</span> for the best
-                    experience.
+            <div className="p-4">
+              <button
+                type="button"
+                onClick={handleDismiss}
+                className="text-muted-foreground hover:text-foreground absolute top-3 right-3 rounded-full p-1.5 transition-colors"
+                aria-label="Dismiss"
+              >
+                <X className="h-4 w-4" />
+              </button>
+
+              {showIOSGuide ? (
+                <div className="pr-6">
+                  <div className="mb-3 flex items-center gap-3">
+                    <div className="bg-brand/10 flex h-11 w-11 items-center justify-center rounded-xl">
+                      <Share className="text-brand h-5 w-5" />
+                    </div>
+                    <div>
+                      <p className="text-foreground text-sm font-bold">Install Soundloaded</p>
+                      <p className="text-muted-foreground text-[11px]">
+                        Get the full app experience
+                      </p>
+                    </div>
+                  </div>
+                  <p className="text-muted-foreground text-xs leading-relaxed">
+                    Tap the <span className="text-foreground font-semibold">Share</span> button in
+                    Safari, then select{" "}
+                    <span className="text-foreground font-semibold">
+                      &quot;Add to Home Screen&quot;
+                    </span>
                   </p>
                 </div>
-              </div>
-            ) : (
-              <div className="flex items-center gap-3 pr-6">
-                <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-rose-500/10">
-                  <Download className="h-5 w-5 text-rose-500" />
+              ) : (
+                <div className="flex items-center gap-3 pr-6">
+                  <div className="bg-brand/10 flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl">
+                    <Smartphone className="text-brand h-5 w-5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-foreground text-sm font-bold">Install Soundloaded</p>
+                    <p className="text-muted-foreground mt-0.5 text-[11px] leading-tight">
+                      Quick access, offline support, and push notifications
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleInstall}
+                    className="bg-brand text-brand-foreground hover:bg-brand/90 flex-shrink-0 rounded-full px-4 py-2 text-xs font-bold transition-colors"
+                  >
+                    Install
+                  </button>
                 </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-foreground text-sm font-semibold">Install Soundloaded</p>
-                  <p className="text-muted-foreground mt-0.5 text-xs">
-                    Get instant access from your home screen.
-                  </p>
-                </div>
-                <button
-                  onClick={handleInstall}
-                  className="flex-shrink-0 rounded-lg bg-rose-600 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-rose-700"
-                >
-                  Install
-                </button>
-              </div>
-            )}
+              )}
+            </div>
           </div>
         </motion.div>
       )}

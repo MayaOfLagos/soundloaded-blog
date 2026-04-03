@@ -1,14 +1,15 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Bell, X } from "lucide-react";
+import { usePathname } from "next/navigation";
+import { Bell, X, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import toast from "react-hot-toast";
 
 const DISMISS_KEY = "push-notification-dismissed";
 const SUBSCRIBED_KEY = "push-notification-subscribed";
 const DISMISS_DAYS = 14;
-const SHOW_DELAY = 60_000; // Show after 60s
+const SHOW_DELAY = 60_000;
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
@@ -37,11 +38,17 @@ function isAlreadySubscribed(): boolean {
 }
 
 export function NotificationPrompt() {
+  const pathname = usePathname();
   const [visible, setVisible] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  const isExcluded =
+    pathname.startsWith("/admin") ||
+    pathname.startsWith("/login") ||
+    pathname.startsWith("/register");
+
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (typeof window === "undefined" || isExcluded) return;
     if (!("Notification" in window) || !("serviceWorker" in navigator)) return;
     if (Notification.permission === "granted" && isAlreadySubscribed()) return;
     if (Notification.permission === "denied") return;
@@ -50,7 +57,7 @@ export function NotificationPrompt() {
 
     const timer = setTimeout(() => setVisible(true), SHOW_DELAY);
     return () => clearTimeout(timer);
-  }, []);
+  }, [isExcluded]);
 
   const handleSubscribe = useCallback(async () => {
     setLoading(true);
@@ -92,42 +99,51 @@ export function NotificationPrompt() {
     localStorage.setItem(DISMISS_KEY, Date.now().toString());
   }, []);
 
+  if (isExcluded) return null;
+
   return (
     <AnimatePresence>
       {visible && (
         <motion.div
-          initial={{ y: -80, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          exit={{ y: -80, opacity: 0 }}
+          initial={{ y: -80, opacity: 0, scale: 0.95 }}
+          animate={{ y: 0, opacity: 1, scale: 1 }}
+          exit={{ y: -80, opacity: 0, scale: 0.95 }}
           transition={{ type: "spring", damping: 25, stiffness: 300 }}
-          className="fixed inset-x-0 top-16 z-50 mx-auto max-w-md px-4"
+          className="fixed inset-x-0 top-16 z-50 mx-auto max-w-sm px-4"
         >
-          <div className="bg-card/95 ring-border/40 relative overflow-hidden rounded-2xl p-4 shadow-2xl ring-1 backdrop-blur-xl">
-            <button
-              onClick={handleDismiss}
-              className="text-muted-foreground hover:text-foreground absolute top-3 right-3 rounded-full p-1 transition-colors"
-              aria-label="Dismiss"
-            >
-              <X className="h-4 w-4" />
-            </button>
+          <div className="bg-card ring-border/30 relative overflow-hidden rounded-2xl shadow-2xl ring-1 backdrop-blur-xl">
+            {/* Gradient accent bar */}
+            <div className="h-1 w-full bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500" />
 
-            <div className="flex items-center gap-3 pr-6">
-              <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-rose-500/10">
-                <Bell className="h-5 w-5 text-rose-500" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-foreground text-sm font-semibold">Never miss a drop</p>
-                <p className="text-muted-foreground mt-0.5 text-xs">
-                  Get notified when new music is uploaded.
-                </p>
-              </div>
+            <div className="p-4">
               <button
-                onClick={handleSubscribe}
-                disabled={loading}
-                className="flex-shrink-0 rounded-lg bg-rose-600 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-rose-700 disabled:opacity-50"
+                type="button"
+                onClick={handleDismiss}
+                className="text-muted-foreground hover:text-foreground absolute top-3 right-3 rounded-full p-1.5 transition-colors"
+                aria-label="Dismiss"
               >
-                {loading ? "..." : "Allow"}
+                <X className="h-4 w-4" />
               </button>
+
+              <div className="flex items-center gap-3 pr-6">
+                <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-amber-500/10">
+                  <Bell className="h-5 w-5 text-amber-500" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-foreground text-sm font-bold">Never miss a drop</p>
+                  <p className="text-muted-foreground mt-0.5 text-[11px] leading-tight">
+                    Get notified when new music is uploaded
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleSubscribe}
+                  disabled={loading}
+                  className="flex flex-shrink-0 items-center gap-1.5 rounded-full bg-amber-500 px-4 py-2 text-xs font-bold text-white transition-colors hover:bg-amber-600 disabled:opacity-50"
+                >
+                  {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : "Allow"}
+                </button>
+              </div>
             </div>
           </div>
         </motion.div>

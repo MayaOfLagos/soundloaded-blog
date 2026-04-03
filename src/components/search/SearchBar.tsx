@@ -134,9 +134,16 @@ export function SearchBar() {
     setLoading(true);
     const controller = new AbortController();
     fetch(`/api/search?q=${encodeURIComponent(debouncedQuery)}`, { signal: controller.signal })
-      .then((r) => r.json())
-      .then((data: SearchResults) => {
-        setResults(data);
+      .then((r) => {
+        if (!r.ok) throw new Error(`Search failed: ${r.status}`);
+        return r.json();
+      })
+      .then((data) => {
+        setResults({
+          posts: data.posts ?? [],
+          music: data.music ?? [],
+          artists: data.artists ?? [],
+        });
         setActiveIndex(-1);
       })
       .catch(() => {})

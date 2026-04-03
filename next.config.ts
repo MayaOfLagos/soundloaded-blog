@@ -76,7 +76,7 @@ const nextConfig: NextConfig = {
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: blob: https://pub-a7e2363e13da41dc85ad97e68dc7713a.r2.dev https://*.r2.dev https://*.r2.cloudflarestorage.com",
               "font-src 'self' data:",
-              `connect-src 'self' https://*.r2.dev https://*.r2.cloudflarestorage.com https://*.vercel-analytics.com https://*.vercel-insights.com https://api.paystack.co https://*.ingest.de.sentry.io https://*.sentry.io${process.env.NEXT_PUBLIC_UMAMI_URL ? ` ${process.env.NEXT_PUBLIC_UMAMI_URL}` : ""}${process.env.NEXT_PUBLIC_MEILISEARCH_HOST ? ` ${process.env.NEXT_PUBLIC_MEILISEARCH_HOST}` : ""}`,
+              `connect-src 'self' https://*.r2.dev https://*.r2.cloudflarestorage.com https://*.vercel-analytics.com https://*.vercel-insights.com https://api.paystack.co https://*.ingest.de.sentry.io https://*.sentry.io https://api-gateway.umami.dev${process.env.NEXT_PUBLIC_UMAMI_URL ? ` ${process.env.NEXT_PUBLIC_UMAMI_URL}` : ""}${process.env.NEXT_PUBLIC_MEILISEARCH_HOST ? ` ${process.env.NEXT_PUBLIC_MEILISEARCH_HOST}` : ""}`,
               "media-src 'self' https://*.r2.dev https://*.r2.cloudflarestorage.com blob:",
               "frame-src 'self' https://checkout.paystack.com https://js.paystack.co",
               "worker-src 'self' blob:",

@@ -17,7 +17,7 @@ const streamLimit = hasUpstash
 const apiLimit = hasUpstash
   ? new Ratelimit({
       redis: Redis.fromEnv(),
-      limiter: Ratelimit.slidingWindow(60, "1 m"),
+      limiter: Ratelimit.slidingWindow(120, "1 m"),
       analytics: false,
       prefix: "sl_api",
     })
@@ -80,8 +80,14 @@ export async function proxy(req: NextRequest) {
     }
   }
 
-  // General API rate limit (60 req/min per IP — public API only)
-  if (pathname.startsWith("/api/") && !pathname.startsWith("/api/admin") && apiLimit) {
+  // General API rate limit (120 req/min per IP — public API only, excludes user-specific endpoints)
+  if (
+    pathname.startsWith("/api/") &&
+    !pathname.startsWith("/api/admin") &&
+    !pathname.startsWith("/api/user/") &&
+    !pathname.startsWith("/api/auth/") &&
+    apiLimit
+  ) {
     const { success } = await apiLimit.limit(ip);
     if (!success) {
       return new NextResponse(JSON.stringify({ error: "Too many requests. Slow down." }), {

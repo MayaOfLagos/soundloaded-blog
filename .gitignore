@@ -54,6 +54,9 @@ prisma/dev.db-journal
 # Generated Payload types (regenerate with pnpm payload:generate)
 src/payload/payload-types.ts
 
+# Internal docs (local only)
+docs/
+
 # WordPress import scripts & data (one-time migration tools)
 scripts/
 /scripts/wp-data/

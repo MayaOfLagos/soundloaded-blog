@@ -23,6 +23,7 @@ const nextConfig: NextConfig = {
   allowedDevOrigins: ["192.168.1.*", "192.168.0.*", "10.*", "127.*"],
   transpilePackages: ["filepond", "react-filepond"],
   images: {
+    unoptimized: true,
     remotePatterns: [
       {
         protocol: "https",

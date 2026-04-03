@@ -83,7 +83,7 @@ export const usePlayerStore = create<PlayerState>()(
         );
         set({
           currentTrack: track,
-          isPlaying: true,
+          isPlaying: false,
           isBuffering: true,
           currentTime: 0,
           playHistory: updatedHistory,

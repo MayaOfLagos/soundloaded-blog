@@ -17,8 +17,8 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 
     const url = await getPresignedDownloadUrl(MUSIC_BUCKET, music.r2Key, music.filename);
 
-    // Increment stream count only after successful URL generation
-    db.music.update({ where: { id }, data: { streamCount: { increment: 1 } } }).catch(() => {});
+    // Stream count is now incremented client-side after 30s of actual playback
+    // via /api/music/[id]/play-count endpoint
 
     return NextResponse.redirect(url);
   } catch {

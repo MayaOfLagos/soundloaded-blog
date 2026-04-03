@@ -62,6 +62,8 @@ export function MusicPlayer() {
   const dominantColor = useDominantColor(currentTrack?.coverArt);
   const howlRef = useRef<Howl | null>(null);
   const animFrameRef = useRef<number>(0);
+  const playCountTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const playCountedRef = useRef<string | null>(null);
   const seekBarRef = useRef<HTMLDivElement>(null);
   const [, setSeeking] = useState(false);
   const [hoverTime, setHoverTime] = useState<{ time: number; x: number } | null>(null);
@@ -72,6 +74,8 @@ export function MusicPlayer() {
       howlRef.current.stop();
       howlRef.current.unload();
     }
+    if (playCountTimerRef.current) clearTimeout(playCountTimerRef.current);
+    playCountedRef.current = null;
 
     // Skip tracks without an audio file
     if (!currentTrack.r2Key) {
@@ -88,6 +92,21 @@ export function MusicPlayer() {
       onload: () => setDuration(howlRef.current?.duration() ?? 0),
       onplay: () => {
         setBuffering(false);
+        usePlayerStore.getState().setPlaying(true);
+        // Start 30s timer for play count
+        const trackId = usePlayerStore.getState().currentTrack?.id;
+        if (trackId && playCountedRef.current !== trackId) {
+          if (playCountTimerRef.current) clearTimeout(playCountTimerRef.current);
+          playCountTimerRef.current = setTimeout(() => {
+            if (
+              howlRef.current?.playing() &&
+              usePlayerStore.getState().currentTrack?.id === trackId
+            ) {
+              playCountedRef.current = trackId;
+              fetch(`/api/music/${trackId}/play-count`, { method: "POST" }).catch(() => {});
+            }
+          }, 30_000);
+        }
         const tick = () => {
           if (howlRef.current?.playing()) {
             setCurrentTime(howlRef.current.seek() as number);
@@ -116,10 +135,17 @@ export function MusicPlayer() {
         setBuffering(false);
         usePlayerStore.getState().setPlaying(false);
       },
-      onpause: () => cancelAnimationFrame(animFrameRef.current),
-      onstop: () => cancelAnimationFrame(animFrameRef.current),
+      onpause: () => {
+        cancelAnimationFrame(animFrameRef.current);
+        if (playCountTimerRef.current) clearTimeout(playCountTimerRef.current);
+      },
+      onstop: () => {
+        cancelAnimationFrame(animFrameRef.current);
+        if (playCountTimerRef.current) clearTimeout(playCountTimerRef.current);
+      },
     });
-    if (isPlaying) howlRef.current.play();
+    // Always start playing when a new track is set
+    howlRef.current.play();
     return () => {
       cancelAnimationFrame(animFrameRef.current);
     };

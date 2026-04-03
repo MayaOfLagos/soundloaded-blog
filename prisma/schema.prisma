@@ -460,7 +460,7 @@ model SiteSettings {
   // General / Site Identity
   siteName      String  @default("Soundloaded Blog")
   tagline       String  @default("Nigeria's #1 music download & entertainment blog")
-  siteUrl       String  @default("https://soundloadedblog.ng")
+  siteUrl       String  @default("https://soundloaded.ng")
   contactEmail  String  @default("")
   copyrightText String  @default("Soundloaded Nigeria. All rights reserved.")
   logoLight     String? // R2 key

@@ -4,7 +4,7 @@ CREATE TABLE "SiteSettings" (
     "updatedAt" TIMESTAMP(3) NOT NULL,
     "siteName" TEXT NOT NULL DEFAULT 'Soundloaded Blog',
     "tagline" TEXT NOT NULL DEFAULT 'Nigeria''s #1 music download & entertainment blog',
-    "siteUrl" TEXT NOT NULL DEFAULT 'https://soundloadedblog.ng',
+    "siteUrl" TEXT NOT NULL DEFAULT 'https://soundloaded.ng',
     "contactEmail" TEXT NOT NULL DEFAULT '',
     "copyrightText" TEXT NOT NULL DEFAULT 'Soundloaded Nigeria. All rights reserved.',
     "logoLight" TEXT,

@@ -16,6 +16,7 @@ const PAGE_TITLES: Record<string, string> = {
   "/admin/posts/new": "New Post",
   "/admin/music": "Music",
   "/admin/music/upload": "Upload Music",
+  "/admin/videos": "Videos",
   "/admin/artists": "Artists",
   "/admin/albums": "Albums",
   "/admin/categories": "Categories",

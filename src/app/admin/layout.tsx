@@ -16,7 +16,7 @@ export default async function AdminLayout({ children }: { children: ReactNode })
   }
 
   const role = (session.user as { role?: string }).role;
-  if (!["ADMIN", "SUPER_ADMIN", "EDITOR"].includes(role ?? "")) {
+  if (!["ADMIN", "SUPER_ADMIN"].includes(role ?? "")) {
     redirect("/login");
   }
 

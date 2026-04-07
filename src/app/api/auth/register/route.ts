@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
+import { verifyTurnstile } from "@/lib/turnstile";
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
 import type { UserRole } from "@prisma/client";
@@ -39,6 +40,16 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
+
+    // Verify Cloudflare Turnstile
+    const turnstileValid = await verifyTurnstile(body.turnstileToken);
+    if (!turnstileValid) {
+      return NextResponse.json(
+        { error: "Security check failed. Please try again." },
+        { status: 403 }
+      );
+    }
+
     const parsed = baseSchema.safeParse(body);
 
     if (!parsed.success) {

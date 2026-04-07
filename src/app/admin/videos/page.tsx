@@ -2,17 +2,17 @@ export const dynamic = "force-dynamic";
 
 import type { Metadata } from "next";
 import Link from "next/link";
-import { Plus, FileText } from "lucide-react";
-import { PostsTable } from "./_components/PostsTable";
+import { Plus, Video } from "lucide-react";
+import { PostsTable } from "../posts/_components/PostsTable";
 import { db } from "@/lib/db";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-export const metadata: Metadata = { title: "Posts — Soundloaded Admin" };
+export const metadata: Metadata = { title: "Videos — Soundloaded Admin" };
 
 const PAGE_SIZE = 20;
 
-interface PostsPageProps {
+interface VideosPageProps {
   searchParams: Promise<{
     page?: string;
     status?: string;
@@ -20,10 +20,9 @@ interface PostsPageProps {
   }>;
 }
 
-async function getPosts({ page, status, q }: { page: number; status?: string; q?: string }) {
+async function getVideos({ page, status, q }: { page: number; status?: string; q?: string }) {
   const where = {
-    type: { notIn: ["COMMUNITY", "VIDEO"] as ("COMMUNITY" | "VIDEO")[] },
-    music: null,
+    type: "VIDEO" as const,
     ...(status && status !== "ALL" ? { status: status as never } : {}),
     ...(q
       ? {
@@ -63,7 +62,7 @@ async function getPosts({ page, status, q }: { page: number; status?: string; q?
 async function getStatusCounts() {
   const counts = await db.post.groupBy({
     by: ["status"],
-    where: { type: { notIn: ["COMMUNITY", "VIDEO"] as ("COMMUNITY" | "VIDEO")[] } },
+    where: { type: "VIDEO" },
     _count: { _all: true },
   });
   const map: Record<string, number> = {};
@@ -73,14 +72,14 @@ async function getStatusCounts() {
   return map;
 }
 
-export default async function PostsPage({ searchParams }: PostsPageProps) {
+export default async function VideosPage({ searchParams }: VideosPageProps) {
   const params = await searchParams;
   const page = Math.max(1, parseInt(params.page ?? "1", 10));
   const status = params.status ?? "ALL";
   const q = params.q ?? "";
 
   const [{ posts, total }, statusCounts] = await Promise.all([
-    getPosts({ page, status, q }),
+    getVideos({ page, status, q }),
     getStatusCounts(),
   ]);
 
@@ -93,20 +92,23 @@ export default async function PostsPage({ searchParams }: PostsPageProps) {
       if (v && v !== "ALL" && v !== "" && v !== "1") p.set(k, v);
     });
     const qs = p.toString();
-    return `/admin/posts${qs ? `?${qs}` : ""}`;
+    return `/admin/videos${qs ? `?${qs}` : ""}`;
   };
 
   return (
     <div className="space-y-5">
       {/* Top bar */}
       <div className="flex items-center justify-between gap-3">
-        <p className="text-muted-foreground text-sm">
-          {total.toLocaleString()} post{total !== 1 ? "s" : ""}
-        </p>
+        <div>
+          <h1 className="text-foreground text-lg font-bold">Videos</h1>
+          <p className="text-muted-foreground text-sm">
+            {total.toLocaleString()} video{total !== 1 ? "s" : ""}
+          </p>
+        </div>
         <Link href="/admin/posts/new">
           <Button size="sm" className="bg-brand hover:bg-brand/90 text-brand-foreground gap-1.5">
             <Plus className="h-4 w-4" />
-            New Post
+            New Video Post
           </Button>
         </Link>
       </div>
@@ -141,19 +143,19 @@ export default async function PostsPage({ searchParams }: PostsPageProps) {
       </div>
 
       {/* Search */}
-      <form method="GET" action="/admin/posts" className="max-w-sm">
+      <form method="GET" action="/admin/videos" className="max-w-sm">
         <input type="hidden" name="status" value={status} />
-        <Input name="q" defaultValue={q} placeholder="Search posts..." className="bg-card" />
+        <Input name="q" defaultValue={q} placeholder="Search videos..." className="bg-card" />
       </form>
 
       {/* Table */}
       {posts.length === 0 ? (
         <div className="border-border bg-card overflow-hidden rounded-xl border">
           <div className="flex flex-col items-center justify-center py-16 text-center">
-            <FileText className="text-muted-foreground/30 mb-3 h-12 w-12" />
-            <p className="text-muted-foreground font-medium">No posts found</p>
+            <Video className="text-muted-foreground/30 mb-3 h-12 w-12" />
+            <p className="text-muted-foreground font-medium">No videos found</p>
             <p className="text-muted-foreground/70 mt-1 text-sm">
-              {q ? "Try a different search term" : "Create your first post to get started"}
+              {q ? "Try a different search term" : "Create your first video post to get started"}
             </p>
           </div>
         </div>

@@ -3,6 +3,7 @@ import Credentials from "next-auth/providers/credentials";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { db } from "./db";
+import { verifyTurnstile } from "./turnstile";
 
 // Login attempt tracking via Upstash Redis (if available)
 let redis: {
@@ -78,7 +79,7 @@ async function clearLoginAttempts(email: string): Promise<void> {
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   secret: process.env.NEXTAUTH_SECRET,
-  session: { strategy: "jwt", maxAge: 30 * 24 * 60 * 60 },
+  session: { strategy: "jwt", maxAge: 7 * 24 * 60 * 60 },
   pages: {
     signIn: "/login",
     error: "/login",
@@ -89,14 +90,23 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       credentials: {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
+        turnstileToken: { label: "Turnstile", type: "text" },
       },
       async authorize(credentials) {
         const parsed = z
-          .object({ email: z.string().email(), password: z.string().min(8) })
+          .object({
+            email: z.string().email(),
+            password: z.string().min(8),
+            turnstileToken: z.string().optional(),
+          })
           .safeParse(credentials);
 
         if (!parsed.success) return null;
-        const { email, password } = parsed.data;
+        const { email, password, turnstileToken } = parsed.data;
+
+        // Verify Cloudflare Turnstile
+        const turnstileValid = await verifyTurnstile(turnstileToken);
+        if (!turnstileValid) return null;
 
         // Check lockout
         const { locked } = await checkLoginLockout(email);

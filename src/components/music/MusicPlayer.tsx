@@ -66,11 +66,17 @@ export function MusicPlayer() {
   const listenedSecondsRef = useRef(0);
   const lastTickTimeRef = useRef(0);
   const seekBarRef = useRef<HTMLDivElement>(null);
+  // Gate: prevents the [isPlaying] effect from conflicting with the
+  // [currentTrack?.id] effect during track changes (avoids double-play).
+  const playableRef = useRef(false);
   const [, setSeeking] = useState(false);
   const [hoverTime, setHoverTime] = useState<{ time: number; x: number } | null>(null);
 
   useEffect(() => {
     if (!currentTrack) return;
+    // Prevent the [isPlaying] effect from touching the Howl during track init
+    playableRef.current = false;
+
     if (howlRef.current) {
       howlRef.current.stop();
       howlRef.current.unload();
@@ -105,6 +111,8 @@ export function MusicPlayer() {
       onplay: () => {
         setBuffering(false);
         usePlayerStore.getState().setPlaying(true);
+        // Now the [isPlaying] effect can manage play/pause for this Howl
+        playableRef.current = true;
         lastTickTimeRef.current = Date.now();
         const tick = () => {
           if (howlRef.current?.playing()) {
@@ -153,7 +161,12 @@ export function MusicPlayer() {
     });
     // Only auto-play if user initiated (isBuffering=true from setTrack)
     // On page restore, isBuffering is false (not persisted) — just load, don't play
-    if (isBuffering) howlRef.current.play();
+    if (isBuffering) {
+      howlRef.current.play();
+    } else {
+      // Page restore: allow the [isPlaying] effect to manage this Howl
+      playableRef.current = true;
+    }
     return () => {
       cancelAnimationFrame(animFrameRef.current);
     };
@@ -161,9 +174,16 @@ export function MusicPlayer() {
   }, [currentTrack?.id]);
 
   useEffect(() => {
-    if (!howlRef.current) return;
-    if (isPlaying) howlRef.current.play();
-    else howlRef.current.pause();
+    if (!howlRef.current || !playableRef.current) return;
+    if (isPlaying) {
+      // Only play if not already playing — avoids double-play when the
+      // onplay callback sets isPlaying=true while the Howl is already active
+      if (!howlRef.current.playing()) {
+        howlRef.current.play();
+      }
+    } else {
+      howlRef.current.pause();
+    }
   }, [isPlaying]);
 
   useEffect(() => {

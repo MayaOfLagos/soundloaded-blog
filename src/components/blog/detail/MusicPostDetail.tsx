@@ -3,7 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Music, Calendar, Disc, ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { DownloadButton } from "@/components/music/DownloadButton";
+import { MusicPostActionBar } from "./MusicPostActionBar";
 import { PostBody } from "@/components/blog/PostBody";
 import { RelatedPosts } from "@/components/blog/RelatedPosts";
 import { ShareButtons } from "@/components/blog/ShareButtons";
@@ -154,14 +154,18 @@ export function MusicPostDetail({ post, settings, related, articleUrl }: DetailP
                 </div>
               </div>
 
-              <DownloadButton
-                musicId={track.id}
-                title={track.title}
-                enabled={track.enableDownload}
-                isExclusive={track.isExclusive}
-                price={track.price}
-                size="lg"
-                className="w-full sm:w-auto"
+              <MusicPostActionBar
+                track={{
+                  id: track.id,
+                  title: track.title,
+                  slug: track.slug,
+                  enableDownload: track.enableDownload,
+                  isExclusive: track.isExclusive,
+                  price: track.price,
+                  artistName: track.artist.name,
+                }}
+                siteUrl={settings.siteUrl}
+                enableDownloads={settings.enableDownloads}
               />
             </div>
           </div>
@@ -220,13 +224,13 @@ export function MusicPostDetail({ post, settings, related, articleUrl }: DetailP
                       </span>
                     )}
                     {t.id !== track.id && (
-                      <DownloadButton
-                        musicId={t.id}
-                        title={t.title}
-                        enabled={t.enableDownload}
-                        size="sm"
-                        variant="ghost"
-                      />
+                      <Link
+                        href={`/music/${t.slug}`}
+                        className="text-muted-foreground hover:text-brand flex-shrink-0 transition-colors"
+                        aria-label={`Listen to ${t.title}`}
+                      >
+                        <Music className="h-4 w-4" />
+                      </Link>
                     )}
                   </div>
                 ))}

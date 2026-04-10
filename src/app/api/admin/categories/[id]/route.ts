@@ -1,16 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
-
-const ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN"];
-
-async function requireAdmin() {
-  const session = await auth();
-  const role = (session?.user as { role?: string } | undefined)?.role ?? "";
-  if (!session || !ADMIN_ROLES.includes(role)) return null;
-  return session;
-}
+import { requireAdmin, unauthorizedResponse } from "@/lib/admin-auth";
 
 const schema = z.object({
   name: z.string().min(1).optional(),
@@ -22,7 +13,7 @@ const schema = z.object({
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await requireAdmin();
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!session) return unauthorizedResponse();
 
   const { id } = await params;
   try {
@@ -38,7 +29,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await requireAdmin();
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!session) return unauthorizedResponse();
 
   const { id } = await params;
   await db.category.delete({ where: { id } });

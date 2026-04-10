@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import axios from "axios";
+import { adminApi } from "@/lib/admin-api";
 import toast from "react-hot-toast";
 import Image from "next/image";
 import {
@@ -93,14 +93,14 @@ export default function AdminFeedPage() {
       params.set("limit", "20");
       if (status !== "ALL") params.set("status", status);
       if (debouncedSearch) params.set("q", debouncedSearch);
-      const { data } = await axios.get(`/api/admin/feed?${params}`);
+      const { data } = await adminApi.get(`/api/admin/feed?${params}`);
       return data;
     },
   });
 
   const bulkMutation = useMutation({
     mutationFn: ({ action, ids }: { action: string; ids: string[] }) =>
-      axios.post("/api/admin/feed/bulk", { action, ids }),
+      adminApi.post("/api/admin/feed/bulk", { action, ids }),
     onSuccess: (_, variables) => {
       const count = variables.ids.length;
       const verb = variables.action === "archive" ? "archived" : "deleted";

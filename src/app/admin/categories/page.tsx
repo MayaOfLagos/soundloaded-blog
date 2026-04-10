@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import toast from "react-hot-toast";
-import axios from "axios";
+import { adminApi, getApiError } from "@/lib/admin-api";
 import { Plus, Pencil, Trash2, Tag, Loader2, Check, X, GripVertical, icons } from "lucide-react";
 import {
   DndContext,
@@ -258,7 +258,9 @@ export default function CategoriesPage() {
 
   const loadCategories = useCallback(async () => {
     try {
-      const res = await axios.get<{ categories: Category[] }>("/api/categories?includeCounts=true");
+      const res = await adminApi.get<{ categories: Category[] }>(
+        "/api/categories?includeCounts=true"
+      );
       setCategories(res.data.categories ?? []);
     } catch {
       toast.error("Failed to load categories");
@@ -301,19 +303,16 @@ export default function CategoriesPage() {
         icon: values.icon || null,
       };
       if (editingCategory) {
-        await axios.put(`/api/admin/categories/${editingCategory.id}`, payload);
+        await adminApi.put(`/api/admin/categories/${editingCategory.id}`, payload);
         toast.success("Category updated!");
       } else {
-        await axios.post("/api/admin/categories", payload);
+        await adminApi.post("/api/admin/categories", payload);
         toast.success("Category created!");
       }
       setDialogOpen(false);
       await loadCategories();
     } catch (err) {
-      const msg = axios.isAxiosError(err)
-        ? (err.response?.data?.error ?? "Failed to save category")
-        : "Failed to save category";
-      toast.error(msg);
+      toast.error(getApiError(err, "Failed to save category"));
     } finally {
       setIsSubmitting(false);
     }
@@ -323,7 +322,7 @@ export default function CategoriesPage() {
     if (!confirm(`Delete category "${name}"? Posts will lose their category assignment.`)) return;
     setDeletingId(id);
     try {
-      await axios.delete(`/api/admin/categories/${id}`);
+      await adminApi.delete(`/api/admin/categories/${id}`);
       toast.success("Category deleted");
       await loadCategories();
     } catch {
@@ -336,7 +335,7 @@ export default function CategoriesPage() {
   async function saveOrder(newCategories: Category[]) {
     setIsSavingOrder(true);
     try {
-      await axios.put("/api/admin/categories/reorder", {
+      await adminApi.put("/api/admin/categories/reorder", {
         orderedIds: newCategories.map((c) => c.id),
       });
       toast.success("Order saved");

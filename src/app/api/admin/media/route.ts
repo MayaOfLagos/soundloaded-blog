@@ -1,17 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { z } from "zod";
 import { getPresignedUploadUrl, MEDIA_BUCKET, MUSIC_BUCKET, CDN_URL } from "@/lib/r2";
 import crypto from "crypto";
+import { requireAdmin, unauthorizedResponse } from "@/lib/admin-auth";
 
-const ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN"];
+const mediaUploadSchema = z.object({
+  filename: z.string().min(1).max(300),
+  contentType: z.string().min(1),
+  size: z
+    .number()
+    .int()
+    .max(100 * 1024 * 1024)
+    .optional(),
+  width: z.number().int().positive().optional(),
+  height: z.number().int().positive().optional(),
+  folder: z.string().max(200).optional(),
+});
 
-async function requireAdmin() {
-  const session = await auth();
-  const role = (session?.user as { role?: string } | undefined)?.role ?? "";
-  if (!session || !ADMIN_ROLES.includes(role)) return null;
-  return session;
-}
+const ALLOWED_SORT_FIELDS = ["createdAt", "filename", "size", "type"];
 
 // Image MIME types
 const IMAGE_TYPES = ["image/png", "image/jpeg", "image/webp", "image/gif", "image/svg+xml"];
@@ -56,9 +63,7 @@ function resolveUrl(r2Key: string, mediaType: string): string {
  */
 export async function GET(req: NextRequest) {
   const session = await requireAdmin();
-  if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  if (!session) return unauthorizedResponse();
 
   const { searchParams } = new URL(req.url);
   const page = Math.max(1, parseInt(searchParams.get("page") ?? "1"));
@@ -66,7 +71,8 @@ export async function GET(req: NextRequest) {
   const type = searchParams.get("type"); // IMAGE, AUDIO, VIDEO, DOCUMENT
   const folder = searchParams.get("folder");
   const search = searchParams.get("search");
-  const sort = searchParams.get("sort") ?? "createdAt";
+  const rawSort = searchParams.get("sort") ?? "createdAt";
+  const sort = ALLOWED_SORT_FIELDS.includes(rawSort) ? rawSort : "createdAt";
   const order = searchParams.get("order") === "asc" ? "asc" : "desc";
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -107,17 +113,11 @@ export async function GET(req: NextRequest) {
  */
 export async function POST(req: NextRequest) {
   const session = await requireAdmin();
-  if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  if (!session) return unauthorizedResponse();
 
   try {
     const body = await req.json();
-    const { filename, contentType, size, width, height, folder } = body;
-
-    if (!filename || !contentType) {
-      return NextResponse.json({ error: "filename and contentType are required" }, { status: 400 });
-    }
+    const { filename, contentType, size, width, height, folder } = mediaUploadSchema.parse(body);
 
     if (!ALL_ALLOWED_TYPES.includes(contentType)) {
       return NextResponse.json({ error: `Unsupported file type: ${contentType}` }, { status: 400 });
@@ -128,11 +128,6 @@ export async function POST(req: NextRequest) {
       .replace(/\.\./g, "")
       .replace(/^\/+/, "")
       .replace(/[^a-zA-Z0-9_\-/]/g, "");
-
-    // Validate file size (100MB max for admin media)
-    if (size && size > 100 * 1024 * 1024) {
-      return NextResponse.json({ error: "File too large (max 100MB)" }, { status: 400 });
-    }
 
     const mediaType = getMediaType(contentType);
     const bucket = getBucket(mediaType);

@@ -1,7 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import axios from "axios";
+import { adminApi } from "@/lib/admin-api";
 import { Separator } from "@/components/ui/separator";
 import { CheckCircle2, XCircle, Loader2, Shield } from "lucide-react";
 
@@ -105,7 +105,7 @@ const ENV_ITEMS: Array<{
 export function EnvironmentStatus() {
   const { data, isLoading, error } = useQuery<EnvStatus>({
     queryKey: ["env-status"],
-    queryFn: () => axios.get("/api/admin/settings/env-status").then((r) => r.data),
+    queryFn: () => adminApi.get("/api/admin/settings/env-status").then((r) => r.data),
     staleTime: 60 * 1000,
   });
 

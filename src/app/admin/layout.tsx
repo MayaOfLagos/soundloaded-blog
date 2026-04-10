@@ -6,6 +6,7 @@ import { getSettings } from "@/lib/settings";
 import { SessionProvider } from "next-auth/react";
 import { AdminSidebarProvider } from "@/components/admin/AdminSidebarContext";
 import { AdminShell } from "@/components/admin/AdminShell";
+import { EDITOR_ROLES } from "@/lib/admin-auth";
 
 export default async function AdminLayout({ children }: { children: ReactNode }) {
   const [session, settings, cookieStore] = await Promise.all([auth(), getSettings(), cookies()]);
@@ -15,8 +16,8 @@ export default async function AdminLayout({ children }: { children: ReactNode })
     redirect("/login");
   }
 
-  const role = (session.user as { role?: string }).role;
-  if (!["ADMIN", "SUPER_ADMIN"].includes(role ?? "")) {
+  const role = (session.user as { role?: string }).role ?? "";
+  if (!EDITOR_ROLES.includes(role as (typeof EDITOR_ROLES)[number])) {
     redirect("/login");
   }
 

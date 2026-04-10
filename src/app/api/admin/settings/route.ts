@@ -1,16 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
-
-const SETTINGS_ROLES = ["ADMIN", "SUPER_ADMIN"];
-
-async function requireSettingsAdmin() {
-  const session = await auth();
-  const role = (session?.user as { role?: string } | undefined)?.role ?? "";
-  if (!session || !SETTINGS_ROLES.includes(role)) return null;
-  return session;
-}
+import { requireAdmin, unauthorizedResponse, getSessionRole, isSuperAdmin } from "@/lib/admin-auth";
 
 const settingsSchema = z
   .object({
@@ -149,8 +140,8 @@ const settingsSchema = z
   .partial();
 
 export async function GET() {
-  const session = await requireSettingsAdmin();
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const session = await requireAdmin();
+  if (!session) return unauthorizedResponse();
 
   try {
     let settings = await db.siteSettings.findUnique({ where: { id: "default" } });
@@ -165,12 +156,41 @@ export async function GET() {
 }
 
 export async function PUT(req: NextRequest) {
-  const session = await requireSettingsAdmin();
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const ctx = await getSessionRole();
+  if (!ctx) return unauthorizedResponse();
 
   try {
     const body = await req.json();
     const data = settingsSchema.parse(body);
+
+    // ── Security: only SUPER_ADMIN can modify code injection fields ──
+    if (
+      (data.headerScripts !== undefined || data.footerScripts !== undefined) &&
+      !isSuperAdmin(ctx.role)
+    ) {
+      return NextResponse.json(
+        { error: "Only SUPER_ADMIN can modify code injection scripts" },
+        { status: 403 }
+      );
+    }
+
+    // ── Security: only SUPER_ADMIN can modify security settings ──
+    const securityFields = [
+      "maxLoginAttempts",
+      "loginLockoutDuration",
+      "requireStrongPasswords",
+      "allowRegistration",
+      "defaultUserRole",
+    ] as const;
+    const hasSecurityChange = securityFields.some(
+      (f) => (data as Record<string, unknown>)[f] !== undefined
+    );
+    if (hasSecurityChange && !isSuperAdmin(ctx.role)) {
+      return NextResponse.json(
+        { error: "Only SUPER_ADMIN can modify security settings" },
+        { status: 403 }
+      );
+    }
 
     const settings = await db.siteSettings.upsert({
       where: { id: "default" },

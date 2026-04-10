@@ -42,10 +42,20 @@ export async function PATCH(request: NextRequest) {
 
   const hashedPassword = await bcrypt.hash(newPassword, 12);
 
-  await db.user.update({
-    where: { id: userId },
-    data: { password: hashedPassword },
-  });
+  await db.$transaction([
+    db.user.update({
+      where: { id: userId },
+      data: { password: hashedPassword },
+    }),
+    // Invalidate any outstanding password reset tokens
+    db.passwordResetToken.deleteMany({
+      where: { email: session.user.email ?? "" },
+    }),
+  ]);
 
-  return NextResponse.json({ message: "Password updated successfully" });
+  // Tell the client to force a re-login for security
+  return NextResponse.json({
+    message: "Password updated successfully",
+    requireReauth: true,
+  });
 }

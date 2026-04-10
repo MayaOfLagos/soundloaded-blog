@@ -6,7 +6,7 @@ import { useForm, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import toast from "react-hot-toast";
-import axios from "axios";
+import { adminApi, getApiError } from "@/lib/admin-api";
 import Image from "next/image";
 import Link from "next/link";
 import type { JSONContent } from "@tiptap/react";
@@ -160,14 +160,15 @@ export default function MusicUploadPage() {
     async function loadData() {
       try {
         const [artistRes, albumRes] = await Promise.all([
-          axios.get<{ artists: Artist[] }>("/api/admin/artists?limit=500"),
-          axios.get<{ albums: Album[] }>("/api/admin/albums"),
+          adminApi.get<{ artists: Artist[] }>("/api/admin/artists?limit=500"),
+          adminApi.get<{ albums: Album[] }>("/api/admin/albums"),
         ]);
         setArtists(artistRes.data.artists ?? []);
         setAlbums(albumRes.data.albums ?? []);
         setFilteredAlbums(albumRes.data.albums ?? []);
-      } catch {
-        // non-blocking
+      } catch (err) {
+        console.error("[music/upload] Failed to load artists/albums:", err);
+        toast.error("Failed to load artists & albums");
       }
     }
     loadData();
@@ -297,14 +298,11 @@ export default function MusicUploadPage() {
         enableDownload: values.enableDownload,
         body: description,
       };
-      await axios.post("/api/admin/music", payload);
+      await adminApi.post("/api/admin/music", payload);
       toast.success("Music track saved successfully!");
       router.push("/admin/music");
     } catch (err) {
-      const msg = axios.isAxiosError(err)
-        ? (err.response?.data?.error ?? "Failed to save music track")
-        : "Failed to save music track";
-      toast.error(typeof msg === "string" ? msg : "Validation error");
+      toast.error(getApiError(err, "Failed to save music track"));
     } finally {
       setIsSubmitting(false);
     }

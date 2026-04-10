@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import axios from "axios";
+import { adminApi } from "@/lib/admin-api";
 import toast from "react-hot-toast";
 import { Download, Mail, Users, UserCheck, UserX, Loader2, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -60,7 +60,7 @@ export default function NewsletterPage() {
   async function loadSubscribers() {
     setIsLoading(true);
     try {
-      const res = await axios.get<{ subscribers: Subscriber[]; stats: NewsletterStats }>(
+      const res = await adminApi.get<{ subscribers: Subscriber[]; stats: NewsletterStats }>(
         "/api/admin/newsletter"
       );
       setSubscribers(res.data.subscribers ?? []);

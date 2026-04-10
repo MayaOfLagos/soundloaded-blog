@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import { useForm, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
-import axios from "axios";
 import toast from "react-hot-toast";
+import { adminApi, getApiError } from "@/lib/admin-api";
 import { Plus, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -86,8 +86,8 @@ export function AlbumFormDialog({ mode, artists, album, trigger }: AlbumFormDial
   const { mutate, isPending } = useMutation({
     mutationFn: (data: AlbumFormValues) =>
       mode === "create"
-        ? axios.post("/api/admin/albums", data)
-        : axios.put(`/api/admin/albums/${album!.id}`, data),
+        ? adminApi.post("/api/admin/albums", data)
+        : adminApi.put(`/api/admin/albums/${album!.id}`, data),
     onSuccess: () => {
       toast.success(mode === "create" ? "Album created" : "Album updated");
       setOpen(false);
@@ -96,10 +96,7 @@ export function AlbumFormDialog({ mode, artists, album, trigger }: AlbumFormDial
       router.refresh();
     },
     onError: (err) => {
-      const msg = axios.isAxiosError(err)
-        ? (err.response?.data?.error ?? "Something went wrong")
-        : "Something went wrong";
-      toast.error(typeof msg === "string" ? msg : "Validation error");
+      toast.error(getApiError(err, "Something went wrong"));
     },
   });
 

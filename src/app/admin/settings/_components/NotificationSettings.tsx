@@ -127,7 +127,12 @@ function PushNotificationSender() {
         body: JSON.stringify({ title, body, url }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
+      if (!res.ok)
+        throw new Error(
+          typeof data.error === "string" && data.error.length < 200
+            ? data.error
+            : "Failed to send notification"
+        );
       toast.success(`Sent to ${data.sent} subscriber${data.sent !== 1 ? "s" : ""}`);
       setTitle("");
       setBody("");

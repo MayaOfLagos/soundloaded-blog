@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
+import { getToken } from "next-auth/jwt";
+
+// Roles that are allowed to access /admin routes
+const ADMIN_ROLES = new Set(["ADMIN", "SUPER_ADMIN", "EDITOR"]);
 
 // Only instantiate rate limiters when Upstash env vars are present
 const hasUpstash = !!process.env.UPSTASH_REDIS_REST_URL && !!process.env.UPSTASH_REDIS_REST_TOKEN;
@@ -23,6 +27,26 @@ const apiLimit = hasUpstash
     })
   : null;
 
+// Admin API rate limit (60 req/min per IP — prevents rapid abuse with compromised credentials)
+const adminApiLimit = hasUpstash
+  ? new Ratelimit({
+      redis: Redis.fromEnv(),
+      limiter: Ratelimit.slidingWindow(60, "1 m"),
+      analytics: false,
+      prefix: "sl_admin_api",
+    })
+  : null;
+
+// Sensitive auth route rate limit (5 req/15min per IP — forgot-password, reset-password, check-lockout)
+const authSensitiveLimit = hasUpstash
+  ? new Ratelimit({
+      redis: Redis.fromEnv(),
+      limiter: Ratelimit.slidingWindow(5, "15 m"),
+      analytics: false,
+      prefix: "sl_auth_sensitive",
+    })
+  : null;
+
 function getIP(req: NextRequest): string {
   return (
     req.headers.get("cf-connecting-ip") ??
@@ -34,6 +58,56 @@ function getIP(req: NextRequest): string {
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
   const ip = getIP(req);
+
+  // ── Admin route protection ────────────────────────────────────────
+  if (pathname.startsWith("/admin") || pathname.startsWith("/api/admin")) {
+    const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+    const role = (token?.role as string) ?? "";
+
+    if (pathname.startsWith("/api/admin")) {
+      // API routes return JSON errors
+      if (!token) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      }
+      if (!ADMIN_ROLES.has(role)) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
+
+      // ── CSRF protection for mutating requests ─────────────────────
+      const method = req.method.toUpperCase();
+      if (["POST", "PUT", "PATCH", "DELETE"].includes(method)) {
+        const origin = req.headers.get("origin");
+        const referer = req.headers.get("referer");
+        const host = req.headers.get("host") ?? "";
+        const allowedOrigin = `${req.nextUrl.protocol}//${host}`;
+
+        const originOk =
+          (origin && origin === allowedOrigin) || (referer && referer.startsWith(allowedOrigin));
+
+        if (!originOk) {
+          return NextResponse.json({ error: "CSRF validation failed" }, { status: 403 });
+        }
+      }
+
+      // ── Admin API rate limiting ───────────────────────────────────
+      if (adminApiLimit) {
+        const { success } = await adminApiLimit.limit(ip);
+        if (!success) {
+          return NextResponse.json(
+            { error: "Too many admin requests. Slow down." },
+            { status: 429 }
+          );
+        }
+      }
+    } else {
+      // Page routes redirect to login
+      if (!token || !ADMIN_ROLES.has(role)) {
+        const loginUrl = new URL("/login", req.url);
+        loginUrl.searchParams.set("callbackUrl", pathname);
+        return NextResponse.redirect(loginUrl);
+      }
+    }
+  }
 
   // ── Maintenance mode ──────────────────────────────────────────────
   // Skip maintenance check for admin, API, auth, and static paths
@@ -60,6 +134,22 @@ export async function proxy(req: NextRequest) {
       }
     } catch {
       // If settings fetch fails, don't block the site
+    }
+  }
+
+  // ── Rate-limit sensitive auth endpoints (5 req/15min per IP) ────
+  const sensitiveAuthPaths = [
+    "/api/auth/forgot-password",
+    "/api/auth/reset-password",
+    "/api/auth/check-lockout",
+  ];
+  if (sensitiveAuthPaths.includes(pathname) && authSensitiveLimit) {
+    const { success } = await authSensitiveLimit.limit(ip);
+    if (!success) {
+      return NextResponse.json(
+        { error: "Too many requests. Please try again later." },
+        { status: 429 }
+      );
     }
   }
 

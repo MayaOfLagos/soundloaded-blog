@@ -1,19 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
 import { indexPost, removeFromIndex, INDEXES } from "@/lib/meilisearch";
 import { autoSharePost } from "@/lib/social-share";
 import { getPostUrl } from "@/lib/urls";
-
-const ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN"];
-
-async function requireAdmin() {
-  const session = await auth();
-  const role = (session?.user as { role?: string } | undefined)?.role ?? "";
-  if (!session || !ADMIN_ROLES.includes(role)) return null;
-  return session;
-}
+import { requireAdmin, unauthorizedResponse } from "@/lib/admin-auth";
 
 const updateSchema = z.object({
   title: z.string().min(1).optional(),
@@ -36,7 +27,7 @@ const updateSchema = z.object({
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await requireAdmin();
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!session) return unauthorizedResponse();
 
   const { id } = await params;
   const post = await db.post.findUnique({
@@ -57,7 +48,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await requireAdmin();
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!session) return unauthorizedResponse();
 
   const { id } = await params;
 
@@ -149,7 +140,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await requireAdmin();
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!session) return unauthorizedResponse();
 
   const { id } = await params;
 

@@ -1,31 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { z } from "zod";
 import { deleteFromR2, MEDIA_BUCKET, MUSIC_BUCKET } from "@/lib/r2";
+import { requireAdmin, unauthorizedResponse } from "@/lib/admin-auth";
 
-const ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN"];
+const bulkDeleteSchema = z.object({
+  ids: z.array(z.string().min(1)).min(1).max(50),
+});
 
 /**
  * POST /api/admin/media/bulk-delete — Delete multiple media items
  * Body: { ids: string[] }
  */
 export async function POST(req: NextRequest) {
-  const session = await auth();
-  const role = (session?.user as { role?: string } | undefined)?.role ?? "";
-  if (!session || !ADMIN_ROLES.includes(role)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const session = await requireAdmin();
+  if (!session) return unauthorizedResponse();
 
   try {
-    const { ids } = await req.json();
-
-    if (!Array.isArray(ids) || ids.length === 0) {
-      return NextResponse.json({ error: "ids array required" }, { status: 400 });
-    }
-
-    if (ids.length > 50) {
-      return NextResponse.json({ error: "Maximum 50 items per batch" }, { status: 400 });
-    }
+    const body = await req.json();
+    const { ids } = bulkDeleteSchema.parse(body);
 
     const items = await db.media.findMany({ where: { id: { in: ids } } });
 

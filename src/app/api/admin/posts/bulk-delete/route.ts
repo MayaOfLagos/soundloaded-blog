@@ -1,21 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
 import { removeFromIndex, INDEXES } from "@/lib/meilisearch";
-
-const ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN"];
+import { requireAdmin, unauthorizedResponse } from "@/lib/admin-auth";
 
 const schema = z.object({
   ids: z.array(z.string().min(1)).min(1).max(100),
 });
 
 export async function POST(req: NextRequest) {
-  const session = await auth();
-  const role = (session?.user as { role?: string } | undefined)?.role ?? "";
-  if (!session || !ADMIN_ROLES.includes(role)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const session = await requireAdmin();
+  if (!session) return unauthorizedResponse();
 
   try {
     const body = await req.json();

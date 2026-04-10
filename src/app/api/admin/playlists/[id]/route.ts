@@ -1,15 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { z } from "zod";
+import { requireAdmin, unauthorizedResponse } from "@/lib/admin-auth";
 
-const ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN"];
-
-async function requireAdmin() {
-  const session = await auth();
-  const role = (session?.user as { role?: string } | undefined)?.role ?? "";
-  if (!session || !ADMIN_ROLES.includes(role)) return null;
-  return session;
-}
+const playlistPatchSchema = z
+  .object({
+    title: z.string().min(1).max(200).optional(),
+    description: z.string().max(2000).optional(),
+    isPublic: z.boolean().optional(),
+  })
+  .strict();
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -17,7 +17,7 @@ interface RouteParams {
 
 export async function GET(_req: NextRequest, { params }: RouteParams) {
   const session = await requireAdmin();
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!session) return unauthorizedResponse();
 
   const { id } = await params;
   const playlist = await db.playlist.findUnique({
@@ -48,26 +48,31 @@ export async function GET(_req: NextRequest, { params }: RouteParams) {
 
 export async function PATCH(req: NextRequest, { params }: RouteParams) {
   const session = await requireAdmin();
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!session) return unauthorizedResponse();
 
-  const { id } = await params;
-  const body = await req.json();
+  try {
+    const { id } = await params;
+    const body = await req.json();
+    const data = playlistPatchSchema.parse(body);
 
-  const playlist = await db.playlist.update({
-    where: { id },
-    data: {
-      ...(body.title !== undefined && { title: body.title }),
-      ...(body.description !== undefined && { description: body.description }),
-      ...(body.isPublic !== undefined && { isPublic: body.isPublic }),
-    },
-  });
+    const playlist = await db.playlist.update({
+      where: { id },
+      data,
+    });
 
-  return NextResponse.json({ playlist });
+    return NextResponse.json({ playlist });
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      return NextResponse.json({ error: err.errors }, { status: 422 });
+    }
+    console.error("[PATCH /api/admin/playlists/[id]]", err);
+    return NextResponse.json({ error: "Failed to update playlist" }, { status: 500 });
+  }
 }
 
 export async function DELETE(_req: NextRequest, { params }: RouteParams) {
   const session = await requireAdmin();
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!session) return unauthorizedResponse();
 
   const { id } = await params;
   await db.playlist.delete({ where: { id } });

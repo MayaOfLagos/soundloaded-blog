@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Pencil, Trash2, Loader2, X, Disc3 } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
-import axios from "axios";
 import toast from "react-hot-toast";
+import { adminApi, getApiError } from "@/lib/admin-api";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -79,32 +79,32 @@ export function AlbumsTable({ albums, artists }: AlbumsTableProps) {
   }
 
   const { mutate: deleteOne, isPending: isDeleting } = useMutation({
-    mutationFn: (id: string) => axios.delete(`/api/admin/albums/${id}`),
+    mutationFn: (id: string) => adminApi.delete(`/api/admin/albums/${id}`),
     onSuccess: () => {
       toast.success("Album deleted");
       setDeleteId(null);
       router.refresh();
     },
     onError: (err) => {
-      const msg = axios.isAxiosError(err) ? err.response?.data?.error : "Failed to delete album";
-      toast.error(msg ?? "Failed to delete album");
+      toast.error(getApiError(err, "Failed to delete album"));
     },
   });
 
   const { mutate: bulkDelete, isPending: isBulkDeleting } = useMutation({
-    mutationFn: () =>
-      Promise.all(Array.from(selected).map((id) => axios.delete(`/api/admin/albums/${id}`))),
-    onSuccess: () => {
-      toast.success(`${selected.size} album(s) deleted`);
+    mutationFn: () => adminApi.post("/api/admin/albums/bulk-delete", { ids: Array.from(selected) }),
+    onSuccess: (res) => {
+      const { deleted, skipped } = res.data as { deleted: number; skipped: number };
+      if (skipped > 0) {
+        toast.success(`${deleted} album(s) deleted, ${skipped} skipped (have tracks)`);
+      } else {
+        toast.success(`${deleted} album(s) deleted`);
+      }
       setSelected(new Set());
       setBulkDeleteOpen(false);
       router.refresh();
     },
     onError: (err) => {
-      const msg = axios.isAxiosError(err)
-        ? err.response?.data?.error
-        : "Some albums could not be deleted";
-      toast.error(msg ?? "Some albums could not be deleted");
+      toast.error(getApiError(err, "Some albums could not be deleted"));
     },
   });
 

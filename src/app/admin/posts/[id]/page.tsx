@@ -2,7 +2,7 @@
 
 import { use, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import axios from "axios";
+import { adminApi } from "@/lib/admin-api";
 import toast from "react-hot-toast";
 import { Loader2 } from "lucide-react";
 import { PostEditor } from "@/components/admin/PostEditor";
@@ -49,7 +49,7 @@ export default function EditPostPage({ params }: EditPostPageProps) {
   useEffect(() => {
     async function loadPost() {
       try {
-        const res = await axios.get<Post>(`/api/admin/posts/${id}`);
+        const res = await adminApi.get<Post>(`/api/admin/posts/${id}`);
         setPost(res.data);
       } catch {
         toast.error("Failed to load post");

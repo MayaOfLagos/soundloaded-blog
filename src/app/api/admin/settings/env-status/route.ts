@@ -1,14 +1,9 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
-
-const SETTINGS_ROLES = ["ADMIN", "SUPER_ADMIN"];
+import { requireAdmin, unauthorizedResponse } from "@/lib/admin-auth";
 
 export async function GET() {
-  const session = await auth();
-  const role = (session?.user as { role?: string } | undefined)?.role ?? "";
-  if (!session || !SETTINGS_ROLES.includes(role)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const session = await requireAdmin();
+  if (!session) return unauthorizedResponse();
 
   return NextResponse.json({
     database: !!process.env.DATABASE_URL,

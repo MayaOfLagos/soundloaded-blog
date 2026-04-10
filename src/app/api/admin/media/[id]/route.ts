@@ -1,25 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { z } from "zod";
 import { deleteFromR2, MEDIA_BUCKET, MUSIC_BUCKET } from "@/lib/r2";
+import { requireAdmin, unauthorizedResponse } from "@/lib/admin-auth";
 
-const ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN"];
-
-async function requireAdmin() {
-  const session = await auth();
-  const role = (session?.user as { role?: string } | undefined)?.role ?? "";
-  if (!session || !ADMIN_ROLES.includes(role)) return null;
-  return session;
-}
+const mediaPatchSchema = z
+  .object({
+    alt: z.string().max(500).optional(),
+    title: z.string().max(300).optional(),
+    caption: z.string().max(2000).optional(),
+    folder: z
+      .string()
+      .max(200)
+      .regex(/^[a-zA-Z0-9_\-/]*$/, "Invalid folder path")
+      .optional(),
+  })
+  .strict();
 
 /**
  * GET /api/admin/media/[id] — Get single media item
  */
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await requireAdmin();
-  if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  if (!session) return unauthorizedResponse();
 
   const { id } = await params;
   const media = await db.media.findUnique({
@@ -39,25 +42,26 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
  */
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await requireAdmin();
-  if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!session) return unauthorizedResponse();
+
+  try {
+    const { id } = await params;
+    const body = await req.json();
+    const data = mediaPatchSchema.parse(body);
+
+    const media = await db.media.update({
+      where: { id },
+      data,
+    });
+
+    return NextResponse.json(media);
+  } catch (err) {
+    if (err instanceof z.ZodError) {
+      return NextResponse.json({ error: err.errors }, { status: 422 });
+    }
+    console.error("[PATCH /api/admin/media/[id]]", err);
+    return NextResponse.json({ error: "Failed to update media" }, { status: 500 });
   }
-
-  const { id } = await params;
-  const body = await req.json();
-  const { alt, title, caption, folder } = body;
-
-  const media = await db.media.update({
-    where: { id },
-    data: {
-      ...(alt !== undefined && { alt }),
-      ...(title !== undefined && { title }),
-      ...(caption !== undefined && { caption }),
-      ...(folder !== undefined && { folder }),
-    },
-  });
-
-  return NextResponse.json(media);
 }
 
 /**
@@ -65,9 +69,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
  */
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await requireAdmin();
-  if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  if (!session) return unauthorizedResponse();
 
   const { id } = await params;
   const media = await db.media.findUnique({ where: { id } });

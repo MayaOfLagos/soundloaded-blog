@@ -1,22 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-
-const ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN"];
-
-async function requireAdmin() {
-  const session = await auth();
-  const role = (session?.user as { role?: string } | undefined)?.role ?? "";
-  if (!session || !ADMIN_ROLES.includes(role)) return null;
-  return session;
-}
+import { requireAdmin, unauthorizedResponse } from "@/lib/admin-auth";
 
 /** GET — admin stories dashboard data */
 export async function GET(request: NextRequest) {
   const session = await requireAdmin();
-  if (!session) {
-    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-  }
+  if (!session) return unauthorizedResponse();
 
   const page = Math.max(1, parseInt(request.nextUrl.searchParams.get("page") || "1"));
   const limit = Math.min(

@@ -1,21 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
 import { indexPost } from "@/lib/meilisearch";
 import { autoSharePost } from "@/lib/social-share";
 import { getPostUrl } from "@/lib/urls";
-
-const ADMIN_ROLES = ["ADMIN", "SUPER_ADMIN"];
-
-async function requireAdmin() {
-  const session = await auth();
-  const role = (session?.user as { role?: string } | undefined)?.role ?? "";
-  if (!session || !ADMIN_ROLES.includes(role)) {
-    return null;
-  }
-  return session;
-}
+import { requireAdmin, unauthorizedResponse } from "@/lib/admin-auth";
 
 const createSchema = z.object({
   title: z.string().min(1),
@@ -38,7 +27,7 @@ const createSchema = z.object({
 
 export async function GET(req: NextRequest) {
   const session = await requireAdmin();
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!session) return unauthorizedResponse();
 
   const { searchParams } = new URL(req.url);
   const page = parseInt(searchParams.get("page") ?? "1");
@@ -81,7 +70,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const session = await requireAdmin();
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  if (!session) return unauthorizedResponse();
 
   try {
     const body = await req.json();

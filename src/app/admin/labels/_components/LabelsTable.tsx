@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Pencil, Trash2, Loader2, X, Building2, BadgeCheck } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
-import axios from "axios";
 import toast from "react-hot-toast";
+import { adminApi, getApiError } from "@/lib/admin-api";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -76,32 +76,32 @@ export function LabelsTable({ labels }: LabelsTableProps) {
   }
 
   const { mutate: deleteOne, isPending: isDeleting } = useMutation({
-    mutationFn: (id: string) => axios.delete(`/api/admin/labels/${id}`),
+    mutationFn: (id: string) => adminApi.delete(`/api/admin/labels/${id}`),
     onSuccess: () => {
       toast.success("Label deleted");
       setDeleteId(null);
       router.refresh();
     },
     onError: (err) => {
-      const msg = axios.isAxiosError(err) ? err.response?.data?.error : "Failed to delete label";
-      toast.error(msg ?? "Failed to delete label");
+      toast.error(getApiError(err, "Failed to delete label"));
     },
   });
 
   const { mutate: bulkDelete, isPending: isBulkDeleting } = useMutation({
-    mutationFn: () =>
-      Promise.all(Array.from(selected).map((id) => axios.delete(`/api/admin/labels/${id}`))),
-    onSuccess: () => {
-      toast.success(`${selected.size} label(s) deleted`);
+    mutationFn: () => adminApi.post("/api/admin/labels/bulk-delete", { ids: Array.from(selected) }),
+    onSuccess: (res) => {
+      const { deleted, skipped } = res.data as { deleted: number; skipped: number };
+      if (skipped > 0) {
+        toast.success(`${deleted} label(s) deleted, ${skipped} skipped (have artists)`);
+      } else {
+        toast.success(`${deleted} label(s) deleted`);
+      }
       setSelected(new Set());
       setBulkDeleteOpen(false);
       router.refresh();
     },
     onError: (err) => {
-      const msg = axios.isAxiosError(err)
-        ? err.response?.data?.error
-        : "Some labels could not be deleted";
-      toast.error(msg ?? "Some labels could not be deleted");
+      toast.error(getApiError(err, "Some labels could not be deleted"));
     },
   });
 

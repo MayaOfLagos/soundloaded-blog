@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Trash2, Loader2, X, ExternalLink } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
-import axios from "axios";
+import { adminApi } from "@/lib/admin-api";
 import { notify } from "@/hooks/useToast";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -77,7 +77,7 @@ export function PlaylistsTable({ playlists }: PlaylistsTableProps) {
   }
 
   const { mutate: deleteOne, isPending: isDeleting } = useMutation({
-    mutationFn: (id: string) => axios.delete(`/api/admin/playlists/${id}`),
+    mutationFn: (id: string) => adminApi.delete(`/api/admin/playlists/${id}`),
     onSuccess: () => {
       notify.success("Playlist deleted");
       setDeleteId(null);
@@ -88,7 +88,7 @@ export function PlaylistsTable({ playlists }: PlaylistsTableProps) {
 
   const { mutate: bulkDelete, isPending: isBulkDeleting } = useMutation({
     mutationFn: () =>
-      Promise.all(Array.from(selected).map((id) => axios.delete(`/api/admin/playlists/${id}`))),
+      Promise.all(Array.from(selected).map((id) => adminApi.delete(`/api/admin/playlists/${id}`))),
     onSuccess: () => {
       notify.success(`${selected.size} playlist(s) deleted`);
       setSelected(new Set());
@@ -100,7 +100,7 @@ export function PlaylistsTable({ playlists }: PlaylistsTableProps) {
 
   const { mutate: togglePublic } = useMutation({
     mutationFn: ({ id, isPublic }: { id: string; isPublic: boolean }) =>
-      axios.patch(`/api/admin/playlists/${id}`, { isPublic }),
+      adminApi.patch(`/api/admin/playlists/${id}`, { isPublic }),
     onSuccess: () => {
       notify.success("Visibility updated");
       router.refresh();

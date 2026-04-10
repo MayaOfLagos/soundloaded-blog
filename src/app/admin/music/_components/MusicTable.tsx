@@ -15,7 +15,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
-import axios from "axios";
+import { adminApi } from "@/lib/admin-api";
 import toast from "react-hot-toast";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -83,7 +83,7 @@ export function MusicTable({ tracks }: MusicTableProps) {
   }
 
   const { mutate: deleteOne, isPending: isDeleting } = useMutation({
-    mutationFn: (id: string) => axios.delete(`/api/admin/music/${id}`),
+    mutationFn: (id: string) => adminApi.delete(`/api/admin/music/${id}`),
     onSuccess: () => {
       toast.success("Track deleted");
       setDeleteId(null);
@@ -93,7 +93,7 @@ export function MusicTable({ tracks }: MusicTableProps) {
   });
 
   const { mutate: bulkDelete, isPending: isBulkDeleting } = useMutation({
-    mutationFn: () => axios.post("/api/admin/music/bulk-delete", { ids: Array.from(selected) }),
+    mutationFn: () => adminApi.post("/api/admin/music/bulk-delete", { ids: Array.from(selected) }),
     onSuccess: (res) => {
       const count = res.data.deleted ?? selected.size;
       toast.success(`${count} track${count !== 1 ? "s" : ""} deleted`);

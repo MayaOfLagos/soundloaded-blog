@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
-import axios from "axios";
+import { adminApi } from "@/lib/admin-api";
 import { ImageIcon, Upload, Loader2 } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { UppyUploader } from "@/components/admin/UppyUploader";
@@ -44,7 +44,7 @@ export default function MediaLibraryPage() {
       params.set("limit", "40");
       if (debouncedSearch) params.set("search", debouncedSearch);
       if (typeFilter) params.set("type", typeFilter);
-      return axios.get(`/api/admin/media?${params}`).then((r) => r.data);
+      return adminApi.get(`/api/admin/media?${params}`).then((r) => r.data);
     },
   });
 

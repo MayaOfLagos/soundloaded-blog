@@ -4,7 +4,7 @@ import { useState, useMemo } from "react";
 import Image from "next/image";
 import { X } from "lucide-react";
 import toast from "react-hot-toast";
-import axios from "axios";
+import { adminApi } from "@/lib/admin-api";
 
 // FilePond core + plugins
 import { FilePond, registerPlugin } from "react-filepond";
@@ -82,7 +82,7 @@ export function ImageUploadField({
         (async () => {
           try {
             // 1. Get presigned URL from our API
-            const { data } = await axios.post("/api/admin/settings/upload", {
+            const { data } = await adminApi.post("/api/admin/settings/upload", {
               type,
               contentType: f.type,
               filename: f.name,

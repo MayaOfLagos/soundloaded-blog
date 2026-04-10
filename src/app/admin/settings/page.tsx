@@ -5,7 +5,7 @@ import { useForm, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import axios from "axios";
+import { adminApi } from "@/lib/admin-api";
 import toast from "react-hot-toast";
 import {
   Settings,
@@ -195,7 +195,7 @@ export default function SettingsPage() {
 
   const { data: serverSettings, isLoading } = useQuery({
     queryKey: ["admin-settings"],
-    queryFn: () => axios.get("/api/admin/settings").then((r) => r.data),
+    queryFn: () => adminApi.get("/api/admin/settings").then((r) => r.data),
   });
 
   const form = useForm<SettingsFormValues>({
@@ -212,7 +212,7 @@ export default function SettingsPage() {
 
   const mutation = useMutation({
     mutationFn: (values: SettingsFormValues) =>
-      axios.put("/api/admin/settings", values).then((r) => r.data),
+      adminApi.put("/api/admin/settings", values).then((r) => r.data),
     onSuccess: () => {
       toast.success("Settings saved!");
       queryClient.invalidateQueries({ queryKey: ["admin-settings"] });

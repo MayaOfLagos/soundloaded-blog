@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import toast from "react-hot-toast";
-import axios from "axios";
+import { adminApi } from "@/lib/admin-api";
 import { MessageSquare, Loader2, Check, X, AlertTriangle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -56,7 +56,7 @@ export default function CommentsPage() {
     setIsLoading(true);
     try {
       const params = status !== "ALL" ? `?status=${status}` : "";
-      const res = await axios.get<{ comments: Comment[]; total: number }>(
+      const res = await adminApi.get<{ comments: Comment[]; total: number }>(
         `/api/admin/comments${params}`
       );
       setComments(res.data.comments ?? []);
@@ -75,7 +75,7 @@ export default function CommentsPage() {
   async function updateStatus(commentId: string, newStatus: CommentStatus) {
     setActionLoading(commentId);
     try {
-      await axios.patch("/api/admin/comments", { id: commentId, status: newStatus });
+      await adminApi.patch("/api/admin/comments", { id: commentId, status: newStatus });
       toast.success(`Comment ${newStatus.toLowerCase()}`);
       await loadComments(activeTab);
     } catch {
@@ -97,7 +97,7 @@ export default function CommentsPage() {
     setIsLoading(true);
     try {
       await Promise.all(
-        pendingIds.map((id) => axios.patch("/api/admin/comments", { id, status: action }))
+        pendingIds.map((id) => adminApi.patch("/api/admin/comments", { id, status: action }))
       );
       toast.success(`${pendingIds.length} comments updated`);
       await loadComments(activeTab);

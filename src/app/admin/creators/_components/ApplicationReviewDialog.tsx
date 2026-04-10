@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import axios from "axios";
 import toast from "react-hot-toast";
+import { adminApi, getApiError } from "@/lib/admin-api";
 import { Check, X, Loader2, ExternalLink, Music, Building2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -53,7 +53,7 @@ export function ApplicationReviewDialog({
     setter(true);
 
     try {
-      await axios.put(`/api/admin/creators/${application.id}`, {
+      await adminApi.put(`/api/admin/creators/${application.id}`, {
         status,
         reviewNote: reviewNote || null,
       });
@@ -62,11 +62,7 @@ export function ApplicationReviewDialog({
       onClose();
       router.refresh();
     } catch (err) {
-      if (axios.isAxiosError(err)) {
-        toast.error(err.response?.data?.error ?? "Failed to review application");
-      } else {
-        toast.error("Something went wrong");
-      }
+      toast.error(getApiError(err, "Failed to review application"));
     } finally {
       setter(false);
     }

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Trash2, Loader2 } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
-import axios from "axios";
+import { adminApi } from "@/lib/admin-api";
 import toast from "react-hot-toast";
 import { Button } from "@/components/ui/button";
 import {
@@ -29,7 +29,7 @@ export function DeletePostButton({
   const router = useRouter();
 
   const { mutate, isPending } = useMutation({
-    mutationFn: () => axios.delete(`/api/admin/posts/${postId}`),
+    mutationFn: () => adminApi.delete(`/api/admin/posts/${postId}`),
     onSuccess: () => {
       toast.success(isArchived ? "Post permanently deleted" : "Post archived");
       setOpen(false);

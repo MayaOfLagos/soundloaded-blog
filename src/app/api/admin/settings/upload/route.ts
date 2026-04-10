@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
 import { getPresignedUploadUrl, MEDIA_BUCKET } from "@/lib/r2";
+import { z } from "zod";
 import crypto from "crypto";
-
-const SETTINGS_ROLES = ["ADMIN", "SUPER_ADMIN"];
+import { requireAdmin, unauthorizedResponse } from "@/lib/admin-auth";
 
 const ALLOWED_TYPES = [
   "image/png",
@@ -12,7 +11,7 @@ const ALLOWED_TYPES = [
   "image/svg+xml",
   "image/x-icon",
   "image/vnd.microsoft.icon",
-];
+] as const;
 
 const UPLOAD_TYPES = [
   "logo-light",
@@ -23,26 +22,24 @@ const UPLOAD_TYPES = [
   "pwa-splash",
 ] as const;
 
+const uploadSchema = z.object({
+  type: z.enum(UPLOAD_TYPES),
+  contentType: z.enum(ALLOWED_TYPES),
+  filename: z.string().min(1).max(300),
+  size: z
+    .number()
+    .int()
+    .max(5 * 1024 * 1024, "File too large (max 5MB)")
+    .optional(),
+});
+
 export async function POST(req: NextRequest) {
-  const session = await auth();
-  const role = (session?.user as { role?: string } | undefined)?.role ?? "";
-  if (!session || !SETTINGS_ROLES.includes(role)) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const session = await requireAdmin();
+  if (!session) return unauthorizedResponse();
 
   try {
-    const { type, contentType, filename, size } = await req.json();
-
-    if (size && size > 5 * 1024 * 1024) {
-      return NextResponse.json({ error: "File too large (max 5MB)" }, { status: 400 });
-    }
-
-    if (!UPLOAD_TYPES.includes(type)) {
-      return NextResponse.json({ error: "Invalid upload type" }, { status: 400 });
-    }
-    if (!ALLOWED_TYPES.includes(contentType)) {
-      return NextResponse.json({ error: "Invalid file type" }, { status: 400 });
-    }
+    const body = await req.json();
+    const { type, contentType, filename } = uploadSchema.parse(body);
 
     const ext = filename?.split(".").pop() || "png";
     const id = crypto.randomUUID().replace(/-/g, "").slice(0, 16);

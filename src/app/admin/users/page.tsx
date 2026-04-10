@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
-import axios from "axios";
+import { adminApi, getApiError } from "@/lib/admin-api";
 import { Users, Loader2, UserPlus, RefreshCw, Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -67,7 +67,7 @@ export default function UsersPage() {
   async function loadUsers() {
     setIsLoading(true);
     try {
-      const res = await axios.get<{ users: User[] }>("/api/admin/users?includeCounts=true");
+      const res = await adminApi.get<{ users: User[] }>("/api/admin/users?includeCounts=true");
       setUsers(res.data.users ?? []);
     } catch {
       toast.error("Failed to load users");
@@ -83,7 +83,7 @@ export default function UsersPage() {
   async function handleRoleChange(userId: string, newRole: UserRole) {
     setUpdatingRole(userId);
     try {
-      await axios.patch(`/api/admin/users/${userId}`, { role: newRole });
+      await adminApi.patch(`/api/admin/users/${userId}`, { role: newRole });
       toast.success("Role updated");
       setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, role: newRole } : u)));
     } catch {
@@ -100,16 +100,13 @@ export default function UsersPage() {
     }
     setIsInviting(true);
     try {
-      await axios.post("/api/admin/users/invite", { email: inviteEmail, role: inviteRole });
+      await adminApi.post("/api/admin/users/invite", { email: inviteEmail, role: inviteRole });
       toast.success(`Invite sent to ${inviteEmail}`);
       setInviteOpen(false);
       setInviteEmail("");
       setInviteRole("EDITOR");
     } catch (err) {
-      const msg = axios.isAxiosError(err)
-        ? (err.response?.data?.error ?? "Failed to send invite")
-        : "Failed to send invite";
-      toast.error(msg);
+      toast.error(getApiError(err, "Failed to send invite"));
     } finally {
       setIsInviting(false);
     }

@@ -94,10 +94,17 @@ export function useChangePassword() {
       newPassword: string;
       confirmPassword: string;
     }) => {
-      await axios.patch("/api/user/password", data);
+      const res = await axios.patch("/api/user/password", data);
+      return res.data;
     },
-    onSuccess: () => {
+    onSuccess: (data: { requireReauth?: boolean }) => {
       notify.success("Password changed successfully");
+      // Force re-login for security after password change
+      if (data?.requireReauth) {
+        setTimeout(() => {
+          window.location.href = "/login";
+        }, 1500);
+      }
     },
     onError: (error: unknown) => {
       const axiosError = error as { response?: { data?: { error?: string } } };

@@ -5,8 +5,8 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
-import axios from "axios";
 import toast from "react-hot-toast";
+import { adminApi, getApiError } from "@/lib/admin-api";
 import { Plus, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -85,8 +85,8 @@ export function LabelFormDialog({ mode, label, trigger }: LabelFormDialogProps) 
   const { mutate, isPending } = useMutation({
     mutationFn: (data: LabelFormValues) =>
       mode === "create"
-        ? axios.post("/api/admin/labels", data)
-        : axios.put(`/api/admin/labels/${label!.id}`, data),
+        ? adminApi.post("/api/admin/labels", data)
+        : adminApi.put(`/api/admin/labels/${label!.id}`, data),
     onSuccess: () => {
       toast.success(mode === "create" ? "Label created" : "Label updated");
       setOpen(false);
@@ -95,10 +95,7 @@ export function LabelFormDialog({ mode, label, trigger }: LabelFormDialogProps) 
       router.refresh();
     },
     onError: (err) => {
-      const msg = axios.isAxiosError(err)
-        ? (err.response?.data?.error ?? "Something went wrong")
-        : "Something went wrong";
-      toast.error(typeof msg === "string" ? msg : "Validation error");
+      toast.error(getApiError(err, "Something went wrong"));
     },
   });
 

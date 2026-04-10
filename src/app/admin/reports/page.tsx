@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import axios from "axios";
+import { adminApi } from "@/lib/admin-api";
 import { format } from "date-fns";
 import {
   Flag,
@@ -82,7 +82,7 @@ function useAdminReports(page: number, status?: ReportStatus) {
     queryFn: async () => {
       const params = new URLSearchParams({ page: String(page) });
       if (status) params.set("status", status);
-      const { data } = await axios.get(`/api/admin/reports?${params}`);
+      const { data } = await adminApi.get(`/api/admin/reports?${params}`);
       return data as { reports: Report[]; total: number; page: number; totalPages: number };
     },
   });
@@ -100,7 +100,7 @@ function useUpdateReport() {
       status: ReportStatus;
       adminNote?: string;
     }) => {
-      const { data } = await axios.patch("/api/admin/reports", { reportId, status, adminNote });
+      const { data } = await adminApi.patch("/api/admin/reports", { reportId, status, adminNote });
       return data;
     },
     onSuccess: () => {

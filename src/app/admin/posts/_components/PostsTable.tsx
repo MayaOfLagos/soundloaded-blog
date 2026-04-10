@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Pencil, ExternalLink, Trash2, Loader2, X } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
-import axios from "axios";
+import { adminApi } from "@/lib/admin-api";
 import toast from "react-hot-toast";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -91,7 +91,7 @@ export function PostsTable({ posts }: PostsTableProps) {
   }
 
   const { mutate: bulkDelete, isPending } = useMutation({
-    mutationFn: () => axios.post("/api/admin/posts/bulk-delete", { ids: Array.from(selected) }),
+    mutationFn: () => adminApi.post("/api/admin/posts/bulk-delete", { ids: Array.from(selected) }),
     onSuccess: (res) => {
       const { archived = 0, deleted = 0 } = res.data;
       const parts = [];

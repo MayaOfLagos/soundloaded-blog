@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { X, Music } from "lucide-react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { usePlayerStore } from "@/store/player.store";
@@ -45,9 +46,22 @@ function QueueRow({
             isPlaying ? "text-brand" : "text-foreground"
           )}
         >
-          {track.title}
+          <Link href={`/music/${track.slug}`} className="hover:underline">
+            {track.title}
+          </Link>
         </p>
-        <p className="text-muted-foreground truncate text-xs">{track.artist}</p>
+        <p className="text-muted-foreground truncate text-xs">
+          {track.artistSlug ? (
+            <Link
+              href={`/artists/${track.artistSlug}`}
+              className="hover:text-brand transition-colors"
+            >
+              {track.artist}
+            </Link>
+          ) : (
+            track.artist
+          )}
+        </p>
       </div>
       {onRemove && (
         <button

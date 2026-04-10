@@ -5,6 +5,7 @@ export interface MusicCardData {
   slug: string;
   title: string;
   artistName: string;
+  artistSlug: string;
   albumTitle?: string | null;
   coverArt?: string | null;
   genre?: string | null;
@@ -46,13 +47,17 @@ export async function getPopularMusic({ limit = 5 }: { limit?: number } = {}): P
     const tracks = await db.music.findMany({
       orderBy: { downloadCount: "desc" },
       take: limit,
-      include: { artist: { select: { name: true } }, album: { select: { title: true } } },
+      include: {
+        artist: { select: { name: true, slug: true } },
+        album: { select: { title: true } },
+      },
     });
     return tracks.map((t) => ({
       id: t.id,
       slug: t.slug,
       title: t.title,
       artistName: t.artist.name,
+      artistSlug: t.artist.slug,
       albumTitle: t.album?.title,
       coverArt: t.coverArt,
       genre: t.genre,
@@ -76,13 +81,17 @@ export async function getMostStreamedMusic({ limit = 20 }: { limit?: number } = 
       where: { streamCount: { gt: 0 } },
       orderBy: { streamCount: "desc" },
       take: limit,
-      include: { artist: { select: { name: true } }, album: { select: { title: true } } },
+      include: {
+        artist: { select: { name: true, slug: true } },
+        album: { select: { title: true } },
+      },
     });
     return tracks.map((t) => ({
       id: t.id,
       slug: t.slug,
       title: t.title,
       artistName: t.artist.name,
+      artistSlug: t.artist.slug,
       albumTitle: t.album?.title,
       coverArt: t.coverArt,
       genre: t.genre,
@@ -109,13 +118,17 @@ export async function getLatestMusic({
       orderBy: { createdAt: "desc" },
       take: limit,
       skip: (page - 1) * limit,
-      include: { artist: { select: { name: true } }, album: { select: { title: true } } },
+      include: {
+        artist: { select: { name: true, slug: true } },
+        album: { select: { title: true } },
+      },
     });
     return tracks.map((t) => ({
       id: t.id,
       slug: t.slug,
       title: t.title,
       artistName: t.artist.name,
+      artistSlug: t.artist.slug,
       albumTitle: t.album?.title,
       coverArt: t.coverArt,
       genre: t.genre,
@@ -307,13 +320,17 @@ export async function getMoreByArtist({
       where: { artistId, id: { not: excludeMusicId } },
       orderBy: { downloadCount: "desc" },
       take: limit,
-      include: { artist: { select: { name: true } }, album: { select: { title: true } } },
+      include: {
+        artist: { select: { name: true, slug: true } },
+        album: { select: { title: true } },
+      },
     });
     return tracks.map((t) => ({
       id: t.id,
       slug: t.slug,
       title: t.title,
       artistName: t.artist.name,
+      artistSlug: t.artist.slug,
       albumTitle: t.album?.title,
       coverArt: t.coverArt,
       genre: t.genre,
@@ -344,13 +361,17 @@ export async function getRelatedByGenre({
       where: { genre, id: { not: excludeMusicId } },
       orderBy: { downloadCount: "desc" },
       take: limit,
-      include: { artist: { select: { name: true } }, album: { select: { title: true } } },
+      include: {
+        artist: { select: { name: true, slug: true } },
+        album: { select: { title: true } },
+      },
     });
     return tracks.map((t) => ({
       id: t.id,
       slug: t.slug,
       title: t.title,
       artistName: t.artist.name,
+      artistSlug: t.artist.slug,
       albumTitle: t.album?.title,
       coverArt: t.coverArt,
       genre: t.genre,
@@ -430,7 +451,7 @@ export async function getAlbumBySlug(slug: string) {
         artist: true,
         tracks: {
           orderBy: { trackNumber: "asc" },
-          include: { artist: { select: { name: true } } },
+          include: { artist: { select: { name: true, slug: true } } },
         },
       },
     });

@@ -47,6 +47,7 @@ function toPlayerTrack(t: TracksResponse["tracks"][number]): Track {
     id: t.id,
     title: t.title,
     artist: t.artist.name,
+    artistSlug: t.artist.slug,
     coverArt: t.coverArt,
     r2Key: t.r2Key,
     duration: t.duration ?? 0,

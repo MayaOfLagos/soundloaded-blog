@@ -22,6 +22,7 @@ export function MusicCard({ track, className }: MusicCardProps) {
       id: track.id,
       title: track.title,
       artist: track.artistName,
+      artistSlug: track.artistSlug,
       coverArt: track.coverArt ?? null,
       r2Key: track.r2Key,
       duration: 0,
@@ -84,7 +85,12 @@ export function MusicCard({ track, className }: MusicCardProps) {
             {track.title}
           </p>
         </Link>
-        <p className="text-muted-foreground mt-0.5 truncate text-xs">{track.artistName}</p>
+        <Link
+          href={`/artists/${track.artistSlug}`}
+          className="text-muted-foreground hover:text-brand mt-0.5 truncate text-xs transition-colors"
+        >
+          {track.artistName}
+        </Link>
 
         <div className="mt-2 flex items-center justify-between gap-2">
           {track.fileSize && (

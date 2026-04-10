@@ -14,6 +14,7 @@ function toPlayerTrack(t: MusicCardData): Track {
     id: t.id,
     title: t.title,
     artist: t.artistName,
+    artistSlug: t.artistSlug,
     coverArt: t.coverArt ?? null,
     r2Key: t.r2Key,
     duration: 0,
@@ -134,7 +135,12 @@ function TrackListItem({
             {track.title}
           </p>
         </Link>
-        <p className="text-muted-foreground truncate text-[11px]">{track.artistName}</p>
+        <Link
+          href={`/artists/${track.artistSlug}`}
+          className="text-muted-foreground hover:text-brand truncate text-[11px] transition-colors"
+        >
+          {track.artistName}
+        </Link>
       </div>
 
       {/* Heart button — visible on hover */}

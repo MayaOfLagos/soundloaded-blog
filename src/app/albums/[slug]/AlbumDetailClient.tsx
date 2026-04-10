@@ -85,6 +85,7 @@ export function AlbumDetailClient({
     id: t.id,
     title: t.title,
     artist: artist.name,
+    artistSlug: artist.slug,
     coverArt: t.coverArt ?? album.coverArt,
     r2Key: t.r2Key,
     duration: t.duration ?? 0,

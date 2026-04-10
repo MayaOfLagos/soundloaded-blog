@@ -89,6 +89,7 @@ export default async function ArtistPage({ params }: Props) {
           slug: t.slug,
           title: t.title,
           artistName: artist.name,
+          artistSlug: artist.slug,
           albumTitle: t.album?.title ?? null,
           coverArt: t.coverArt,
           genre: t.genre,

@@ -58,6 +58,7 @@ function toPlayerTrack(t: PlaylistTrackItem): Track {
     id: t.music.id,
     title: t.music.title,
     artist: t.music.artist.name,
+    artistSlug: t.music.artist.slug,
     coverArt: t.music.coverArt,
     r2Key: t.music.r2Key,
     duration: t.music.duration ?? 0,

@@ -266,6 +266,7 @@ export function MusicDetailClient({
                 isExclusive: track.isExclusive,
                 price: track.price,
                 artistName: track.artist.name,
+                artistSlug: track.artist.slug,
                 genre: track.genre,
                 downloadCount: track.downloadCount,
                 fileSize: track.fileSize,

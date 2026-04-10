@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Howl } from "howler";
 import Image from "next/image";
+import Link from "next/link";
 import {
   Play,
   Pause,
@@ -282,8 +283,22 @@ export function MusicPlayer() {
           <div className="flex items-center gap-3 px-3 pb-1">
             {mobileCover}
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-bold text-white">{currentTrack.title}</p>
-              <p className="truncate text-xs text-white/70">{currentTrack.artist}</p>
+              <Link
+                href={`/music/${currentTrack.slug}`}
+                className="block truncate text-sm font-bold text-white hover:underline"
+              >
+                {currentTrack.title}
+              </Link>
+              {currentTrack.artistSlug ? (
+                <Link
+                  href={`/artists/${currentTrack.artistSlug}`}
+                  className="block truncate text-xs text-white/70 transition-colors hover:text-white"
+                >
+                  {currentTrack.artist}
+                </Link>
+              ) : (
+                <p className="truncate text-xs text-white/70">{currentTrack.artist}</p>
+              )}
             </div>
             <div className="flex items-center gap-0.5">
               <button
@@ -345,8 +360,22 @@ export function MusicPlayer() {
           <div className="flex min-w-0 items-center gap-3">
             {desktopCover}
             <div className="min-w-0">
-              <p className="text-foreground truncate text-sm font-semibold">{currentTrack.title}</p>
-              <p className="text-muted-foreground truncate text-xs">{currentTrack.artist}</p>
+              <Link
+                href={`/music/${currentTrack.slug}`}
+                className="text-foreground block truncate text-sm font-semibold hover:underline"
+              >
+                {currentTrack.title}
+              </Link>
+              {currentTrack.artistSlug ? (
+                <Link
+                  href={`/artists/${currentTrack.artistSlug}`}
+                  className="text-muted-foreground hover:text-brand block truncate text-xs transition-colors"
+                >
+                  {currentTrack.artist}
+                </Link>
+              ) : (
+                <p className="text-muted-foreground truncate text-xs">{currentTrack.artist}</p>
+              )}
             </div>
             <HeartButton
               musicId={currentTrack.id}

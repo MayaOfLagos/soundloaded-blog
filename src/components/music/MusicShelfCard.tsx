@@ -24,6 +24,7 @@ function toPlayerTrack(t: MusicCardData): Track {
     id: t.id,
     title: t.title,
     artist: t.artistName,
+    artistSlug: t.artistSlug,
     coverArt: t.coverArt ?? null,
     r2Key: t.r2Key,
     duration: 0,
@@ -142,7 +143,12 @@ export function MusicShelfCard({ track, shelfTracks, shelfLabel, className }: Mu
             {track.title}
           </Link>
         </div>
-        <p className="text-muted-foreground mt-0.5 truncate text-xs">{track.artistName}</p>
+        <Link
+          href={`/artists/${track.artistSlug}`}
+          className="text-muted-foreground hover:text-brand mt-0.5 truncate text-xs transition-colors"
+        >
+          {track.artistName}
+        </Link>
       </div>
     </div>
   );

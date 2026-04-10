@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { Play, Pause, Music, ChevronUp } from "lucide-react";
 import { usePlayerStore } from "@/store/player.store";
 import { useDominantColor } from "@/hooks/useDominantColor";
@@ -81,10 +82,21 @@ export function MiniPlayer() {
             aria-label="Expand player"
           >
             <p className="truncate text-[13px] font-bold whitespace-nowrap text-white">
-              {currentTrack.title}
+              <Link href={`/music/${currentTrack.slug}`} className="hover:underline">
+                {currentTrack.title}
+              </Link>
             </p>
             <p className="truncate text-[11px] whitespace-nowrap text-white/70">
-              {currentTrack.artist}
+              {currentTrack.artistSlug ? (
+                <Link
+                  href={`/artists/${currentTrack.artistSlug}`}
+                  className="transition-colors hover:text-white"
+                >
+                  {currentTrack.artist}
+                </Link>
+              ) : (
+                currentTrack.artist
+              )}
             </p>
           </button>
           <div className="flex items-center gap-2">
@@ -115,9 +127,22 @@ export function MiniPlayer() {
             aria-label="Expand player"
           >
             <p className="text-foreground truncate text-[13px] font-semibold">
-              {currentTrack.title}
+              <Link href={`/music/${currentTrack.slug}`} className="hover:underline">
+                {currentTrack.title}
+              </Link>
             </p>
-            <p className="text-muted-foreground truncate text-[11px]">{currentTrack.artist}</p>
+            <p className="text-muted-foreground truncate text-[11px]">
+              {currentTrack.artistSlug ? (
+                <Link
+                  href={`/artists/${currentTrack.artistSlug}`}
+                  className="hover:text-brand transition-colors"
+                >
+                  {currentTrack.artist}
+                </Link>
+              ) : (
+                currentTrack.artist
+              )}
+            </p>
           </button>
           <div className="flex items-center gap-1">
             {playBtn(isPlaying, "text-foreground")}

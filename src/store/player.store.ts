@@ -5,6 +5,7 @@ export interface Track {
   id: string;
   title: string;
   artist: string;
+  artistSlug?: string;
   coverArt: string | null;
   r2Key: string;
   duration?: number;

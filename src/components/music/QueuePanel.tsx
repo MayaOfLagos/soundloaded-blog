@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { motion, AnimatePresence } from "motion/react";
 import { X, Music, GripVertical, ListMusic, Clock3, Play } from "lucide-react";
 import { usePlayerStore } from "@/store/player.store";
@@ -67,9 +68,22 @@ function QueueTrackRow({
             isPlaying ? "text-brand" : "text-foreground"
           )}
         >
-          {track.title}
+          <Link href={`/music/${track.slug}`} className="hover:underline">
+            {track.title}
+          </Link>
         </p>
-        <p className="text-muted-foreground mt-0.5 truncate text-[11px]">{track.artist}</p>
+        <p className="text-muted-foreground mt-0.5 truncate text-[11px]">
+          {track.artistSlug ? (
+            <Link
+              href={`/artists/${track.artistSlug}`}
+              className="hover:text-brand transition-colors"
+            >
+              {track.artist}
+            </Link>
+          ) : (
+            track.artist
+          )}
+        </p>
       </div>
       {onRemove && (
         <button

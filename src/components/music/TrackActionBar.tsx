@@ -23,6 +23,7 @@ interface TrackActionBarProps {
     isExclusive: boolean;
     price: number | null;
     artistName: string;
+    artistSlug: string;
     genre: string | null;
     downloadCount: number;
     fileSize: number | null;
@@ -164,6 +165,7 @@ export function TrackActionBar({ track, siteUrl, enableDownloads }: TrackActionB
       id: track.id,
       title: track.title,
       artist: track.artistName,
+      artistSlug: track.artistSlug,
       coverArt: track.coverArt,
       r2Key: track.r2Key,
       duration: track.duration ?? undefined,

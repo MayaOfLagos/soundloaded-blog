@@ -21,6 +21,7 @@ function toPlayerTrack(t: MusicCardData): Track {
     id: t.id,
     title: t.title,
     artist: t.artistName,
+    artistSlug: t.artistSlug,
     coverArt: t.coverArt ?? null,
     r2Key: t.r2Key,
     duration: 0,
@@ -120,7 +121,12 @@ export function MusicListItem({ track, rank, listTracks, listLabel }: MusicListI
         >
           {track.title}
         </Link>
-        <p className="text-muted-foreground truncate text-xs">{track.artistName}</p>
+        <Link
+          href={`/artists/${track.artistSlug}`}
+          className="text-muted-foreground hover:text-brand truncate text-xs transition-colors"
+        >
+          {track.artistName}
+        </Link>
       </div>
 
       {/* Stream count */}

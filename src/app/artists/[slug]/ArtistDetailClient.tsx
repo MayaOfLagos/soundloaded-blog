@@ -354,6 +354,7 @@ export function ArtistDetailClient({
                 allTracks={allTracks}
                 albums={albums}
                 artistName={artist.name}
+                artistSlug={artist.slug}
                 onSeeAllSongs={() => setActiveTab("songs")}
               />
             )}
@@ -516,12 +517,14 @@ function OverviewTab({
   allTracks,
   albums,
   artistName,
+  artistSlug,
   onSeeAllSongs,
 }: {
   popularTracks: PopularTrack[];
   allTracks: MusicCardData[];
   albums: AlbumCardData[];
   artistName: string;
+  artistSlug: string;
   onSeeAllSongs: () => void;
 }) {
   return (
@@ -541,7 +544,11 @@ function OverviewTab({
               </button>
             )}
           </div>
-          <PopularTracksList tracks={popularTracks} artistName={artistName} />
+          <PopularTracksList
+            tracks={popularTracks}
+            artistName={artistName}
+            artistSlug={artistSlug}
+          />
         </div>
       )}
 
@@ -619,6 +626,7 @@ function SongsTab({ tracks, artistName }: { tracks: MusicCardData[]; artistName:
       id: t.id,
       title: t.title,
       artist: t.artistName,
+      artistSlug: t.artistSlug,
       coverArt: t.coverArt ?? null,
       r2Key: t.r2Key,
       duration: 0,
@@ -704,7 +712,12 @@ function SongsTab({ tracks, artistName }: { tracks: MusicCardData[]; artistName:
                   {track.title}
                 </p>
               </Link>
-              <p className="text-muted-foreground mt-0.5 truncate text-xs">{artistName}</p>
+              <Link
+                href={`/artists/${track.artistSlug}`}
+                className="text-muted-foreground hover:text-brand mt-0.5 truncate text-xs transition-colors"
+              >
+                {artistName}
+              </Link>
             </div>
           </div>
         );
@@ -853,7 +866,15 @@ function StatItem({
 
 /* ─── Popular Tracks List ─── */
 
-function PopularTracksList({ tracks, artistName }: { tracks: PopularTrack[]; artistName: string }) {
+function PopularTracksList({
+  tracks,
+  artistName,
+  artistSlug,
+}: {
+  tracks: PopularTrack[];
+  artistName: string;
+  artistSlug: string;
+}) {
   const { currentTrack, isPlaying, isBuffering, setTrack, togglePlay, setContextQueue } =
     usePlayerStore();
 
@@ -867,6 +888,7 @@ function PopularTracksList({ tracks, artistName }: { tracks: PopularTrack[]; art
       id: t.id,
       title: t.title,
       artist: artistName,
+      artistSlug,
       coverArt: t.coverArt,
       r2Key: t.r2Key,
       duration: t.duration ?? 0,

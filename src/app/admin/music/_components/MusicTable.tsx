@@ -3,7 +3,17 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { Trash2, Loader2, X, Music, TrendingUp } from "lucide-react";
+import Link from "next/link";
+import {
+  Trash2,
+  Loader2,
+  X,
+  Music,
+  TrendingUp,
+  Download,
+  Pencil,
+  ExternalLink,
+} from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import axios from "axios";
 import toast from "react-hot-toast";
@@ -37,8 +47,11 @@ interface Track {
   coverArt: string | null;
   genre: string | null;
   format: string;
-  fileSize: string; // BigInt serialized
+  fileSize: string;
   downloadCount: number;
+  streamCount: number;
+  r2Key: string;
+  postId: string;
   artist: { id: string; name: string; slug: string };
   album: { id: string; title: string; slug: string } | null;
 }
@@ -141,8 +154,8 @@ export function MusicTable({ tracks }: MusicTableProps) {
                 <TableHead className="hidden md:table-cell">Genre</TableHead>
                 <TableHead className="hidden md:table-cell">Format</TableHead>
                 <TableHead className="hidden text-right lg:table-cell">Size</TableHead>
-                <TableHead className="text-right">Downloads</TableHead>
-                <TableHead className="w-20 text-right">Actions</TableHead>
+                <TableHead className="text-right">Stats</TableHead>
+                <TableHead className="w-28 text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -212,23 +225,54 @@ export function MusicTable({ tracks }: MusicTableProps) {
                       </span>
                     </TableCell>
                     <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <TrendingUp className="h-3 w-3 text-green-500" />
-                        <span className="text-sm font-medium">
-                          {track.downloadCount.toLocaleString()}
-                        </span>
+                      <div className="space-y-0.5 text-xs">
+                        <div className="flex items-center justify-end gap-1">
+                          <Download className="h-3 w-3 text-green-500" />
+                          <span className="font-medium">
+                            {track.downloadCount.toLocaleString()}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-end gap-1">
+                          <TrendingUp className="h-3 w-3 text-blue-500" />
+                          <span className="text-muted-foreground">
+                            {track.streamCount.toLocaleString()}
+                          </span>
+                        </div>
                       </div>
+                      {!track.r2Key && (
+                        <Badge
+                          variant="outline"
+                          className="mt-1 border-amber-500/30 text-[9px] text-amber-500"
+                        >
+                          No Audio
+                        </Badge>
+                      )}
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center justify-end">
+                      <div className="flex items-center justify-end gap-0.5">
+                        <Link href={`/admin/posts/${track.postId}`}>
+                          <Button size="icon" variant="ghost" className="h-8 w-8" title="Edit post">
+                            <Pencil className="h-3.5 w-3.5" />
+                          </Button>
+                        </Link>
+                        <Link href={`/music/${track.slug}`} target="_blank">
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8"
+                            title="Open track page"
+                          >
+                            <ExternalLink className="h-3.5 w-3.5" />
+                          </Button>
+                        </Link>
                         <Button
                           size="icon"
                           variant="ghost"
                           className="text-destructive hover:text-destructive h-8 w-8"
                           onClick={() => setDeleteId(track.id)}
+                          title="Delete"
                         >
                           <Trash2 className="h-3.5 w-3.5" />
-                          <span className="sr-only">Delete</span>
                         </Button>
                       </div>
                     </TableCell>

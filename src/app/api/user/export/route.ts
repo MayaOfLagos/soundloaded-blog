@@ -53,6 +53,13 @@ export async function POST() {
       db.transaction.findMany({
         where: { userId },
         orderBy: { createdAt: "desc" },
+        select: {
+          id: true,
+          type: true,
+          amount: true,
+          status: true,
+          createdAt: true,
+        },
       }),
       db.userPreferences.findUnique({ where: { userId } }),
     ]);

@@ -8,7 +8,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ slu
     const post = await db.post.findUnique({
       where: { slug, status: "PUBLISHED" },
       include: {
-        author: { select: { name: true, image: true, email: true } },
+        author: { select: { name: true, image: true } },
         category: { select: { name: true, slug: true } },
         tags: { include: { tag: { select: { name: true, slug: true } } } },
         comments: {
@@ -30,8 +30,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ slu
       return NextResponse.json({ error: "Post not found" }, { status: 404 });
     }
 
-    // Increment view count (fire-and-forget)
-    db.post.update({ where: { id: post.id }, data: { views: { increment: 1 } } }).catch(() => {});
+    // Note: view counting is handled by POST /api/posts/view with proper dedup
 
     return NextResponse.json({ post });
   } catch (err) {

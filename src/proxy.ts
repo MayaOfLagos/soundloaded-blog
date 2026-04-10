@@ -142,6 +142,8 @@ export async function proxy(req: NextRequest) {
     "/api/auth/forgot-password",
     "/api/auth/reset-password",
     "/api/auth/check-lockout",
+    "/api/user/password",
+    "/api/user/delete-account",
   ];
   if (sensitiveAuthPaths.includes(pathname) && authSensitiveLimit) {
     const { success } = await authSensitiveLimit.limit(ip);

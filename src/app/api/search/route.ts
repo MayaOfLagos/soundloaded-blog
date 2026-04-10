@@ -6,12 +6,13 @@ import { searchAll } from "@/lib/meilisearch";
 function trackSearch(
   query: string,
   results: number,
-  ip: string | null,
+  _ip: string | null,
   engine: string = "meilisearch"
 ) {
+  // Note: IP is no longer stored for GDPR compliance
   db.searchQuery
     .create({
-      data: { query: query.toLowerCase().slice(0, 200), results, ip, engine },
+      data: { query: query.toLowerCase().slice(0, 200), results, ip: null, engine },
     })
     .catch(() => {});
 }

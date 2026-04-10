@@ -95,7 +95,8 @@ export async function GET(request: NextRequest) {
 
   // List followers/following
   const type = searchParams.get("type") ?? "following";
-  const userId = searchParams.get("userId") ?? currentUserId;
+  // Always scope to the current user — don't allow querying other users' lists
+  const userId = currentUserId;
 
   if (type === "followers") {
     const followers = await db.follow.findMany({

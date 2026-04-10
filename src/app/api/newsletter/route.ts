@@ -3,20 +3,42 @@ import { randomUUID } from "crypto";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { resend, NEWSLETTER_FROM } from "@/lib/resend";
+import { Ratelimit } from "@upstash/ratelimit";
+import { Redis } from "@upstash/redis";
 
 const schema = z.object({
   email: z.string().email(),
   name: z.string().max(100).optional(),
 });
 
+// Per-email rate limit: 3 per hour (prevent email bombing)
+const emailRatelimit =
+  process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN
+    ? new Ratelimit({
+        redis: Redis.fromEnv(),
+        limiter: Ratelimit.slidingWindow(3, "1 h"),
+        prefix: "sl:newsletter",
+      })
+    : null;
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const { email, name } = schema.parse(body);
 
+    // Rate-limit per email to prevent email bombing
+    if (emailRatelimit) {
+      const { success } = await emailRatelimit.limit(email.toLowerCase());
+      if (!success) {
+        // Return success to avoid enumeration, but don't actually send
+        return NextResponse.json({ success: true, message: "If that address is valid, a confirmation email has been sent" });
+      }
+    }
+
     const existing = await db.subscriber.findUnique({ where: { email } });
     if (existing?.status === "CONFIRMED") {
-      return NextResponse.json({ success: true, message: "Already subscribed" });
+      // Generic message to prevent enumeration
+      return NextResponse.json({ success: true, message: "If that address is valid, a confirmation email has been sent" });
     }
 
     const token = randomUUID();
@@ -62,7 +84,7 @@ export async function POST(req: NextRequest) {
       `,
     });
 
-    return NextResponse.json({ success: true, message: "Confirmation email sent" });
+    return NextResponse.json({ success: true, message: "If that address is valid, a confirmation email has been sent" });
   } catch (err) {
     if (err instanceof z.ZodError) {
       return NextResponse.json({ error: "Invalid email address" }, { status: 400 });

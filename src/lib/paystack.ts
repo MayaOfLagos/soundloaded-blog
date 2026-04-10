@@ -1,4 +1,4 @@
-import { createHmac } from "crypto";
+import { createHmac, timingSafeEqual } from "crypto";
 
 const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET_KEY ?? "";
 const BASE_URL = "https://api.paystack.co";
@@ -52,7 +52,9 @@ export async function verifyTransaction(reference: string) {
 
 export function verifyWebhookSignature(body: string, signature: string): boolean {
   const hash = createHmac("sha512", PAYSTACK_SECRET).update(body).digest("hex");
-  return hash === signature;
+  // Use timing-safe comparison to prevent timing attacks
+  if (hash.length !== signature.length) return false;
+  return timingSafeEqual(Buffer.from(hash), Buffer.from(signature));
 }
 
 /** Default prices in kobo */

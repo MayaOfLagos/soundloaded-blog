@@ -32,6 +32,28 @@ function getExtension(filename: string): string {
   return parts.length > 1 ? parts.pop()!.toLowerCase() : "bin";
 }
 
+// Map validated MIME types to safe file extensions
+const MIME_TO_EXT: Record<string, string> = {
+  "image/png": "png",
+  "image/jpeg": "jpg",
+  "image/webp": "webp",
+  "image/gif": "gif",
+  "video/mp4": "mp4",
+  "video/webm": "webm",
+  "video/quicktime": "mov",
+  "audio/mpeg": "mp3",
+  "audio/mp4": "m4a",
+  "audio/wav": "wav",
+  "audio/ogg": "ogg",
+  "audio/x-m4a": "m4a",
+  "audio/aac": "aac",
+};
+
+function getSafeExtension(mimeType: string, filename: string): string {
+  // Prefer the extension from the validated MIME type
+  return MIME_TO_EXT[mimeType] ?? getExtension(filename);
+}
+
 function getAllowedTypes(mediaType: string) {
   if (mediaType === "image") return ALLOWED_IMAGE_TYPES;
   if (mediaType === "video") return ALLOWED_VIDEO_TYPES;
@@ -61,7 +83,9 @@ export async function POST(request: NextRequest) {
   const formData = await request.formData();
   const file = formData.get("file") as File | null;
   const mediaType = formData.get("mediaType") as string | null;
-  const purpose = (formData.get("purpose") as string | null) ?? "stories";
+  const rawPurpose = (formData.get("purpose") as string | null) ?? "stories";
+  // Validate purpose against allowlist
+  const purpose = ["stories", "posts"].includes(rawPurpose) ? rawPurpose : "stories";
 
   if (!file || !mediaType) {
     return NextResponse.json({ error: "Missing file or mediaType" }, { status: 400 });
@@ -83,7 +107,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const ext = getExtension(file.name);
+  const ext = getSafeExtension(file.type, file.name);
   const id = crypto.randomUUID();
 
   const isAudio = mediaType === "audio";

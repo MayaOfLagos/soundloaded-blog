@@ -31,7 +31,6 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
               coverArt: true,
               duration: true,
               genre: true,
-              r2Key: true,
               streamCount: true,
               downloadCount: true,
               enableDownload: true,

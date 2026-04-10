@@ -84,7 +84,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
   await db.$transaction(
     parsed.data.tracks.map((t) =>
       db.playlistTrack.update({
-        where: { id: t.id },
+        where: { id: t.id, playlistId: id },
         data: { position: t.position },
       })
     )

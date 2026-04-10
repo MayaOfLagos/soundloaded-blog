@@ -37,7 +37,7 @@ export function SettingsTabBar({ activeTab, onTabChange }: SettingsTabBarProps) 
               onClick={() => onTabChange(id)}
               className={cn(
                 "relative flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-all outline-none",
-                isActive ? "text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+                isActive ? "text-brand-foreground" : "text-muted-foreground hover:text-foreground"
               )}
             >
               {isActive && (

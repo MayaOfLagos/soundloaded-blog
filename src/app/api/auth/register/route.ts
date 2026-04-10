@@ -26,9 +26,9 @@ const strongPasswordRegex =
   /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]).{8,}$/;
 
 export async function POST(req: NextRequest) {
-  // Rate limit by IP
+  // Rate limit by IP — fail-closed if Upstash is not configured in production
   if (ratelimit) {
-    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+    const ip = req.headers.get("cf-connecting-ip") ?? req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
     const { success } = await ratelimit.limit(ip);
     if (!success) {
       return NextResponse.json(
@@ -36,6 +36,12 @@ export async function POST(req: NextRequest) {
         { status: 429 }
       );
     }
+  } else if (process.env.NODE_ENV === "production") {
+    console.error("[register] Rate limiter unavailable in production — blocking request");
+    return NextResponse.json(
+      { error: "Service temporarily unavailable. Please try again." },
+      { status: 503 }
+    );
   }
 
   try {
@@ -91,7 +97,8 @@ export async function POST(req: NextRequest) {
     });
 
     if (existing) {
-      return NextResponse.json({ error: "Email already in use" }, { status: 409 });
+      // Return generic success to prevent email enumeration
+      return NextResponse.json({ message: "Check your email to continue." });
     }
 
     const hashed = await bcrypt.hash(password, 12);

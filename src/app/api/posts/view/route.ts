@@ -64,11 +64,8 @@ export async function POST(request: NextRequest) {
           return NextResponse.json({ viewed: true, duplicate: true });
         }
       } catch {
-        // Redis unavailable — fall through to increment anyway
-        await db.post.update({
-          where: { id: postId },
-          data: { views: { increment: 1 } },
-        });
+        // Redis unavailable — skip increment to prevent abuse (fail-closed)
+        return NextResponse.json({ viewed: true, skipped: true });
       }
     }
 

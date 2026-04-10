@@ -26,12 +26,14 @@ export async function GET(req: NextRequest) {
     const result = await verifyTransaction(reference);
 
     if (result.data.status === "success") {
-      await db.transaction.update({
-        where: { paystackRef: reference },
+      // Use updateMany with status filter to prevent race conditions (double processing)
+      const updated = await db.transaction.updateMany({
+        where: { paystackRef: reference, status: { not: "success" } },
         data: { status: "success" },
       });
 
-      if (transaction.type === "subscription") {
+      // Only process subscription if we actually changed the status
+      if (updated.count > 0 && transaction.type === "subscription") {
         const plan =
           ((transaction.metadata as Record<string, unknown>)?.plan as string) || "monthly";
         const daysToAdd = plan === "yearly" ? 365 : 30;

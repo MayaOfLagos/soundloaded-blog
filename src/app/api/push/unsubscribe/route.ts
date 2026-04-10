@@ -13,11 +13,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const userId = (session.user as { id: string }).id;
+
   try {
     const body = await req.json();
     const { endpoint } = schema.parse(body);
 
-    await db.pushSubscription.deleteMany({ where: { endpoint } });
+    // Only delete the current user's subscription for this endpoint
+    await db.pushSubscription.deleteMany({ where: { endpoint, userId } });
 
     return NextResponse.json({ ok: true });
   } catch {

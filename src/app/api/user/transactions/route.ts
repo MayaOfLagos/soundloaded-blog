@@ -21,7 +21,12 @@ export async function GET(request: NextRequest) {
       orderBy: { createdAt: "desc" },
       skip: (page - 1) * limit,
       take: limit,
-      include: {
+      select: {
+        id: true,
+        type: true,
+        amount: true,
+        status: true,
+        createdAt: true,
         music: { select: { title: true, slug: true } },
       },
     }),

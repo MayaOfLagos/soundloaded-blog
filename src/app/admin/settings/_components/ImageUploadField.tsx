@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import Image from "next/image";
 import { X } from "lucide-react";
 import toast from "react-hot-toast";
 import { adminApi } from "@/lib/admin-api";
@@ -149,17 +148,18 @@ export function ImageUploadField({
             className="bg-muted overflow-hidden rounded-lg border"
             style={{ width: previewWidth, height: previewHeight }}
           >
-            <Image
+            <img
               src={previewUrl}
               alt={label}
               width={previewWidth}
               height={previewHeight}
               className="h-full w-full object-contain"
-              unoptimized
             />
           </div>
           <button
             type="button"
+            title="Remove image"
+            aria-label="Remove image"
             onClick={() => {
               onChange(null);
               setFiles([]);

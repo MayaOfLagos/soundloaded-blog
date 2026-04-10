@@ -69,7 +69,7 @@ function ViewTab({
       onClick={onClick}
       className={cn(
         "relative flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition-all outline-none",
-        active ? "text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+        active ? "text-background" : "text-muted-foreground hover:text-foreground"
       )}
     >
       {active && (

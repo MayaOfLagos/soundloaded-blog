@@ -21,7 +21,6 @@ export async function GET(req: NextRequest) {
         name: true,
         status: true,
         createdAt: true,
-        updatedAt: true,
       },
     }),
     db.subscriber.count(),

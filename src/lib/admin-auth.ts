@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import type { Session } from "next-auth";
 import { auth } from "@/lib/auth";
 
 // ── Role definitions ──────────────────────────────────────────────────
@@ -12,13 +13,13 @@ export type EditorRole = (typeof EDITOR_ROLES)[number];
 // ── Session helpers ───────────────────────────────────────────────────
 
 /** Extract the role string from a session user object */
-function getUserRole(session: { user?: Record<string, unknown> } | null): string {
-  return (session?.user as { role?: string } | undefined)?.role ?? "";
+function getUserRole(session: Session | null): string {
+  return ((session?.user as Record<string, unknown> | undefined)?.role as string) ?? "";
 }
 
 /** Extract the user ID from a session user object */
-function getUserId(session: { user?: Record<string, unknown> } | null): string | null {
-  return (session?.user as { id?: string } | undefined)?.id ?? null;
+function getUserId(session: Session | null): string | null {
+  return ((session?.user as Record<string, unknown> | undefined)?.id as string) ?? null;
 }
 
 // ── Auth guard: ADMIN or SUPER_ADMIN ──────────────────────────────────
@@ -65,7 +66,7 @@ export async function requireSuperAdmin() {
 
 // ── Convenience: get current session role ─────────────────────────────
 export async function getSessionRole(): Promise<{
-  session: Awaited<ReturnType<typeof auth>>;
+  session: Session;
   role: string;
   userId: string | null;
 } | null> {

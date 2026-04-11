@@ -315,6 +315,7 @@ export const usePlayerStore = create<PlayerState>()(
         return state as Record<string, unknown>;
       },
       version: 1,
+      skipHydration: true,
     }
   )
 );

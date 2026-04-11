@@ -30,6 +30,11 @@ import { MiniPlayer } from "./MiniPlayer";
 import { QueueSheet } from "./QueueSheet";
 
 export function MusicPlayer() {
+  // Rehydrate persisted store AFTER React hydration to avoid SSR mismatch
+  useEffect(() => {
+    usePlayerStore.persist.rehydrate();
+  }, []);
+
   const {
     currentTrack,
     isPlaying,

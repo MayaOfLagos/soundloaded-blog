@@ -151,6 +151,36 @@ export function FeaturesSettings({ form }: Props) {
         </div>
       )}
 
+      {/* Player Experience */}
+      <div className="pt-4">
+        <h2 className="text-foreground text-base font-bold">Player Experience</h2>
+        <p className="text-muted-foreground mt-0.5 text-sm">
+          Control the music player behavior on mobile devices
+        </p>
+      </div>
+      <Separator />
+
+      <FormField
+        control={form.control}
+        name="enableNowPlayingDrawer"
+        render={({ field }) => (
+          <FormItem className="flex items-center justify-between rounded-lg border p-4">
+            <div className="space-y-0.5">
+              <FormLabel className="text-foreground text-sm font-medium">
+                Now Playing Drawer
+              </FormLabel>
+              <p className="text-muted-foreground text-xs">
+                Full-screen Spotify-style slide-up panel when tapping the mini player on mobile.
+                When disabled, the compact expanded player is shown instead.
+              </p>
+            </div>
+            <FormControl>
+              <Switch checked={field.value} onCheckedChange={field.onChange} />
+            </FormControl>
+          </FormItem>
+        )}
+      />
+
       {/* Site Sections */}
       <div className="pt-4">
         <h2 className="text-foreground text-base font-bold">Site Sections</h2>

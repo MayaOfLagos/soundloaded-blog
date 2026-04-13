@@ -167,6 +167,8 @@ const settingsSchema = z.object({
   enableAlbums: z.boolean().default(true),
   enableArtists: z.boolean().default(true),
   enableSearch: z.boolean().default(true),
+  // Player Experience
+  enableNowPlayingDrawer: z.boolean().default(true),
 });
 
 export type SettingsFormValues = z.infer<typeof settingsSchema>;

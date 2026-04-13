@@ -609,6 +609,9 @@ model SiteSettings {
   enableAlbums  Boolean @default(true)
   enableArtists Boolean @default(true)
   enableSearch  Boolean @default(true)
+
+  // Feature Toggles — Player Experience
+  enableNowPlayingDrawer Boolean @default(true)
 }
 
 // ── Media Library ────────────────────────────────────────────────────

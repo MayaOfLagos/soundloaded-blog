@@ -84,6 +84,8 @@ export interface PublicSettings {
   enableAlbums: boolean;
   enableArtists: boolean;
   enableSearch: boolean;
+  // Player Experience
+  enableNowPlayingDrawer: boolean;
 }
 
 const DEFAULTS: PublicSettings = {
@@ -157,6 +159,7 @@ const DEFAULTS: PublicSettings = {
   enableAlbums: true,
   enableArtists: true,
   enableSearch: true,
+  enableNowPlayingDrawer: true,
 };
 
 function resolveImageUrl(r2Key: string | null | undefined): string | null {
@@ -266,6 +269,7 @@ export function buildPublicSettings(
     enableAlbums: bool(raw, "enableAlbums", DEFAULTS.enableAlbums),
     enableArtists: bool(raw, "enableArtists", DEFAULTS.enableArtists),
     enableSearch: bool(raw, "enableSearch", DEFAULTS.enableSearch),
+    enableNowPlayingDrawer: bool(raw, "enableNowPlayingDrawer", DEFAULTS.enableNowPlayingDrawer),
   };
 }
 

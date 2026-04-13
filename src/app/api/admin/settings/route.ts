@@ -136,6 +136,8 @@ const settingsSchema = z
     enableAlbums: z.boolean(),
     enableArtists: z.boolean(),
     enableSearch: z.boolean(),
+    // Player Experience
+    enableNowPlayingDrawer: z.boolean(),
   })
   .partial();
 

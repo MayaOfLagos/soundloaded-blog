@@ -24,6 +24,8 @@
     "db:push": "prisma db push",
     "payload:generate": "payload generate:types",
     "generate:icons": "tsx scripts/generate-icons.ts",
+    "worker:audio": "tsx worker/audio-processor.ts",
+    "worker:audio:docker": "docker compose -f docker/docker-compose.yml --profile worker up audio-worker",
     "prepare": "husky"
   },
   "dependencies": {

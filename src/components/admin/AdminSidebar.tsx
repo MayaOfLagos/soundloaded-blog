@@ -26,6 +26,7 @@ import {
   ExternalLink,
   LogOut,
   ChevronUp,
+  AudioWaveform,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -68,6 +69,7 @@ const manageNav = [
   { title: "Users", href: "/admin/users", icon: Users },
   { title: "Creators", href: "/admin/creators", icon: UserCheck },
   { title: "Reports", href: "/admin/reports", icon: Flag },
+  { title: "Audio Processing", href: "/admin/audio-processing", icon: AudioWaveform },
 ];
 
 const bottomNav = [

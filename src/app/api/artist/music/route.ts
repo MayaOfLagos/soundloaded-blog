@@ -136,6 +136,21 @@ export async function POST(req: NextRequest) {
 
     indexMusic(music);
 
+    // Auto-enqueue audio processing job (transcode + normalize + waveform)
+    try {
+      await db.audioProcessingJob.create({
+        data: {
+          musicId: music.id,
+          jobType: "full",
+          status: "pending",
+          priority: 0,
+        },
+      });
+    } catch (enqueueErr) {
+      // Non-fatal: track was created, processing can be retried later
+      console.warn("[POST /api/artist/music] Failed to enqueue processing:", enqueueErr);
+    }
+
     return NextResponse.json({ ...music, fileSize: music.fileSize.toString() }, { status: 201 });
   } catch (err) {
     if (err instanceof z.ZodError) return NextResponse.json({ error: err.errors }, { status: 422 });

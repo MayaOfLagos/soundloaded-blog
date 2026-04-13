@@ -161,6 +161,18 @@ model Music {
 
   trackNumber Int?
 
+  // ── Audio processing fields ──
+  processedR2Key   String?  // R2 key for the processed (transcoded) file
+  processedFormat  String?  // e.g. "aac", "mp3"
+  processedBitrate Int?     // e.g. 128, 256
+  processedSize    BigInt?  // file size of processed version
+  loudnessLUFS     Float?   // integrated loudness (EBU R128)
+  waveformData     Json?    // array of amplitude peaks for waveform UI
+  processingStatus String   @default("pending") // pending | processing | completed | failed
+  processingError  String?  // error message if processing failed
+
+  processingJobs AudioProcessingJob[]
+
   postId    String     @unique
   post      Post       @relation(fields: [postId], references: [id])
   artistId  String
@@ -1003,4 +1015,25 @@ model PlaylistTrack {
 
   @@unique([playlistId, musicId])
   @@index([playlistId, position])
+}
+
+// ── Audio Processing Jobs ─────────────────────────────────────────────
+model AudioProcessingJob {
+  id          String   @id @default(cuid())
+  musicId     String
+  music       Music    @relation(fields: [musicId], references: [id], onDelete: Cascade)
+  jobType     String   // transcode | normalize | waveform | full
+  status      String   @default("pending") // pending | processing | completed | failed
+  priority    Int      @default(0)
+  attempts    Int      @default(0)
+  maxAttempts Int      @default(3)
+  error       String?
+  result      Json?    // output metadata from FFmpeg
+  startedAt   DateTime?
+  completedAt DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([status, priority, createdAt])
+  @@index([musicId])
 }

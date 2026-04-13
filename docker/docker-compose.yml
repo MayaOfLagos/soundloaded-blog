@@ -84,3 +84,25 @@ networks:
   soundloadedblog-net:
     name: soundloadedblog-net
     driver: bridge
+
+  # ── Audio Processing Worker ──────────────────────────────────────────
+  # Run with: docker compose -f docker/docker-compose.yml --profile worker up audio-worker
+  audio-worker:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.audio-worker
+    container_name: soundloadedblog-audio-worker
+    restart: unless-stopped
+    profiles: ["worker"]
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      CLOUDFLARE_ACCOUNT_ID: ${CLOUDFLARE_ACCOUNT_ID}
+      R2_ACCESS_KEY_ID: ${R2_ACCESS_KEY_ID}
+      R2_SECRET_ACCESS_KEY: ${R2_SECRET_ACCESS_KEY}
+      R2_MUSIC_BUCKET: ${R2_MUSIC_BUCKET:-soundloadedblog-music}
+      AUDIO_TARGET_FORMAT: ${AUDIO_TARGET_FORMAT:-aac}
+      AUDIO_TARGET_BITRATE: ${AUDIO_TARGET_BITRATE:-128}
+      WAVEFORM_PEAKS: ${WAVEFORM_PEAKS:-200}
+      WORKER_POLL_INTERVAL: ${WORKER_POLL_INTERVAL:-5000}
+    networks:
+      - soundloadedblog-net

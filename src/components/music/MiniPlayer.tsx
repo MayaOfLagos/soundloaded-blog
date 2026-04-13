@@ -63,7 +63,10 @@ export function MiniPlayer() {
   return (
     <>
       {/* Mobile — dominant color bg */}
-      <div className="fixed inset-x-0 z-50 md:hidden" style={{ bottom: "4rem" }}>
+      <div
+        className="fixed inset-x-0 z-50 md:hidden"
+        style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 3.5rem)" }}
+      >
         <div
           className="relative mx-2 grid h-14 items-center gap-x-2 overflow-hidden rounded-xl px-2 shadow-lg transition-colors duration-500"
           style={{ backgroundColor: mobileBg, gridTemplateColumns: "auto 1fr auto" }}

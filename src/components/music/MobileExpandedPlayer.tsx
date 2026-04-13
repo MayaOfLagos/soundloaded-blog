@@ -49,7 +49,10 @@ export function MobileExpandedPlayer({ onSeek }: MobileExpandedPlayerProps) {
     : "var(--brand)";
 
   return (
-    <div className="fixed inset-x-0 z-50 md:hidden" style={{ bottom: "4.3rem" }}>
+    <div
+      className="fixed inset-x-0 z-50 md:hidden"
+      style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 3.5rem)" }}
+    >
       <div
         className="mx-2 overflow-hidden rounded-xl shadow-lg transition-colors duration-500"
         style={{ backgroundColor: mobileBg }}

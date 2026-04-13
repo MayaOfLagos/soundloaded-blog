@@ -15,8 +15,10 @@ WORKDIR /app
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY prisma ./prisma/
 
-# Install only production dependencies + prisma
-RUN pnpm install --frozen-lockfile --prod && \
+# Install dependencies (HUSKY=0 prevents husky prepare from failing)
+# Worker needs tsx (devDep) at runtime and prisma (devDep) for generate
+ENV HUSKY=0
+RUN pnpm install --frozen-lockfile && \
     pnpm exec prisma generate
 
 # Copy worker code and shared lib

@@ -11,6 +11,9 @@ import { getSettings } from "@/lib/settings";
 import { JsonLd } from "@/components/common/JsonLd";
 import { buildWebSiteSchema, buildOrganizationSchema } from "@/lib/structured-data";
 
+/** Revalidate the homepage every 60 seconds (ISR) */
+export const revalidate = 60;
+
 interface HomePageProps {
   searchParams: Promise<{ page?: string }>;
 }
@@ -67,24 +70,16 @@ export default async function HomePage({ searchParams }: HomePageProps) {
 
             {/* ── Mobile-only: Right sidebar content below feed ── */}
             <div className="mt-8 space-y-5 lg:hidden">
-              <Suspense fallback={<SidebarBlockSkeleton />}>
-                <TrendingSidebar />
-              </Suspense>
-              <Suspense fallback={<SidebarBlockSkeleton />}>
-                <PopularMusicSidebar />
-              </Suspense>
+              <TrendingSidebarBlock />
+              <PopularMusicBlock />
               <MobileNewsletter />
             </div>
           </main>
 
           {/* ── RIGHT SIDEBAR (lg+ only) ── */}
           <aside className="sticky top-16 hidden h-[calc(100vh-4rem)] space-y-5 overflow-y-auto pb-8 lg:block">
-            <Suspense fallback={<SidebarBlockSkeleton />}>
-              <TrendingSidebar />
-            </Suspense>
-            <Suspense fallback={<SidebarBlockSkeleton />}>
-              <PopularMusicSidebar />
-            </Suspense>
+            <TrendingSidebarBlock />
+            <PopularMusicBlock />
 
             {/* Newsletter signup */}
             <div className="from-brand/10 via-card/80 to-card ring-border/40 overflow-hidden rounded-2xl bg-gradient-to-br ring-1">
@@ -102,6 +97,24 @@ export default async function HomePage({ searchParams }: HomePageProps) {
         </div>
       </div>
     </>
+  );
+}
+
+/* ━━━ Deduplicated sidebar wrappers (Suspense + single component) ━━━ */
+
+function TrendingSidebarBlock() {
+  return (
+    <Suspense fallback={<SidebarBlockSkeleton />}>
+      <TrendingSidebar />
+    </Suspense>
+  );
+}
+
+function PopularMusicBlock() {
+  return (
+    <Suspense fallback={<SidebarBlockSkeleton />}>
+      <PopularMusicSidebar />
+    </Suspense>
   );
 }
 

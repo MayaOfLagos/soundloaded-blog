@@ -55,7 +55,7 @@ function getIP(req: NextRequest): string {
   );
 }
 
-export async function proxy(req: NextRequest) {
+export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
   const ip = getIP(req);
 

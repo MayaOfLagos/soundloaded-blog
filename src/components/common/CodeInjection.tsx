@@ -1,33 +1,21 @@
-import { db } from "@/lib/db";
+import { getSettings } from "@/lib/settings";
 
 export async function HeadScripts() {
-  const raw = await db.siteSettings.findUnique({
-    where: { id: "default" },
-    select: { headerScripts: true },
-  });
-  const scripts = raw?.headerScripts;
-  if (!scripts) return null;
-  return <div dangerouslySetInnerHTML={{ __html: scripts }} />;
+  const settings = await getSettings();
+  if (!settings.headerScripts) return null;
+  return <div dangerouslySetInnerHTML={{ __html: settings.headerScripts }} />;
 }
 
 export async function FooterScripts() {
-  const raw = await db.siteSettings.findUnique({
-    where: { id: "default" },
-    select: { footerScripts: true },
-  });
-  const scripts = raw?.footerScripts;
-  if (!scripts) return null;
-  return <div dangerouslySetInnerHTML={{ __html: scripts }} />;
+  const settings = await getSettings();
+  if (!settings.footerScripts) return null;
+  return <div dangerouslySetInnerHTML={{ __html: settings.footerScripts }} />;
 }
 
 export async function CustomCss() {
-  const raw = await db.siteSettings.findUnique({
-    where: { id: "default" },
-    select: { customCss: true },
-  });
-  const css = raw?.customCss;
-  if (!css) return null;
-  return <style dangerouslySetInnerHTML={{ __html: css }} />;
+  const settings = await getSettings();
+  if (!settings.customCss) return null;
+  return <style dangerouslySetInnerHTML={{ __html: settings.customCss }} />;
 }
 
 function hexToRgb(hex: string): [number, number, number] {
@@ -60,11 +48,8 @@ function luminance(r: number, g: number, b: number): number {
 }
 
 export async function BrandColorStyle() {
-  const raw = await db.siteSettings.findUnique({
-    where: { id: "default" },
-    select: { brandColor: true },
-  });
-  const brand = raw?.brandColor;
+  const settings = await getSettings();
+  const brand = settings.brandColor;
   if (!brand || !/^#[0-9a-fA-F]{6}$/.test(brand)) return null;
 
   const [r, g, b] = hexToRgb(brand);

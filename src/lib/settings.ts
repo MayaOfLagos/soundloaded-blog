@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { cache } from "react";
+import { unstable_cache } from "next/cache";
 
 export interface PublicSettings {
   // General
@@ -66,6 +66,10 @@ export interface PublicSettings {
   maintenanceMessage: string;
   // Security (public subset)
   allowRegistration: boolean;
+  // Code Injection
+  headerScripts: string;
+  footerScripts: string;
+  customCss: string;
   // Appearance
   brandColor: string;
   enableDarkMode: boolean;
@@ -144,6 +148,9 @@ const DEFAULTS: PublicSettings = {
   maintenanceMode: false,
   maintenanceMessage: "We're upgrading. Be right back!",
   allowRegistration: true,
+  headerScripts: "",
+  footerScripts: "",
+  customCss: "",
   brandColor: "#e11d48",
   enableDarkMode: true,
   defaultTheme: "dark",
@@ -254,6 +261,9 @@ export function buildPublicSettings(
     maintenanceMode: bool(raw, "maintenanceMode", DEFAULTS.maintenanceMode),
     maintenanceMessage: str(raw, "maintenanceMessage", DEFAULTS.maintenanceMessage),
     allowRegistration: bool(raw, "allowRegistration", DEFAULTS.allowRegistration),
+    headerScripts: str(raw, "headerScripts", DEFAULTS.headerScripts),
+    footerScripts: str(raw, "footerScripts", DEFAULTS.footerScripts),
+    customCss: str(raw, "customCss", DEFAULTS.customCss),
     brandColor: str(raw, "brandColor", DEFAULTS.brandColor),
     enableDarkMode: bool(raw, "enableDarkMode", DEFAULTS.enableDarkMode),
     defaultTheme: str(raw, "defaultTheme", DEFAULTS.defaultTheme),
@@ -275,13 +285,18 @@ export function buildPublicSettings(
 
 /**
  * Server-side cached settings fetch.
- * React cache() deduplicates within a single request.
+ * unstable_cache caches across requests for 60 s, drastically reducing
+ * cold-start DB queries on Neon.
  */
-export const getSettings = cache(async (): Promise<PublicSettings> => {
-  try {
-    const raw = await db.siteSettings.findUnique({ where: { id: "default" } });
-    return buildPublicSettings(raw as unknown as Record<string, unknown>);
-  } catch {
-    return DEFAULTS;
-  }
-});
+export const getSettings = unstable_cache(
+  async (): Promise<PublicSettings> => {
+    try {
+      const raw = await db.siteSettings.findUnique({ where: { id: "default" } });
+      return buildPublicSettings(raw as unknown as Record<string, unknown>);
+    } catch {
+      return DEFAULTS;
+    }
+  },
+  ["site-settings"],
+  { revalidate: 60 }
+);

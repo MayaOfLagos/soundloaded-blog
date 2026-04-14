@@ -178,7 +178,7 @@ export function AudioProcessingDashboard({ initialJobs }: AudioProcessingDashboa
                 </TableCell>
                 <TableCell>{job.music.artist.name}</TableCell>
                 <TableCell className="text-muted-foreground text-xs">
-                  {job.music.format.toUpperCase()} · {formatBytes(job.music.fileSize)}
+                  {job.music.format?.toUpperCase() || "UNKNOWN"} · {formatBytes(job.music.fileSize)}
                 </TableCell>
                 <TableCell>
                   <StatusBadge status={job.status} />

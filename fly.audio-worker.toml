@@ -1,29 +1,27 @@
-# Fly.io configuration for the audio processing worker
-# Deploy with: fly launch --config fly.audio-worker.toml
-# Then: fly deploy --config fly.audio-worker.toml
+# fly.toml app configuration file generated for soundloaded-audio-worker on 2026-04-13T22:28:26+01:00
+#
+# See https://fly.io/docs/reference/configuration/ for information about how to use this file.
+#
 
-app = "soundloaded-audio-worker"
-primary_region = "lhr" # London — close to Cloudflare R2
+app = 'soundloaded-audio-worker'
+primary_region = 'lhr'
 
 [build]
-  dockerfile = "docker/Dockerfile.audio-worker"
+  dockerfile = 'docker/Dockerfile.audio-worker'
 
-# No HTTP service needed — this is a background worker
+[env]
+  AUDIO_TARGET_BITRATE = '128'
+  AUDIO_TARGET_FORMAT = 'aac'
+  R2_MUSIC_BUCKET = 'soundloadedblog-music'
+  WAVEFORM_PEAKS = '200'
+  WORKER_POLL_INTERVAL = '5000'
+
 [processes]
-  worker = "pnpm exec tsx worker/audio-processor.ts"
+  worker = 'pnpm exec tsx worker/audio-processor.ts'
 
 [[vm]]
-  size = "shared-cpu-1x"
-  memory = "512mb"
+  size = 'shared-cpu-1x'
+  memory = '512mb'
+  cpu_kind = 'shared'
   cpus = 1
-
-# Set secrets with:
-#   fly secrets set DATABASE_URL=... CLOUDFLARE_ACCOUNT_ID=... \
-#     R2_ACCESS_KEY_ID=... R2_SECRET_ACCESS_KEY=... \
-#     --config fly.audio-worker.toml
-[env]
-  R2_MUSIC_BUCKET = "soundloadedblog-music"
-  AUDIO_TARGET_FORMAT = "aac"
-  AUDIO_TARGET_BITRATE = "128"
-  WAVEFORM_PEAKS = "200"
-  WORKER_POLL_INTERVAL = "5000"
+  memory_mb = 512

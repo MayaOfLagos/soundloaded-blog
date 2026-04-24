@@ -5,6 +5,7 @@ import { getToken } from "next-auth/jwt";
 
 // Roles that are allowed to access /admin routes
 const ADMIN_ROLES = new Set(["ADMIN", "SUPER_ADMIN", "EDITOR"]);
+const authSecret = process.env.NEXTAUTH_SECRET ?? process.env.AUTH_SECRET;
 
 // Only instantiate rate limiters when Upstash env vars are present
 const hasUpstash = !!process.env.UPSTASH_REDIS_REST_URL && !!process.env.UPSTASH_REDIS_REST_TOKEN;
@@ -55,21 +56,48 @@ function getIP(req: NextRequest): string {
   );
 }
 
+function usesSecureAuthCookies(req: NextRequest): boolean {
+  const forwardedProto = req.headers.get("x-forwarded-proto")?.split(",")[0].trim();
+  return req.nextUrl.protocol === "https:" || forwardedProto === "https";
+}
+
+function logAdminAuthFailure(
+  req: NextRequest,
+  reason: "missing-token" | "insufficient-role",
+  role: string,
+  secureCookie: boolean
+) {
+  console.warn("[admin-auth] denied", {
+    reason,
+    pathname: req.nextUrl.pathname,
+    role,
+    host: req.headers.get("host"),
+    secureCookie,
+  });
+}
+
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
   const ip = getIP(req);
 
   // ── Admin route protection ────────────────────────────────────────
   if (pathname.startsWith("/admin") || pathname.startsWith("/api/admin")) {
-    const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET });
+    const secureCookie = usesSecureAuthCookies(req);
+    const token = await getToken({
+      req,
+      secret: authSecret,
+      secureCookie,
+    });
     const role = (token?.role as string) ?? "";
 
     if (pathname.startsWith("/api/admin")) {
       // API routes return JSON errors
       if (!token) {
+        logAdminAuthFailure(req, "missing-token", role, secureCookie);
         return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
       }
       if (!ADMIN_ROLES.has(role)) {
+        logAdminAuthFailure(req, "insufficient-role", role, secureCookie);
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
       }
 
@@ -102,6 +130,7 @@ export async function middleware(req: NextRequest) {
     } else {
       // Page routes redirect to login
       if (!token || !ADMIN_ROLES.has(role)) {
+        logAdminAuthFailure(req, token ? "insufficient-role" : "missing-token", role, secureCookie);
         const loginUrl = new URL("/login", req.url);
         loginUrl.searchParams.set("callbackUrl", pathname);
         return NextResponse.redirect(loginUrl);

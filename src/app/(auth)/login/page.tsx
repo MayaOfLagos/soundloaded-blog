@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { signIn } from "next-auth/react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -20,13 +20,21 @@ const schema = z.object({
 });
 type FormData = z.infer<typeof schema>;
 
+function getSafeCallbackUrl(callbackUrl: string | null): string {
+  if (!callbackUrl?.startsWith("/")) {
+    return "/admin/dashboard";
+  }
+
+  return callbackUrl;
+}
+
 export default function LoginPage() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const [error, setError] = useState<string | null>(null);
   const [isLocked, setIsLocked] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const { data: settings } = useSettings();
+  const callbackUrl = getSafeCallbackUrl(searchParams.get("callbackUrl"));
 
   useEffect(() => {
     if (searchParams.get("registered") === "1") {
@@ -49,6 +57,7 @@ export default function LoginPage() {
     const result = await signIn("credentials", {
       email: data.email,
       password: data.password,
+      callbackUrl,
       redirect: false,
     });
 
@@ -75,8 +84,7 @@ export default function LoginPage() {
       toast.error("Login failed. Check your credentials.");
     } else {
       toast.success("Welcome back!");
-      router.push("/admin/dashboard");
-      router.refresh();
+      window.location.assign(result?.url ?? callbackUrl);
     }
   };
 

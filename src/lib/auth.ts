@@ -5,6 +5,8 @@ import bcrypt from "bcryptjs";
 import { db } from "./db";
 import { verifyTurnstile } from "./turnstile";
 
+const authSecret = process.env.NEXTAUTH_SECRET ?? process.env.AUTH_SECRET;
+
 // Login attempt tracking via Upstash Redis (if available)
 let redis: {
   get: (key: string) => Promise<string | null>;
@@ -78,7 +80,7 @@ async function clearLoginAttempts(email: string): Promise<void> {
 }
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  secret: process.env.NEXTAUTH_SECRET,
+  secret: authSecret,
   session: { strategy: "jwt", maxAge: 7 * 24 * 60 * 60 },
   pages: {
     signIn: "/login",

@@ -18,6 +18,7 @@ import {
   Shield,
   LogOut,
   LogIn,
+  Sparkles,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -103,6 +104,13 @@ export function UserMenu() {
       ? [{ id: "admin", label: "Admin Panel", icon: Shield, href: "/admin" } as MenuItem]
       : []),
     { id: "divider-3", label: "", icon: null },
+    {
+      id: "landing",
+      label: "View Landing Page",
+      icon: Sparkles,
+      href: "/api/exit",
+    },
+    { id: "divider-4", label: "", icon: null },
     {
       id: "logout",
       label: "Sign Out",

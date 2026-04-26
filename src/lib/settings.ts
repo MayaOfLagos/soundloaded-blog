@@ -90,6 +90,8 @@ export interface PublicSettings {
   enableSearch: boolean;
   // Player Experience
   enableNowPlayingDrawer: boolean;
+  // Landing gate
+  enableLandingGate: boolean;
 }
 
 const DEFAULTS: PublicSettings = {
@@ -167,6 +169,7 @@ const DEFAULTS: PublicSettings = {
   enableArtists: true,
   enableSearch: true,
   enableNowPlayingDrawer: true,
+  enableLandingGate: true,
 };
 
 function resolveImageUrl(r2Key: string | null | undefined): string | null {
@@ -280,6 +283,7 @@ export function buildPublicSettings(
     enableArtists: bool(raw, "enableArtists", DEFAULTS.enableArtists),
     enableSearch: bool(raw, "enableSearch", DEFAULTS.enableSearch),
     enableNowPlayingDrawer: bool(raw, "enableNowPlayingDrawer", DEFAULTS.enableNowPlayingDrawer),
+    enableLandingGate: bool(raw, "enableLandingGate", DEFAULTS.enableLandingGate),
   };
 }
 

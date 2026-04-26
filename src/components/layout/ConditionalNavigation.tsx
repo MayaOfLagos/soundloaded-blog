@@ -13,7 +13,7 @@ interface ConditionalNavigationProps {
 }
 
 // Routes that should NOT show the public Navbar/Footer
-const EXCLUDE_PATHS = ["/admin", "/payload-admin", "/login", "/register"];
+const EXCLUDE_PATHS = ["/admin", "/payload-admin", "/login", "/register", "/landing"];
 
 export function ConditionalNavigation({ children }: ConditionalNavigationProps) {
   const pathname = usePathname();

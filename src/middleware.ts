@@ -127,6 +127,33 @@ export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
   const ip = getIP(req);
 
+  // ── 0. Premium landing gate ───────────────────────────────────────────────
+  // When a visitor hits / without the sl_entered cookie they get the premium
+  // landing page (internal /landing route, URL stays /).
+  // Once they click "Enter Soundloaded" the /api/enter route sets the cookie
+  // and redirects back to /, which then falls through to the blog.
+  if (pathname === "/") {
+    const entered = req.cookies.get("sl_entered")?.value;
+    if (!entered) {
+      // Check if the gate is enabled in site settings (respects admin toggle)
+      let gateEnabled = true;
+      try {
+        const res = await fetch(`${req.nextUrl.origin}/api/settings`, {
+          headers: { "x-internal": "1" },
+        });
+        if (res.ok) {
+          const s = (await res.json()) as { enableLandingGate?: boolean };
+          gateEnabled = s.enableLandingGate !== false;
+        }
+      } catch {
+        // If settings fetch fails, default to showing the gate
+      }
+      if (gateEnabled) {
+        return NextResponse.rewrite(new URL("/landing", req.url));
+      }
+    }
+  }
+
   // ── 1. Block direct access to the internal gateway route ──────────────────
   // This path is only served through the rewrite in step 2 below.
   // The path lives under /login/ to inherit ConditionalNavigation exclusion,

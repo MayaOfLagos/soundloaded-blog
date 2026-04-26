@@ -20,7 +20,6 @@ import { Label } from "@/components/ui/label";
 const schema = z.object({
   email: z.string().email("Enter a valid email"),
   password: z.string().min(8, "Password must be at least 8 characters"),
-  _h: z.string().max(0).optional(),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -64,8 +63,6 @@ export function AdminLoginForm({
   } = useForm<FormData>({ resolver: zodResolver(schema) });
 
   const onSubmit = async (data: FormData) => {
-    if (data._h) return;
-
     setError(null);
     setIsLocked(false);
 
@@ -161,15 +158,6 @@ export function AdminLoginForm({
                     : error}
                 </p>
               ) : null}
-
-              <input
-                type="text"
-                tabIndex={-1}
-                aria-hidden="true"
-                autoComplete="off"
-                className="absolute -left-[9999px] h-0 w-0 overflow-hidden opacity-0"
-                {...register("_h")}
-              />
 
               <div className="grid gap-2">
                 <Label htmlFor="email">Email</Label>

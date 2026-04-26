@@ -69,6 +69,9 @@ scripts/
 # IDE
 .vscode/
 
+# Local backups (safety copies, never commit)
+**/_*-bak/
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

@@ -13,6 +13,11 @@ export const artistSchema = z.object({
   facebook: z.string().optional().nullable(),
   spotify: z.string().optional().nullable(),
   appleMusic: z.string().optional().nullable(),
+  youtube: z.string().optional().nullable(),
+  tiktok: z.string().optional().nullable(),
+  soundcloud: z.string().optional().nullable(),
+  boomplay: z.string().optional().nullable(),
+  website: z.string().url().optional().nullable().or(z.literal("")),
   verified: z.boolean().optional(),
 });
 

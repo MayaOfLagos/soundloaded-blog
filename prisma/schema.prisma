@@ -205,6 +205,11 @@ model Artist {
   facebook   String?
   spotify    String?
   appleMusic String?
+  youtube    String?
+  tiktok     String?
+  soundcloud String?
+  boomplay   String?
+  website    String?
   verified   Boolean  @default(false)
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt

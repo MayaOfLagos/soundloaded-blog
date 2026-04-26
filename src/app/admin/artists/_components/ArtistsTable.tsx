@@ -44,6 +44,11 @@ interface Artist {
   facebook: string | null;
   spotify: string | null;
   appleMusic: string | null;
+  youtube: string | null;
+  tiktok: string | null;
+  soundcloud: string | null;
+  boomplay: string | null;
+  website: string | null;
   verified: boolean;
   _count: { music: number; albums: number };
 }

@@ -1,5 +1,19 @@
 /** @type {import('next-sitemap').IConfig} */
-const siteUrl = process.env.NEXT_PUBLIC_APP_URL || "https://soundloaded.ng";
+// Prefer NEXT_PUBLIC_SITE_URL, then NEXT_PUBLIC_APP_URL — but reject any
+// localhost value so a local dev build never bakes localhost into the sitemap.
+function resolvedSiteUrl() {
+  const candidates = [
+    process.env.NEXT_PUBLIC_SITE_URL,
+    process.env.NEXT_PUBLIC_APP_URL,
+  ];
+  for (const url of candidates) {
+    if (url && !url.includes("localhost") && !url.includes("127.0.0.1")) {
+      return url.replace(/\/$/, ""); // strip trailing slash
+    }
+  }
+  return "https://soundloaded.ng";
+}
+const siteUrl = resolvedSiteUrl();
 
 module.exports = {
   siteUrl,

@@ -44,6 +44,11 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
         facebook: data.facebook ?? null,
         spotify: data.spotify ?? null,
         appleMusic: data.appleMusic ?? null,
+        youtube: data.youtube ?? null,
+        tiktok: data.tiktok ?? null,
+        soundcloud: data.soundcloud ?? null,
+        boomplay: data.boomplay ?? null,
+        website: data.website || null,
         verified: data.verified ?? false,
       },
     });

@@ -20,6 +20,8 @@ const UPLOAD_TYPES = [
   "og-image",
   "pwa-icon",
   "pwa-splash",
+  "artist-photo",
+  "artist-cover",
 ] as const;
 
 const uploadSchema = z.object({
@@ -41,9 +43,14 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { type, contentType, filename } = uploadSchema.parse(body);
 
-    const ext = filename?.split(".").pop() || "png";
+    const ext = filename?.split(".").pop() || "jpg";
     const id = crypto.randomUUID().replace(/-/g, "").slice(0, 16);
-    const r2Key = `settings/${type}/${id}.${ext}`;
+    const r2Key =
+      type === "artist-photo"
+        ? `artists/photo/${id}.${ext}`
+        : type === "artist-cover"
+          ? `artists/cover/${id}.${ext}`
+          : `settings/${type}/${id}.${ext}`;
 
     const uploadUrl = await getPresignedUploadUrl(MEDIA_BUCKET, r2Key, contentType);
 

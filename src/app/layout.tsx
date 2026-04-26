@@ -4,6 +4,7 @@ import { ThemeProvider } from "next-themes";
 import { Toaster } from "react-hot-toast";
 import { Analytics } from "@vercel/analytics/react";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import { headers } from "next/headers";
 import { QueryProvider } from "@/components/common/QueryProvider";
 import { ConditionalNavigation } from "@/components/layout/ConditionalNavigation";
 import { getSettings } from "@/lib/settings";
@@ -90,6 +91,13 @@ export const viewport: Viewport = {
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const settings = await getSettings();
+
+  // When the admin portal is requested, middleware injects this header via rewrite.
+  // Skip public navigation entirely — the page is self-contained and cleans up after itself.
+  const h = await headers();
+  const isAdminPortal =
+    !!process.env.ADMIN_PORTAL_SECRET &&
+    h.get("x-admin-gateway-origin") === process.env.ADMIN_PORTAL_SECRET;
   return (
     <html lang={settings.language || "en"} suppressHydrationWarning>
       <head>
@@ -139,7 +147,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body className={`${inter.variable} font-sans antialiased`}>
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
           <QueryProvider>
-            <ConditionalNavigation>{children}</ConditionalNavigation>
+            {isAdminPortal ? children : <ConditionalNavigation>{children}</ConditionalNavigation>}
           </QueryProvider>
           <Toaster
             position="bottom-center"

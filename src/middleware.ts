@@ -3,51 +3,97 @@ import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
 import { getToken } from "next-auth/jwt";
 
-// Roles that are allowed to access /admin routes
+// ── Constants ─────────────────────────────────────────────────────────────────
 const ADMIN_ROLES = new Set(["ADMIN", "SUPER_ADMIN", "EDITOR"]);
 const authSecret = process.env.NEXTAUTH_SECRET ?? process.env.AUTH_SECRET;
 
-// Only instantiate rate limiters when Upstash env vars are present
+// Internal route that the admin login page actually lives at.
+// Lives under /login/ so ConditionalNavigation already excludes it from public nav.
+// Direct access always returns 404 — only reachable via middleware rewrite.
+const ADMIN_GATEWAY_INTERNAL = "/login/admin-portal";
+
+// Public-facing admin login URL — admin sets this in env (ADMIN_LOGIN_PATH).
+const ADMIN_LOGIN_PATH = process.env.ADMIN_LOGIN_PATH ?? "";
+
+// Secret that proves a request came from our middleware rewrite, not a browser.
+const ADMIN_PORTAL_SECRET = process.env.ADMIN_PORTAL_SECRET ?? "";
+
+// ── WAF: user-agents blocked on the admin portal ─────────────────────────────
+const BLOCKED_UA_FRAGMENTS = [
+  "sqlmap",
+  "nikto",
+  "nmap",
+  "masscan",
+  "zgrab",
+  "nuclei",
+  "dirbuster",
+  "gobuster",
+  "hydra",
+  "medusa",
+  "nessus",
+  "openvas",
+  "acunetix",
+  "burpsuite",
+  "metasploit",
+  "python-requests/",
+  "go-http-client/1.",
+  "curl/",
+  "wget/",
+  "scrapy/",
+  "semrushbot",
+  "ahrefsbot",
+  "mj12bot",
+  "dotbot",
+  "petalbot",
+  "yandexbot",
+];
+
+function isBlockedUA(ua: string): boolean {
+  if (!ua || ua.length < 10) return true; // missing / suspiciously short UA
+  const lower = ua.toLowerCase();
+  return BLOCKED_UA_FRAGMENTS.some((fragment) => lower.includes(fragment));
+}
+
+// ── IP whitelist — empty means allow everyone ─────────────────────────────────
+function isIPAllowed(ip: string): boolean {
+  const raw = process.env.ADMIN_IP_WHITELIST ?? "";
+  if (!raw.trim()) return true;
+  const whitelist = raw
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  return whitelist.includes(ip);
+}
+
+// ── Rate limiters ─────────────────────────────────────────────────────────────
 const hasUpstash = !!process.env.UPSTASH_REDIS_REST_URL && !!process.env.UPSTASH_REDIS_REST_TOKEN;
 
-const streamLimit = hasUpstash
-  ? new Ratelimit({
-      redis: Redis.fromEnv(),
-      limiter: Ratelimit.slidingWindow(20, "1 h"),
-      analytics: false,
-      prefix: "sl_stream",
-    })
-  : null;
+function makeLimit(
+  count: number,
+  window: Parameters<typeof Ratelimit.slidingWindow>[1],
+  prefix: string
+) {
+  if (!hasUpstash) return null;
+  return new Ratelimit({
+    redis: Redis.fromEnv(),
+    limiter: Ratelimit.slidingWindow(count, window),
+    analytics: false,
+    prefix,
+  });
+}
 
-const apiLimit = hasUpstash
-  ? new Ratelimit({
-      redis: Redis.fromEnv(),
-      limiter: Ratelimit.slidingWindow(120, "1 m"),
-      analytics: false,
-      prefix: "sl_api",
-    })
-  : null;
+// Admin portal: 5 page-loads per IP per 15 min — brute-force discovery protection
+const adminPortalLimit = makeLimit(5, "15 m", "sl_admin_portal");
+// Admin API: 60 req/min per IP
+const adminApiLimit = makeLimit(60, "1 m", "sl_admin_api");
+// Music streams: 20/hr per IP
+const streamLimit = makeLimit(20, "1 h", "sl_stream");
+// General public API: 120 req/min per IP
+const apiLimit = makeLimit(120, "1 m", "sl_api");
+// Sensitive auth (forgot-password, reset, check-lockout): 5 req/15 min per IP
+const authSensitiveLimit = makeLimit(5, "15 m", "sl_auth_sensitive");
 
-// Admin API rate limit (60 req/min per IP — prevents rapid abuse with compromised credentials)
-const adminApiLimit = hasUpstash
-  ? new Ratelimit({
-      redis: Redis.fromEnv(),
-      limiter: Ratelimit.slidingWindow(60, "1 m"),
-      analytics: false,
-      prefix: "sl_admin_api",
-    })
-  : null;
-
-// Sensitive auth route rate limit (5 req/15min per IP — forgot-password, reset-password, check-lockout)
-const authSensitiveLimit = hasUpstash
-  ? new Ratelimit({
-      redis: Redis.fromEnv(),
-      limiter: Ratelimit.slidingWindow(5, "15 m"),
-      analytics: false,
-      prefix: "sl_auth_sensitive",
-    })
-  : null;
-
+// ── Helpers ───────────────────────────────────────────────────────────────────
 function getIP(req: NextRequest): string {
   return (
     req.headers.get("cf-connecting-ip") ??
@@ -57,8 +103,8 @@ function getIP(req: NextRequest): string {
 }
 
 function usesSecureAuthCookies(req: NextRequest): boolean {
-  const forwardedProto = req.headers.get("x-forwarded-proto")?.split(",")[0].trim();
-  return req.nextUrl.protocol === "https:" || forwardedProto === "https";
+  const proto = req.headers.get("x-forwarded-proto")?.split(",")[0].trim();
+  return req.nextUrl.protocol === "https:" || proto === "https";
 }
 
 function logAdminAuthFailure(
@@ -76,18 +122,57 @@ function logAdminAuthFailure(
   });
 }
 
+// ── Middleware ────────────────────────────────────────────────────────────────
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl;
   const ip = getIP(req);
 
-  // ── Admin route protection ────────────────────────────────────────
+  // ── 1. Block direct access to the internal gateway route ──────────────────
+  // This path is only served through the rewrite in step 2 below.
+  // The path lives under /login/ to inherit ConditionalNavigation exclusion,
+  // but direct access is always rejected — only ADMIN_LOGIN_PATH rewrites reach it.
+  if (pathname === ADMIN_GATEWAY_INTERNAL) {
+    return new NextResponse(null, { status: 404 });
+  }
+
+  // ── 2. Admin portal entry point ────────────────────────────────────────────
+  // ADMIN_LOGIN_PATH is the secret URL that admins use to reach the login page.
+  if (ADMIN_LOGIN_PATH && pathname === ADMIN_LOGIN_PATH) {
+    // WAF: reject known attack tools and scrapers
+    const ua = req.headers.get("user-agent") ?? "";
+    if (isBlockedUA(ua)) return new NextResponse(null, { status: 404 });
+
+    // IP whitelist (if configured, only listed IPs see the login form)
+    if (!isIPAllowed(ip)) return new NextResponse(null, { status: 404 });
+
+    // Per-IP rate limit — 5 attempts per 15 min
+    if (adminPortalLimit) {
+      const { success } = await adminPortalLimit.limit(ip);
+      // Return 404 so scrapers never learn whether the path exists
+      if (!success) return new NextResponse(null, { status: 404 });
+    }
+
+    // Already-authenticated admins skip the form and go straight to the dashboard
+    const secureCookie = usesSecureAuthCookies(req);
+    const token = await getToken({ req, secret: authSecret, secureCookie });
+    if (token && ADMIN_ROLES.has((token.role as string) ?? "")) {
+      return NextResponse.redirect(new URL("/admin", req.url));
+    }
+
+    // All checks passed — rewrite to the internal gateway page.
+    // The portal secret is injected as a request header so the server component
+    // can verify the request came through here (not directly from a browser).
+    const reqHeaders = new Headers(req.headers);
+    reqHeaders.set("x-admin-gateway-origin", ADMIN_PORTAL_SECRET);
+    return NextResponse.rewrite(new URL(ADMIN_GATEWAY_INTERNAL, req.url), {
+      request: { headers: reqHeaders },
+    });
+  }
+
+  // ── 3. Admin route protection ──────────────────────────────────────────────
   if (pathname.startsWith("/admin") || pathname.startsWith("/api/admin")) {
     const secureCookie = usesSecureAuthCookies(req);
-    const token = await getToken({
-      req,
-      secret: authSecret,
-      secureCookie,
-    });
+    const token = await getToken({ req, secret: authSecret, secureCookie });
     const role = (token?.role as string) ?? "";
 
     if (pathname.startsWith("/api/admin")) {
@@ -101,23 +186,21 @@ export async function middleware(req: NextRequest) {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
       }
 
-      // ── CSRF protection for mutating requests ─────────────────────
+      // CSRF: reject cross-origin mutating requests
       const method = req.method.toUpperCase();
       if (["POST", "PUT", "PATCH", "DELETE"].includes(method)) {
         const origin = req.headers.get("origin");
         const referer = req.headers.get("referer");
         const host = req.headers.get("host") ?? "";
         const allowedOrigin = `${req.nextUrl.protocol}//${host}`;
-
         const originOk =
           (origin && origin === allowedOrigin) || (referer && referer.startsWith(allowedOrigin));
-
         if (!originOk) {
           return NextResponse.json({ error: "CSRF validation failed" }, { status: 403 });
         }
       }
 
-      // ── Admin API rate limiting ───────────────────────────────────
+      // Admin API rate limit
       if (adminApiLimit) {
         const { success } = await adminApiLimit.limit(ip);
         if (!success) {
@@ -128,18 +211,18 @@ export async function middleware(req: NextRequest) {
         }
       }
     } else {
-      // Page routes redirect to login
+      // Page routes: redirect unauthenticated requests to the admin portal
       if (!token || !ADMIN_ROLES.has(role)) {
         logAdminAuthFailure(req, token ? "insufficient-role" : "missing-token", role, secureCookie);
-        const loginUrl = new URL("/login", req.url);
+        const dest = ADMIN_LOGIN_PATH || "/login";
+        const loginUrl = new URL(dest, req.url);
         loginUrl.searchParams.set("callbackUrl", pathname);
         return NextResponse.redirect(loginUrl);
       }
     }
   }
 
-  // ── Maintenance mode ──────────────────────────────────────────────
-  // Skip maintenance check for admin, API, auth, and static paths
+  // ── 4. Maintenance mode ────────────────────────────────────────────────────
   const skipMaintenance =
     pathname.startsWith("/admin") ||
     pathname.startsWith("/api") ||
@@ -147,26 +230,26 @@ export async function middleware(req: NextRequest) {
     pathname.startsWith("/register") ||
     pathname.startsWith("/maintenance") ||
     pathname.startsWith("/_next") ||
-    pathname.startsWith("/icons");
+    pathname.startsWith("/icons") ||
+    (ADMIN_LOGIN_PATH !== "" && pathname === ADMIN_LOGIN_PATH);
 
   if (!skipMaintenance) {
     try {
-      const baseUrl = req.nextUrl.origin;
-      const res = await fetch(`${baseUrl}/api/settings`, {
+      const res = await fetch(`${req.nextUrl.origin}/api/settings`, {
         headers: { "x-internal": "1" },
       });
       if (res.ok) {
-        const settings = await res.json();
+        const settings = (await res.json()) as { maintenanceMode?: boolean };
         if (settings.maintenanceMode) {
           return NextResponse.rewrite(new URL("/maintenance", req.url));
         }
       }
     } catch {
-      // If settings fetch fails, don't block the site
+      // Settings fetch failure must never block the site
     }
   }
 
-  // ── Rate-limit sensitive auth endpoints (5 req/15min per IP) ────
+  // ── 5. Sensitive auth route rate limiting ─────────────────────────────────
   const sensitiveAuthPaths = [
     "/api/auth/forgot-password",
     "/api/auth/reset-password",
@@ -184,7 +267,7 @@ export async function middleware(req: NextRequest) {
     }
   }
 
-  // Rate limit music streams (20/hr per IP)
+  // ── 6. Music stream rate limiting ─────────────────────────────────────────
   if (pathname.match(/^\/api\/music\/[^/]+\/stream/) && streamLimit) {
     const { success, limit, remaining, reset } = await streamLimit.limit(ip);
     if (!success) {
@@ -201,7 +284,7 @@ export async function middleware(req: NextRequest) {
     }
   }
 
-  // General API rate limit (120 req/min per IP — public API only, excludes user-specific endpoints)
+  // ── 7. General public API rate limiting ───────────────────────────────────
   if (
     pathname.startsWith("/api/") &&
     !pathname.startsWith("/api/admin") &&

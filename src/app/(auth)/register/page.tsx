@@ -99,7 +99,7 @@ export default function RegisterPage() {
 
   if (!allowRegistration) {
     return (
-      <div className="space-y-6 text-center">
+      <div className="w-full max-w-sm space-y-6 text-center">
         <div className="bg-muted/50 mx-auto flex h-14 w-14 items-center justify-center rounded-2xl">
           <UserPlus className="text-muted-foreground h-7 w-7" />
         </div>
@@ -119,7 +119,7 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="w-full max-w-sm space-y-6">
       {/* Header */}
       <div className="text-center">
         <div className="bg-brand/10 mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl">

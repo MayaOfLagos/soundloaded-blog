@@ -48,7 +48,7 @@ export async function GET(req: NextRequest) {
         excerpt: p.excerpt ?? null,
         coverImage: p.coverImage ?? null,
         publishedAt: p.publishedAt ?? p.createdAt ?? null,
-        category: p.categoryName ? { name: p.categoryName, slug: p.categorySlug } : null,
+        category: p.categoryName ?? null,
         type: p.type ?? null,
         href: getPostUrl(
           {

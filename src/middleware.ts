@@ -149,7 +149,11 @@ export async function middleware(req: NextRequest) {
         // If settings fetch fails, default to showing the gate
       }
       if (gateEnabled) {
-        return NextResponse.rewrite(new URL("/landing", req.url));
+        const reqHeaders = new Headers(req.headers);
+        reqHeaders.set("x-landing-gate", "1");
+        return NextResponse.rewrite(new URL("/landing", req.url), {
+          request: { headers: reqHeaders },
+        });
       }
     }
   }

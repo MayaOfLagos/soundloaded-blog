@@ -98,6 +98,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const isAdminPortal =
     !!process.env.ADMIN_PORTAL_SECRET &&
     h.get("x-admin-gateway-origin") === process.env.ADMIN_PORTAL_SECRET;
+  // When the premium landing gate fires, middleware injects this header.
+  // The URL stays / but the page is the self-contained PremiumLanding — no blog nav needed.
+  const isLandingGate = h.get("x-landing-gate") === "1";
   return (
     <html lang={settings.language || "en"} suppressHydrationWarning>
       <head>
@@ -147,7 +150,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body className={`${inter.variable} font-sans antialiased`}>
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
           <QueryProvider>
-            {isAdminPortal ? children : <ConditionalNavigation>{children}</ConditionalNavigation>}
+            {isAdminPortal || isLandingGate ? (
+              children
+            ) : (
+              <ConditionalNavigation>{children}</ConditionalNavigation>
+            )}
           </QueryProvider>
           <Toaster
             position="bottom-center"

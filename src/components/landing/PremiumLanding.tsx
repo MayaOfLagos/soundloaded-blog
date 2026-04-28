@@ -1,26 +1,44 @@
 import Image from "next/image";
 import Link from "next/link";
-import { Music, Newspaper, TrendingUp, Download, Play, ArrowRight, Radio } from "lucide-react";
+import { Music, Newspaper, Download, Play, ArrowRight, Radio, TrendingUp } from "lucide-react";
 import { getLatestPosts } from "@/lib/api/posts";
-import { getPopularMusic } from "@/lib/api/music";
+import {
+  getDistinctGenres,
+  getLatestArtists,
+  getMostStreamedMusic,
+  getOrbitArtists,
+  getPopularMusic,
+} from "@/lib/api/music";
 import { getSettings } from "@/lib/settings";
 import { NewsletterForm } from "@/components/common/NewsletterForm";
 import { Logo } from "@/components/common/Logo";
 import { formatRelativeDate } from "@/lib/utils";
 import { PostImage } from "@/components/blog/PostImage";
+import { SolarSystemOrbit } from "@/components/landing/SolarSystemOrbit";
+import { GenreSpotlight } from "@/components/landing/GenreSpotlight";
+import { TopInNigeria } from "@/components/landing/TopInNigeria";
+import { FeaturedArtists } from "@/components/landing/FeaturedArtists";
+import { ArtistsCTABanner } from "@/components/landing/ArtistsCTABanner";
+import { PremiumFooter } from "@/components/landing/PremiumFooter";
+import "@/styles/solar-system-orbit.css";
 
 export async function PremiumLanding() {
-  const [settings, posts, tracks] = await Promise.all([
-    getSettings(),
-    getLatestPosts({ limit: 6, permalinkStructure: undefined }),
-    getPopularMusic({ limit: 5 }),
-  ]);
+  const [settings, posts, tracks, orbitArtists, chartTracks, featuredArtists, genres] =
+    await Promise.all([
+      getSettings(),
+      getLatestPosts({ limit: 6, permalinkStructure: undefined }),
+      getPopularMusic({ limit: 5 }),
+      getOrbitArtists({ limit: 12 }),
+      getMostStreamedMusic({ limit: 10 }),
+      getLatestArtists({ limit: 12 }),
+      getDistinctGenres(),
+    ]);
 
   const siteName = settings.siteName ?? "Soundloaded";
-  const tagline = settings.tagline ?? "Nigeria's #1 music download & entertainment blog";
-
   const featuredPost = posts[0] ?? null;
   const gridPosts = posts.slice(1, 5);
+  const centerLogo = settings.logoDark ?? settings.logoLight;
+  const featuredArtistsWithPhotos = featuredArtists.filter((a) => !!a.photo).slice(0, 6);
 
   return (
     <div className="bg-background text-foreground min-h-screen">
@@ -50,68 +68,70 @@ export async function PremiumLanding() {
       </header>
 
       {/* ── HERO ────────────────────────────────────────────────────────── */}
-      <section className="relative overflow-hidden">
-        {/* Background gradient */}
-        <div className="from-brand/5 pointer-events-none absolute inset-0 bg-linear-to-b to-transparent" />
+      <section className="px-3 pt-4 pb-6 sm:px-6 sm:pt-6 sm:pb-10 lg:pt-8 lg:pb-14">
+        <div className="mx-auto max-w-7xl">
+          <div className="relative overflow-hidden rounded-3xl ring-1 ring-white/10 lg:rounded-[2.5rem]">
+            {/* Layered gradient background */}
+            <div className="absolute inset-0 bg-[#0a0612]" />
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_70%_at_15%_15%,rgba(217,70,239,0.30),transparent_55%)]" />
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_55%_70%_at_85%_85%,rgba(168,85,247,0.22),transparent_60%)]" />
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_40%_50%_at_50%_50%,rgba(251,191,36,0.05),transparent_70%)]" />
+            <div className="absolute inset-0 bg-linear-to-br from-transparent via-transparent to-black/40" />
 
-        <div className="mx-auto max-w-7xl px-4 py-20 sm:px-6 sm:py-28 lg:py-36">
-          <div className="flex flex-col items-center gap-6 text-center">
-            <div className="bg-brand/10 text-brand ring-brand/20 inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-semibold ring-1">
-              <Radio className="h-3 w-3 animate-pulse" />
-              Nigeria&apos;s #1 Music &amp; Entertainment Platform
-            </div>
-            <h1 className="max-w-4xl text-5xl leading-[1.1] font-black tracking-tight sm:text-6xl lg:text-7xl">
-              Where <span className="text-brand">Nigerian Music</span> Comes to Life
-            </h1>
-            <p className="text-muted-foreground max-w-2xl text-lg leading-relaxed sm:text-xl">
-              {tagline}. Latest drops, breaking music news, artist stories, and free downloads — all
-              in one place.
-            </p>
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <Link
-                href="/api/enter"
-                className="bg-brand text-brand-foreground hover:bg-brand/90 inline-flex items-center gap-2 rounded-full px-8 py-3.5 text-base font-bold transition-all duration-200 hover:scale-105"
-              >
-                Explore Music &amp; News
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-              <Link
-                href="/music"
-                className="border-border hover:bg-muted inline-flex items-center gap-2 rounded-full border px-8 py-3.5 text-base font-semibold transition-colors"
-              >
-                <Download className="h-4 w-4" />
-                Free Downloads
-              </Link>
-            </div>
+            <div className="relative grid items-center gap-10 px-6 py-12 sm:px-10 sm:py-16 lg:grid-cols-[1.15fr_1fr] lg:gap-12 lg:px-16 lg:py-20">
+              <div className="flex flex-col gap-6 lg:gap-8">
+                <h1 className="text-4xl leading-[1.05] font-black tracking-tight text-white sm:text-5xl lg:text-6xl xl:text-7xl">
+                  Discover The <br className="hidden sm:block" />
+                  <span className="bg-linear-to-r from-fuchsia-400 via-purple-400 to-amber-300 bg-clip-text text-transparent">
+                    Sound Of Africa
+                  </span>
+                </h1>
 
-            {/* Stats row */}
-            <div className="border-border/40 mt-4 flex flex-wrap items-center justify-center gap-8 border-t pt-8">
-              {[
-                { icon: Music, label: "Tracks Available", value: "10,000+" },
-                { icon: Newspaper, label: "Stories Published", value: "5,000+" },
-                { icon: Download, label: "Downloads Daily", value: "50,000+" },
-              ].map(({ icon: Icon, label, value }) => (
-                <div key={label} className="flex flex-col items-center gap-1">
-                  <div className="flex items-center gap-2">
-                    <Icon className="text-brand h-4 w-4" />
-                    <span className="text-2xl font-black">{value}</span>
-                  </div>
-                  <span className="text-muted-foreground text-xs">{label}</span>
+                <p className="max-w-xl text-base leading-relaxed text-white/75 sm:text-lg">
+                  The home of Afrobeats. Stream the latest, download what you love, and follow the
+                  artists shaping Nigeria&apos;s sound — all in one place.
+                </p>
+
+                <div className="flex flex-col gap-3 pt-1 sm:flex-row sm:gap-4">
+                  <Link
+                    href="/api/enter?next=/music"
+                    className="inline-flex items-center justify-center gap-2 rounded-full bg-linear-to-r from-fuchsia-500 to-amber-400 px-7 py-3.5 text-sm font-bold text-white shadow-lg transition-all duration-300 hover:scale-[1.03] hover:shadow-[0_0_30px_rgba(217,70,239,0.4)] sm:text-base"
+                  >
+                    Explore Latest Music
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+                  <Link
+                    href="/api/enter?next=/music"
+                    className="inline-flex items-center justify-center gap-2 rounded-full border border-white/25 bg-white/5 px-7 py-3.5 text-sm font-semibold text-white backdrop-blur-md transition-all duration-300 hover:border-white/45 hover:bg-white/15 sm:text-base"
+                  >
+                    Promote Your Song
+                  </Link>
                 </div>
-              ))}
+              </div>
+
+              <div className="hidden lg:flex lg:items-center lg:justify-center">
+                <SolarSystemOrbit
+                  artists={orbitArtists}
+                  centerLogo={centerLogo}
+                  siteName={siteName}
+                />
+              </div>
             </div>
           </div>
         </div>
       </section>
 
+      {/* ── GENRE SPOTLIGHT ─────────────────────────────────────────────── */}
+      <GenreSpotlight availableGenres={genres} />
+
       {/* ── LATEST DROPS (music) ────────────────────────────────────────── */}
       {tracks.length > 0 && (
-        <section className="bg-foreground/3 py-16">
+        <section className="py-14 sm:py-16">
           <div className="mx-auto max-w-7xl px-4 sm:px-6">
             <SectionHeader
               icon={<TrendingUp className="text-brand h-4 w-4" />}
               label="Hot Right Now"
-              title="Latest Drops"
+              title="Fresh Drops"
               href="/music"
               linkLabel="All Music"
             />
@@ -172,19 +192,24 @@ export async function PremiumLanding() {
         </section>
       )}
 
-      {/* ── FEATURED STORY + GRID ───────────────────────────────────────── */}
+      {/* ── TOP IN NIGERIA (chart) ──────────────────────────────────────── */}
+      <TopInNigeria tracks={chartTracks} />
+
+      {/* ── FEATURED ARTISTS ────────────────────────────────────────────── */}
+      <FeaturedArtists artists={featuredArtistsWithPhotos} />
+
+      {/* ── FROM THE NEWSROOM (stories) ─────────────────────────────────── */}
       {featuredPost && (
-        <section className="py-16">
+        <section className="py-14 sm:py-16">
           <div className="mx-auto max-w-7xl px-4 sm:px-6">
             <SectionHeader
               icon={<Newspaper className="text-brand h-4 w-4" />}
-              label="Top Stories"
+              label="From the Newsroom"
               title="What's Happening"
               href="/api/enter?next=/"
               linkLabel="Read the Blog"
             />
             <div className="mt-8 grid gap-6 lg:grid-cols-[1.5fr_1fr]">
-              {/* Big featured card */}
               <Link
                 href={featuredPost.href ?? `/${featuredPost.slug}`}
                 className="ring-border/40 group hover:ring-brand/40 relative overflow-hidden rounded-3xl ring-1 transition-all duration-300"
@@ -222,7 +247,6 @@ export async function PremiumLanding() {
                 </div>
               </Link>
 
-              {/* Grid of 4 smaller cards */}
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
                 {gridPosts.map((post) => (
                   <Link
@@ -260,56 +284,11 @@ export async function PremiumLanding() {
         </section>
       )}
 
-      {/* ── FEATURES STRIP ──────────────────────────────────────────────── */}
-      <section className="bg-foreground/3 py-16">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6">
-          <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {[
-              {
-                icon: Music,
-                title: "Free Music Downloads",
-                desc: "Download your favourite Nigerian and Afrobeats tracks in high quality, for free.",
-                href: "/music",
-                cta: "Browse Music",
-              },
-              {
-                icon: Newspaper,
-                title: "Breaking Music News",
-                desc: "Stay ahead with the latest news, album drops, and artist updates from the culture.",
-                href: "/api/enter?next=/news",
-                cta: "Read News",
-              },
-              {
-                icon: TrendingUp,
-                title: "Charts & Trending",
-                desc: "See what everyone is listening to — daily charts, trending videos, and top artists.",
-                href: "/api/enter?next=/explore",
-                cta: "View Charts",
-              },
-            ].map(({ icon: Icon, title, desc, href, cta }) => (
-              <Link
-                key={title}
-                href={href}
-                className="bg-card ring-border/40 hover:ring-brand/40 group flex flex-col gap-4 rounded-2xl p-6 ring-1 transition-all duration-200 hover:scale-[1.01]"
-              >
-                <div className="bg-brand/10 flex h-11 w-11 items-center justify-center rounded-xl">
-                  <Icon className="text-brand h-5 w-5" />
-                </div>
-                <div>
-                  <h3 className="text-foreground font-bold">{title}</h3>
-                  <p className="text-muted-foreground mt-1 text-sm leading-relaxed">{desc}</p>
-                </div>
-                <span className="text-brand mt-auto flex items-center gap-1 text-sm font-semibold transition-all group-hover:gap-2">
-                  {cta} <ArrowRight className="h-3.5 w-3.5" />
-                </span>
-              </Link>
-            ))}
-          </div>
-        </div>
-      </section>
+      {/* ── FOR ARTISTS CTA ─────────────────────────────────────────────── */}
+      <ArtistsCTABanner />
 
       {/* ── NEWSLETTER ──────────────────────────────────────────────────── */}
-      <section className="py-20">
+      <section className="py-16 sm:py-20">
         <div className="mx-auto max-w-2xl px-4 text-center sm:px-6">
           <div className="bg-brand/10 text-brand ring-brand/20 mb-4 inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-xs font-semibold ring-1">
             <Radio className="h-3 w-3" />
@@ -326,42 +305,11 @@ export async function PremiumLanding() {
       </section>
 
       {/* ── FOOTER ──────────────────────────────────────────────────────── */}
-      <footer className="border-border/40 border-t py-10">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6">
-          <div className="flex flex-col items-center justify-between gap-6 sm:flex-row">
-            <Logo
-              logoLightUrl={settings.logoLight}
-              logoDarkUrl={settings.logoDark}
-              siteName={siteName}
-            />
-            <nav className="flex flex-wrap items-center justify-center gap-5 text-sm">
-              {[
-                { href: "/music", label: "Music" },
-                { href: "/api/enter?next=/news", label: "News" },
-                { href: "/artists", label: "Artists" },
-                { href: "/api/enter?next=/", label: "Blog" },
-                { href: "/login", label: "Sign in" },
-              ].map(({ href, label }) => (
-                <Link
-                  key={label}
-                  href={href}
-                  className="text-muted-foreground hover:text-foreground transition-colors"
-                >
-                  {label}
-                </Link>
-              ))}
-            </nav>
-            <p className="text-muted-foreground text-xs">
-              © {new Date().getFullYear()} {siteName}. All rights reserved.
-            </p>
-          </div>
-        </div>
-      </footer>
+      <PremiumFooter settings={settings} />
     </div>
   );
 }
 
-/* ── Small reusable section header ── */
 function SectionHeader({
   icon,
   label,
@@ -382,10 +330,7 @@ function SectionHeader({
           {icon}
           {label}
         </div>
-        <h2
-          className="text-2xl font-black sm:text-3xl"
-          dangerouslySetInnerHTML={{ __html: title }}
-        />
+        <h2 className="text-2xl font-black sm:text-3xl">{title}</h2>
       </div>
       <Link
         href={href}

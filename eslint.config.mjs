@@ -55,6 +55,12 @@ const eslintConfig = defineConfig([
     "src/components/vertical-tabs.tsx",
     // Payload CMS generated types
     "src/payload/payload-types.ts",
+    // Premium landing — uses arbitrary CSS gradients and dynamic orbital positioning
+    "src/components/landing/PremiumLanding.tsx",
+    "src/components/landing/SolarSystemOrbit.tsx",
+    "src/components/landing/ArtistsCTABanner.tsx",
+    "src/components/landing/GenreSpotlight.tsx",
+    "src/components/landing/PremiumFooter.tsx",
   ]),
 ]);
 

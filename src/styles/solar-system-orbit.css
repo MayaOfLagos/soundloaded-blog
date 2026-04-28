@@ -1,0 +1,102 @@
+/* ─────────────────────────────────────────────────────────────────
+   Soundloaded Solar-System Orbit
+   ───────────────────────────────────────────────────────────────── */
+
+@keyframes orbit-cw {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes orbit-ccw {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(-360deg);
+  }
+}
+
+/* Visible belt rings — 4 fixed sizes, drawn via border ─────────── */
+.belt-ring {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: 9999px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  pointer-events: none;
+}
+.belt-ring-0 {
+  width: 170px;
+  height: 170px;
+  border-color: rgba(255, 255, 255, 0.28);
+  box-shadow: inset 0 0 24px rgba(217, 70, 239, 0.18);
+}
+.belt-ring-1 {
+  width: 270px;
+  height: 270px;
+  border-color: rgba(255, 255, 255, 0.22);
+}
+.belt-ring-2 {
+  width: 370px;
+  height: 370px;
+  border-color: rgba(255, 255, 255, 0.16);
+}
+.belt-ring-3 {
+  width: 470px;
+  height: 470px;
+  border-color: rgba(255, 255, 255, 0.12);
+}
+
+/* Orbit arm — zero-size pivot at orbit center ──────────────────── */
+.orbit-arm {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  transform-origin: 0 0;
+  animation-duration: var(--orbit-duration, 30s);
+  animation-delay: var(--orbit-delay, 0s);
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+.orbit-arm-cw {
+  animation-name: orbit-cw;
+}
+.orbit-arm-ccw {
+  animation-name: orbit-ccw;
+}
+
+/* Orbit card — counter-spins so its content stays upright ──────── */
+.orbit-card {
+  position: absolute;
+  /* Avatar is 56×56; offset by radius + half-avatar so the avatar's geometric
+     center lands exactly on the orbit ring line. */
+  top: calc(-1 * (var(--orbit-radius, 100px) + 28px));
+  left: -28px;
+  width: 56px;
+  height: 56px;
+  animation-duration: var(--orbit-duration, 30s);
+  animation-delay: var(--orbit-delay, 0s);
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+}
+.orbit-card-cw {
+  animation-name: orbit-cw;
+}
+.orbit-card-ccw {
+  animation-name: orbit-ccw;
+}
+
+/* Reduce motion — hold the orbit still ─────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .orbit-arm,
+  .orbit-card {
+    animation: none !important;
+  }
+}

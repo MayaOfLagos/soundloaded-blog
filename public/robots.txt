@@ -7,9 +7,9 @@ Disallow: /login
 Disallow: /register
 
 # Host
-Host: http://localhost:3000
+Host: https://soundloaded.ng
 
 # Sitemaps
-Sitemap: http://localhost:3000/sitemap.xml
-Sitemap: http://localhost:3000/server-sitemap.xml
-Sitemap: http://localhost:3000/news-sitemap.xml
+Sitemap: https://soundloaded.ng/sitemap.xml
+Sitemap: https://soundloaded.ng/server-sitemap.xml
+Sitemap: https://soundloaded.ng/news-sitemap.xml

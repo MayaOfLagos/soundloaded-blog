@@ -1,10 +1,10 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useSettings } from "@/hooks/useSettings";
 import { signIn } from "next-auth/react";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { AlertCircle, Eye, EyeOff, Info, Loader2, ShieldAlert } from "lucide-react";
 import { Turnstile, type TurnstileInstance } from "@marsidev/react-turnstile";
 import { useForm } from "react-hook-form";
 import toast from "react-hot-toast";
@@ -23,6 +23,7 @@ const schema = z.object({
 });
 
 type FormData = z.infer<typeof schema>;
+type BannerTone = "info" | "error";
 
 const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 
@@ -32,10 +33,22 @@ interface AdminLoginFormProps extends React.ComponentProps<"div"> {
   reason?: string | null;
 }
 
-function getInitialError(authError: string | null | undefined): string | null {
-  if (authError === "CredentialsSignin") return "Invalid email or password.";
-  if (authError === "AccessDenied") return "You do not have permission to access that page.";
-  if (authError) return "We couldn't complete that sign-in request. Please try again.";
+function getAuthBanner(
+  reason: string | null | undefined,
+  authError: string | null | undefined
+): { text: string; tone: BannerTone } | null {
+  if (reason === "session_expired") {
+    return { text: "Your admin session expired. Sign in again to continue.", tone: "info" };
+  }
+  if (authError === "AccessDenied") {
+    return { text: "You do not have permission to access that page.", tone: "error" };
+  }
+  if (authError === "CredentialsSignin") {
+    return { text: "Invalid email or password.", tone: "error" };
+  }
+  if (authError) {
+    return { text: "We couldn't complete that sign-in request. Please try again.", tone: "error" };
+  }
   return null;
 }
 
@@ -46,15 +59,15 @@ export function AdminLoginForm({
   reason,
   ...props
 }: AdminLoginFormProps) {
-  const [error, setError] = useState<string | null>(() => getInitialError(authError));
+  const [error, setError] = useState<string | null>(null);
   const [isLocked, setIsLocked] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [hideInitialBanner, setHideInitialBanner] = useState(false);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   const turnstileRef = useRef<TurnstileInstance | undefined>(undefined);
   const { data: settings } = useSettings();
-  const logoLight = settings?.logoLight ?? settings?.logoDark;
-  const logoDark = settings?.logoDark ?? settings?.logoLight;
-  const siteName = settings?.siteName ?? "Soundloaded";
+
+  const initialBanner = useMemo(() => getAuthBanner(reason, authError), [reason, authError]);
 
   const {
     register,
@@ -62,9 +75,20 @@ export function AdminLoginForm({
     formState: { errors, isSubmitting },
   } = useForm<FormData>({ resolver: zodResolver(schema) });
 
+  const banner = error
+    ? { text: error, tone: isLocked ? "info" : ("error" as BannerTone) }
+    : !hideInitialBanner
+      ? initialBanner
+      : null;
+
+  const logoLight = settings?.logoLight ?? settings?.logoDark;
+  const logoDark = settings?.logoDark ?? settings?.logoLight;
+  const siteName = settings?.siteName ?? "Soundloaded";
+
   const onSubmit = async (data: FormData) => {
     setError(null);
     setIsLocked(false);
+    setHideInitialBanner(true);
 
     if (TURNSTILE_SITE_KEY && !turnstileToken) {
       setError("Please complete the security check.");
@@ -97,7 +121,7 @@ export function AdminLoginForm({
             return;
           }
         } catch {
-          // ignore
+          // ignore lockout check errors
         }
 
         setError("Invalid email or password.");
@@ -111,6 +135,7 @@ export function AdminLoginForm({
       window.location.assign(result?.url ?? callbackUrl);
     } catch {
       setError("We couldn't sign you in right now. Please try again.");
+      toast.error("Login failed. Please try again.");
       turnstileRef.current?.reset();
       setTurnstileToken(null);
     }
@@ -120,7 +145,7 @@ export function AdminLoginForm({
     <div className={cn("flex flex-col gap-6", className)} {...props}>
       <Card className="overflow-hidden">
         <CardContent className="grid p-0 md:grid-cols-2">
-          <form className="p-6 md:p-8" onSubmit={(e) => void handleSubmit(onSubmit)(e)}>
+          <form className="p-6 md:p-8" onSubmit={(event) => void handleSubmit(onSubmit)(event)}>
             <div className="flex flex-col gap-6">
               <div className="flex flex-col items-center gap-3 text-center">
                 {logoLight || logoDark ? (
@@ -151,12 +176,24 @@ export function AdminLoginForm({
                 </p>
               </div>
 
-              {error || reason === "session_expired" ? (
-                <p className="text-destructive text-center text-sm">
-                  {reason === "session_expired" && !error
-                    ? "Your session expired. Please sign in again."
-                    : error}
-                </p>
+              {banner ? (
+                <div
+                  className={cn(
+                    "flex items-start gap-2.5 rounded-lg border px-3.5 py-3 text-sm",
+                    banner.tone === "error"
+                      ? "border-destructive/20 bg-destructive/10 text-destructive"
+                      : "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200"
+                  )}
+                >
+                  {banner.tone === "error" ? (
+                    <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+                  ) : isLocked ? (
+                    <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />
+                  ) : (
+                    <Info className="mt-0.5 h-4 w-4 shrink-0" />
+                  )}
+                  <span>{banner.text}</span>
+                </div>
               ) : null}
 
               <div className="grid gap-2">

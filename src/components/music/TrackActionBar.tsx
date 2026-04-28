@@ -1,13 +1,26 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Play, Download, Heart, MoreHorizontal, ListPlus, Share2, User } from "lucide-react";
+import Link from "next/link";
+import {
+  Play,
+  Download,
+  Heart,
+  MoreHorizontal,
+  ListPlus,
+  Share2,
+  User,
+  Lock,
+  Crown,
+} from "lucide-react";
 import { motion } from "motion/react";
 import useMeasure from "react-use-measure";
 import { usePlayerStore } from "@/store/player.store";
 import type { Track } from "@/store/player.store";
 import { useMusicFavorite } from "@/hooks/useMusicFavorite";
+import { useSubscription } from "@/hooks/useSubscription";
 import { ShareButton } from "./ShareButton";
+import { PaystackButton } from "@/components/payments/PaystackButton";
 import { notify } from "@/hooks/useToast";
 import { cn } from "@/lib/utils";
 
@@ -22,6 +35,9 @@ interface TrackActionBarProps {
     enableDownload: boolean;
     isExclusive: boolean;
     price: number | null;
+    accessModel: string; // "free" | "subscription" | "purchase" | "both"
+    streamAccess: string; // "free" | "subscription"
+    creatorPrice: number | null;
     artistName: string;
     artistSlug: string;
     genre: string | null;
@@ -149,14 +165,28 @@ function DiscreteAction({
 export function TrackActionBar({ track, siteUrl, enableDownloads }: TrackActionBarProps) {
   const { currentTrack, isPlaying, setTrack, togglePlay } = usePlayerStore();
   const { isFavorited, toggleFavorite } = useMusicFavorite(track.id);
+  const { data: subscription } = useSubscription();
   const [activeAction, setActiveAction] = useState<string>("play");
   const [downloadState, setDownloadState] = useState<"idle" | "loading" | "done">("idle");
 
   const isCurrentTrack = currentTrack?.id === track.id;
   const isActivelyPlaying = isCurrentTrack && isPlaying;
 
+  const hasSubscription = subscription?.hasSubscription ?? false;
+  const isStreamGated =
+    track.streamAccess === "subscription" || track.accessModel === "subscription";
+  const streamLocked = isStreamGated && !hasSubscription;
+
+  const isPurchaseGated = track.accessModel === "purchase" || track.accessModel === "both";
+  const isDownloadSubGated = track.accessModel === "subscription" || track.accessModel === "both";
+  const downloadLocked = (isPurchaseGated || isDownloadSubGated) && !hasSubscription;
+
   const handlePlay = () => {
     setActiveAction("play");
+    if (streamLocked) {
+      window.location.href = "/billing";
+      return;
+    }
     if (isCurrentTrack) {
       togglePlay();
       return;
@@ -205,10 +235,53 @@ export function TrackActionBar({ track, siteUrl, enableDownloads }: TrackActionB
     toggleFavorite();
   };
 
-  const playLabel = isActivelyPlaying ? "Playing" : isCurrentTrack ? "Resume" : "Play";
+  const playLabel = isActivelyPlaying
+    ? "Playing"
+    : isCurrentTrack
+      ? "Resume"
+      : streamLocked
+        ? "Subscribe to Play"
+        : "Play";
   const downloadLabel =
     downloadState === "loading" ? "Getting..." : downloadState === "done" ? "Done!" : "Download";
   const favoriteLabel = isFavorited ? "Saved" : "Save";
+
+  // Stream-locked: show subscribe CTA above action bar
+  if (streamLocked) {
+    return (
+      <div className="space-y-3">
+        <div className="flex items-center gap-3 rounded-xl border border-amber-500/20 bg-amber-500/10 px-4 py-3">
+          <Crown className="h-5 w-5 shrink-0 text-amber-500" />
+          <div className="min-w-0 flex-1">
+            <p className="text-foreground text-sm font-semibold">Subscribers Only</p>
+            <p className="text-muted-foreground text-xs">
+              Subscribe to stream and download this track
+            </p>
+          </div>
+          <Link
+            href="/billing"
+            className="shrink-0 rounded-full bg-amber-500 px-3 py-1.5 text-xs font-bold text-white transition-colors hover:bg-amber-400"
+          >
+            Subscribe
+          </Link>
+        </div>
+        <div className="pointer-events-none flex flex-wrap items-center gap-2 opacity-50">
+          <DiscreteAction
+            id="play"
+            label="Subscribers Only"
+            isActive
+            onClick={() => {}}
+            activeClassName="bg-amber-500 text-white"
+          >
+            <Lock className="h-[18px] w-[18px]" />
+          </DiscreteAction>
+        </div>
+      </div>
+    );
+  }
+
+  // Purchase-gated download: show buy CTA inline
+  const showBuyCTA = isPurchaseGated && !hasSubscription && enableDownloads && track.enableDownload;
 
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -227,16 +300,27 @@ export function TrackActionBar({ track, siteUrl, enableDownloads }: TrackActionB
         )}
       </DiscreteAction>
 
-      {/* Download */}
-      {enableDownloads && track.enableDownload && (
-        <DiscreteAction
-          id="download"
-          label={downloadLabel}
-          icon={Download}
-          isActive={activeAction === "download"}
-          onClick={handleDownload}
-          activeClassName="bg-brand text-brand-foreground"
+      {/* Download / Buy CTA */}
+      {showBuyCTA ? (
+        <PaystackButton
+          type="download"
+          musicId={track.id}
+          price={track.creatorPrice ?? track.price}
+          className="h-9 rounded-full text-xs font-semibold"
         />
+      ) : (
+        enableDownloads &&
+        track.enableDownload &&
+        !downloadLocked && (
+          <DiscreteAction
+            id="download"
+            label={downloadLabel}
+            icon={Download}
+            isActive={activeAction === "download"}
+            onClick={handleDownload}
+            activeClassName="bg-brand text-brand-foreground"
+          />
+        )
       )}
 
       {/* Favorite / Save */}

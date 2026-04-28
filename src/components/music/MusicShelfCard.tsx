@@ -2,11 +2,13 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { Play, Pause, Music, Loader2 } from "lucide-react";
+import { Play, Pause, Music, Loader2, Lock } from "lucide-react";
 import { usePlayerStore } from "@/store/player.store";
 import { cn } from "@/lib/utils";
 import { HeartButton } from "./HeartButton";
 import { MusicActionMenu } from "./MusicActionMenu";
+import { AccessGateBadge } from "@/components/payments/AccessGateBadge";
+import { useSubscription } from "@/hooks/useSubscription";
 import type { MusicCardData } from "@/lib/api/music";
 import type { Track } from "@/store/player.store";
 
@@ -45,14 +47,25 @@ function EqualizerBars() {
 export function MusicShelfCard({ track, shelfTracks, shelfLabel, className }: MusicShelfCardProps) {
   const { currentTrack, isPlaying, isBuffering, setTrack, setContextQueue, togglePlay } =
     usePlayerStore();
+  const { data: subscription } = useSubscription();
 
   const isCurrentTrack = currentTrack?.id === track.id;
   const isActivelyPlaying = isCurrentTrack && isPlaying;
   const isLoading = isCurrentTrack && isBuffering;
 
+  const isStreamGated =
+    track.streamAccess === "subscription" || track.accessModel === "subscription";
+  const hasSubscription = subscription?.hasSubscription ?? false;
+  const streamLocked = isStreamGated && !hasSubscription;
+
   const handlePlay = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+
+    if (streamLocked) {
+      window.location.href = "/billing";
+      return;
+    }
 
     if (isCurrentTrack) {
       togglePlay();
@@ -90,7 +103,26 @@ export function MusicShelfCard({ track, shelfTracks, shelfLabel, className }: Mu
 
           {/* Hover overlay gradient for button visibility */}
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 transition-opacity duration-300 group-hover/card:opacity-100" />
+
+          {/* Stream-locked overlay */}
+          {streamLocked && (
+            <div className="absolute inset-0 flex items-center justify-center bg-black/50 backdrop-blur-[2px]">
+              <Lock className="h-8 w-8 text-white/80" />
+            </div>
+          )}
         </Link>
+
+        {/* Premium badge — top right */}
+        {(track.accessModel !== "free" || track.streamAccess === "subscription") && (
+          <div className="absolute top-1.5 right-1.5 z-30">
+            <AccessGateBadge
+              accessModel={track.accessModel}
+              streamAccess={track.streamAccess}
+              creatorPrice={track.creatorPrice}
+              size="xs"
+            />
+          </div>
+        )}
 
         {/* 3-button row: Heart | Play | Options — outside overflow-hidden so dropdown expands freely */}
         <div
@@ -117,6 +149,8 @@ export function MusicShelfCard({ track, shelfTracks, shelfLabel, className }: Mu
               <Loader2 className="h-6 w-6 animate-spin" />
             ) : isActivelyPlaying ? (
               <Pause className="h-6 w-6" />
+            ) : streamLocked ? (
+              <Lock className="h-5 w-5" />
             ) : (
               <Play className="ml-0.5 h-6 w-6" />
             )}
@@ -149,6 +183,16 @@ export function MusicShelfCard({ track, shelfTracks, shelfLabel, className }: Mu
         >
           {track.artistName}
         </Link>
+        {(track.accessModel !== "free" || track.streamAccess === "subscription") && (
+          <div className="mt-1">
+            <AccessGateBadge
+              accessModel={track.accessModel}
+              streamAccess={track.streamAccess}
+              creatorPrice={track.creatorPrice}
+              size="xs"
+            />
+          </div>
+        )}
       </div>
     </div>
   );

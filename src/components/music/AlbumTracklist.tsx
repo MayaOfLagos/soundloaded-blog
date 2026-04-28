@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Play, Pause } from "lucide-react";
+import { Play, Pause, Crown } from "lucide-react";
 import { usePlayerStore } from "@/store/player.store";
 import type { Track } from "@/store/player.store";
 import { DownloadButton } from "./DownloadButton";
@@ -18,6 +18,8 @@ interface AlbumTrack {
   duration: number | null;
   trackNumber: number | null;
   enableDownload: boolean;
+  accessModel?: string;
+  creatorPrice?: number | null;
 }
 
 interface AlbumTracklistProps {
@@ -112,19 +114,24 @@ function TrackRow({
 
       {/* Title */}
       <div className="min-w-0 flex-1">
-        <Link
-          href={`/music/${track.slug}`}
-          className={cn(
-            "block truncate text-sm font-medium transition-colors hover:underline",
-            isCurrentTrack
-              ? "text-brand"
-              : isDetailTrack
-                ? "text-brand font-semibold"
-                : "text-foreground"
+        <div className="flex items-center gap-1.5">
+          <Link
+            href={`/music/${track.slug}`}
+            className={cn(
+              "block truncate text-sm font-medium transition-colors hover:underline",
+              isCurrentTrack
+                ? "text-brand"
+                : isDetailTrack
+                  ? "text-brand font-semibold"
+                  : "text-foreground"
+            )}
+          >
+            {track.title}
+          </Link>
+          {track.accessModel && track.accessModel !== "free" && (
+            <Crown className="h-3 w-3 shrink-0 text-amber-500" />
           )}
-        >
-          {track.title}
-        </Link>
+        </div>
       </div>
 
       {/* Duration */}

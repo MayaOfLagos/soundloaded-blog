@@ -2,10 +2,12 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { Play, Music, Headphones } from "lucide-react";
+import { Play, Music, Headphones, Lock } from "lucide-react";
 import { usePlayerStore } from "@/store/player.store";
 import { cn } from "@/lib/utils";
 import { HeartButton } from "./HeartButton";
+import { useSubscription } from "@/hooks/useSubscription";
+import { AccessGateBadge } from "@/components/payments/AccessGateBadge";
 import type { MusicCardData } from "@/lib/api/music";
 import type { Track } from "@/store/player.store";
 
@@ -41,13 +43,23 @@ function EqualizerBars() {
 
 export function MusicListItem({ track, rank, listTracks, listLabel }: MusicListItemProps) {
   const { currentTrack, isPlaying, setTrack, setContextQueue, togglePlay } = usePlayerStore();
+  const { data: subscription } = useSubscription();
 
   const isCurrentTrack = currentTrack?.id === track.id;
   const isActivelyPlaying = isCurrentTrack && isPlaying;
 
+  const isStreamGated =
+    track.streamAccess === "subscription" || track.accessModel === "subscription";
+  const streamLocked = isStreamGated && !(subscription?.hasSubscription ?? false);
+
   const handlePlay = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+
+    if (streamLocked) {
+      window.location.href = "/billing";
+      return;
+    }
 
     if (isCurrentTrack) {
       togglePlay();
@@ -79,7 +91,7 @@ export function MusicListItem({ track, rank, listTracks, listLabel }: MusicListI
         ) : (
           <>
             <span className="text-muted-foreground block text-base font-bold tabular-nums group-hover/item:hidden">
-              {rank}
+              {streamLocked ? <Lock className="h-4 w-4 text-amber-500" /> : rank}
             </span>
             <Play
               className="text-foreground hidden h-4 w-4 group-hover/item:block"
@@ -112,15 +124,26 @@ export function MusicListItem({ track, rank, listTracks, listLabel }: MusicListI
 
       {/* Title + artist */}
       <div className="min-w-0 flex-1">
-        <Link
-          href={`/music/${track.slug}`}
-          className={cn(
-            "block truncate text-sm font-semibold transition-colors hover:underline",
-            isCurrentTrack ? "text-brand" : "text-foreground"
+        <div className="flex items-center gap-1.5">
+          <Link
+            href={`/music/${track.slug}`}
+            className={cn(
+              "block truncate text-sm font-semibold transition-colors hover:underline",
+              isCurrentTrack ? "text-brand" : "text-foreground"
+            )}
+          >
+            {track.title}
+          </Link>
+          {(track.accessModel !== "free" || track.streamAccess === "subscription") && (
+            <AccessGateBadge
+              accessModel={track.accessModel}
+              streamAccess={track.streamAccess}
+              creatorPrice={track.creatorPrice}
+              size="xs"
+              className="flex-shrink-0"
+            />
           )}
-        >
-          {track.title}
-        </Link>
+        </div>
         <Link
           href={`/artists/${track.artistSlug}`}
           className="text-muted-foreground hover:text-brand truncate text-xs transition-colors"

@@ -3,7 +3,18 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
-import { Music2, Calendar, Disc, Clock, HardDrive, FileAudio, Tag, Building } from "lucide-react";
+import {
+  Music2,
+  Calendar,
+  Disc,
+  Clock,
+  HardDrive,
+  FileAudio,
+  Tag,
+  Building,
+  Crown,
+  ShoppingCart,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Dialog, DialogPortal, DialogTitle } from "@/components/ui/dialog";
@@ -37,6 +48,9 @@ interface TrackDetail {
   enableDownload: boolean;
   isExclusive: boolean;
   price: number | null;
+  accessModel: string; // "free" | "subscription" | "purchase" | "both"
+  streamAccess: string; // "free" | "subscription"
+  creatorPrice: number | null;
   trackNumber: number | null;
   postId: string;
   artist: {
@@ -222,11 +236,33 @@ export function MusicDetailClient({
 
           {/* Track info */}
           <div className="flex flex-1 flex-col justify-end space-y-3">
-            {track.genre && (
-              <Badge className="bg-brand/15 text-brand border-brand/20 w-fit text-xs tracking-wide uppercase">
-                {track.genre}
-              </Badge>
-            )}
+            <div className="flex flex-wrap items-center gap-2">
+              {track.genre && (
+                <Badge className="bg-brand/15 text-brand border-brand/20 w-fit text-xs tracking-wide uppercase">
+                  {track.genre}
+                </Badge>
+              )}
+              {(track.accessModel !== "free" || track.streamAccess === "subscription") && (
+                <span
+                  className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] font-semibold ${
+                    track.accessModel === "purchase" || track.accessModel === "both"
+                      ? "bg-brand/15 text-brand"
+                      : "bg-amber-500/15 text-amber-500"
+                  }`}
+                >
+                  {track.accessModel === "purchase" || track.accessModel === "both" ? (
+                    <ShoppingCart className="h-3 w-3" />
+                  ) : (
+                    <Crown className="h-3 w-3" />
+                  )}
+                  {track.accessModel === "purchase" || track.accessModel === "both"
+                    ? track.creatorPrice
+                      ? `Buy ₦${(track.creatorPrice / 100).toLocaleString()}`
+                      : "Purchase Only"
+                    : "Subscribers Only"}
+                </span>
+              )}
+            </div>
 
             <div>
               <h1 className="text-foreground text-2xl leading-tight font-black sm:text-3xl lg:text-4xl">
@@ -265,6 +301,9 @@ export function MusicDetailClient({
                 enableDownload: track.enableDownload,
                 isExclusive: track.isExclusive,
                 price: track.price,
+                accessModel: track.accessModel,
+                streamAccess: track.streamAccess,
+                creatorPrice: track.creatorPrice,
                 artistName: track.artist.name,
                 artistSlug: track.artist.slug,
                 genre: track.genre,

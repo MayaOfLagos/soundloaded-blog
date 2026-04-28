@@ -115,6 +115,9 @@ export default async function MusicDetailPage({ params }: Props) {
     enableDownload: track.enableDownload,
     isExclusive: track.isExclusive,
     price: track.price,
+    accessModel: track.accessModel ?? "free",
+    streamAccess: track.streamAccess ?? "free",
+    creatorPrice: track.creatorPrice ?? null,
     trackNumber: track.trackNumber,
     postId: track.postId,
     artist: {
@@ -143,6 +146,8 @@ export default async function MusicDetailPage({ params }: Props) {
             duration: t.duration,
             trackNumber: t.trackNumber,
             enableDownload: t.enableDownload,
+            accessModel: t.accessModel ?? "free",
+            creatorPrice: t.creatorPrice ?? null,
           })),
         }
       : null,

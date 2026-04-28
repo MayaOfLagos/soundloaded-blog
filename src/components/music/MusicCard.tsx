@@ -2,11 +2,13 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { Play, Music } from "lucide-react";
+import { Play, Music, Lock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn, formatFileSize } from "@/lib/utils";
 import { DownloadButton } from "./DownloadButton";
 import { usePlayerStore } from "@/store/player.store";
+import { useSubscription } from "@/hooks/useSubscription";
+import { AccessGateBadge } from "@/components/payments/AccessGateBadge";
 import type { MusicCardData } from "@/lib/api/music";
 
 interface MusicCardProps {
@@ -16,8 +18,17 @@ interface MusicCardProps {
 
 export function MusicCard({ track, className }: MusicCardProps) {
   const { setTrack } = usePlayerStore();
+  const { data: subscription } = useSubscription();
+
+  const isStreamGated =
+    track.streamAccess === "subscription" || track.accessModel === "subscription";
+  const streamLocked = isStreamGated && !(subscription?.hasSubscription ?? false);
 
   const handlePlay = () => {
+    if (streamLocked) {
+      window.location.href = "/billing";
+      return;
+    }
     setTrack({
       id: track.id,
       title: track.title,
@@ -66,9 +77,21 @@ export function MusicCard({ track, className }: MusicCardProps) {
           aria-label={`Play ${track.title}`}
         >
           <div className="bg-brand text-brand-foreground flex h-12 w-12 items-center justify-center rounded-full shadow-lg">
-            <Play className="ml-0.5 h-5 w-5" />
+            {streamLocked ? <Lock className="h-5 w-5" /> : <Play className="ml-0.5 h-5 w-5" />}
           </div>
         </button>
+
+        {/* Premium badge — top right */}
+        {(track.accessModel !== "free" || track.streamAccess === "subscription") && (
+          <div className="absolute top-1.5 right-1.5 z-10">
+            <AccessGateBadge
+              accessModel={track.accessModel}
+              streamAccess={track.streamAccess}
+              creatorPrice={track.creatorPrice}
+              size="xs"
+            />
+          </div>
+        )}
 
         {/* Genre badge */}
         {track.genre && (

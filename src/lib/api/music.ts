@@ -24,6 +24,10 @@ export interface MusicCardData {
   fileSize?: bigint | null;
   releaseYear?: number | null;
   r2Key: string;
+  // Monetization
+  accessModel: string; // "free" | "subscription" | "purchase" | "both"
+  streamAccess: string; // "free" | "subscription"
+  creatorPrice: number | null; // kobo
 }
 
 export interface ArtistCardData {
@@ -66,6 +70,10 @@ type MusicCardCandidate = {
   createdAt: Date;
   artist: { name: string; slug: string };
   album: { title: string } | null;
+  // Monetization
+  accessModel: string;
+  streamAccess: string;
+  creatorPrice: number | null;
 };
 
 type MusicRecommendationCandidate = MusicCardCandidate & {
@@ -93,6 +101,9 @@ function mapMusicCard(track: MusicCardCandidate): MusicCardData {
     fileSize: track.fileSize,
     releaseYear: track.year,
     r2Key: track.r2Key,
+    accessModel: track.accessModel ?? "free",
+    streamAccess: track.streamAccess ?? "free",
+    creatorPrice: track.creatorPrice ?? null,
   };
 }
 
@@ -132,6 +143,9 @@ export async function getPopularMusic({ limit = 5 }: { limit?: number } = {}): P
       fileSize: t.fileSize,
       releaseYear: t.year,
       r2Key: t.r2Key,
+      accessModel: t.accessModel ?? "free",
+      streamAccess: t.streamAccess ?? "free",
+      creatorPrice: t.creatorPrice ?? null,
     }));
   } catch {
     return [];
@@ -166,6 +180,9 @@ export async function getMostStreamedMusic({ limit = 20 }: { limit?: number } = 
       fileSize: t.fileSize,
       releaseYear: t.year,
       r2Key: t.r2Key,
+      accessModel: t.accessModel ?? "free",
+      streamAccess: t.streamAccess ?? "free",
+      creatorPrice: t.creatorPrice ?? null,
     }));
   } catch {
     return [];
@@ -203,6 +220,9 @@ export async function getLatestMusic({
       fileSize: t.fileSize,
       releaseYear: t.year,
       r2Key: t.r2Key,
+      accessModel: t.accessModel ?? "free",
+      streamAccess: t.streamAccess ?? "free",
+      creatorPrice: t.creatorPrice ?? null,
     }));
   } catch {
     return [];

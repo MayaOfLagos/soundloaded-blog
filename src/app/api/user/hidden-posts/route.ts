@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
+import {
+  RecommendationEntityType,
+  RecommendationEventName,
+  RecommendationSurface,
+} from "@prisma/client";
+import { trackInteractionEvent } from "@/lib/recommendation";
 
 async function requireUser() {
   const session = await auth();
@@ -77,6 +83,14 @@ export async function POST(req: NextRequest) {
 
     const hidden = await db.hiddenPost.create({
       data: { userId, postId },
+    });
+    trackInteractionEvent({
+      eventName: RecommendationEventName.POST_HIDE,
+      entityType: RecommendationEntityType.POST,
+      entityId: postId,
+      userId,
+      surface: RecommendationSurface.FEED_FORYOU,
+      weightHint: -10,
     });
 
     return NextResponse.json({ hidden: true, id: hidden.id }, { status: 201 });

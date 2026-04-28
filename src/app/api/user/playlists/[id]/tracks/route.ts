@@ -2,7 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { addTrackToPlaylistSchema, reorderPlaylistSchema } from "@/lib/validations/user";
-import { Prisma } from "@prisma/client";
+import {
+  Prisma,
+  RecommendationEntityType,
+  RecommendationEventName,
+  RecommendationSurface,
+} from "@prisma/client";
+import { trackInteractionEvent } from "@/lib/recommendation";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -49,6 +55,16 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     await db.playlist.update({
       where: { id },
       data: { updatedAt: new Date() },
+    });
+    trackInteractionEvent({
+      eventName: RecommendationEventName.MUSIC_PLAYLIST_ADD,
+      entityType: RecommendationEntityType.MUSIC,
+      entityId: parsed.data.musicId,
+      userId,
+      surface: RecommendationSurface.LIBRARY_PLAYLIST,
+      referrerEntityType: RecommendationEntityType.PLAYLIST,
+      referrerEntityId: id,
+      weightHint: 8,
     });
 
     return NextResponse.json({ track }, { status: 201 });

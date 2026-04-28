@@ -71,6 +71,7 @@ scripts/
 
 # Local backups (safety copies, never commit)
 **/_*-bak/
+backups/
 
 # typescript
 *.tsbuildinfo

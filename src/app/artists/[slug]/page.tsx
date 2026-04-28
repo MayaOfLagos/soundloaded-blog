@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { getArtistBySlug } from "@/lib/api/music";
+import { getArtistBySlug, getSimilarArtistsForArtist } from "@/lib/api/music";
 import { getSettings } from "@/lib/settings";
 import { JsonLd } from "@/components/common/JsonLd";
 import { buildMusicGroupSchema, buildBreadcrumbSchema } from "@/lib/structured-data";
@@ -30,6 +30,10 @@ export default async function ArtistPage({ params }: Props) {
   const { slug } = await params;
   const [artist, settings] = await Promise.all([getArtistBySlug(slug), getSettings()]);
   if (!artist) notFound();
+  const similarArtists = await getSimilarArtistsForArtist({
+    artistId: artist.id,
+    genre: artist.genre,
+  });
 
   const artistSchema = buildMusicGroupSchema(artist, settings.siteUrl);
   const breadcrumbSchema = buildBreadcrumbSchema(
@@ -111,6 +115,7 @@ export default async function ArtistPage({ params }: Props) {
           trackCount: a._count.tracks,
           totalDownloads: a.tracks.reduce((sum, t) => sum + t.downloadCount, 0),
         }))}
+        similarArtists={similarArtists}
         siteUrl={settings.siteUrl}
       />
     </>

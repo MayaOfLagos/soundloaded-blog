@@ -20,42 +20,45 @@ model User {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  bio             String?
-  location        String?
-  socialLinks     Json?
+  bio         String?
+  location    String?
+  socialLinks Json?
 
-  posts             Post[]
-  comments          Comment[]
-  downloads         Download[]
-  accounts          Account[]
-  sessions          Session[]
-  media             Media[]
-  pushSubscriptions PushSubscription[]
-  subscription      Subscription?
-  transactions      Transaction[]
-  searchQueries     SearchQuery[]
-  bookmarks         Bookmark[]
-  favorites         Favorite[]
-  reactions         Reaction[]
-  following         Follow[]    @relation("UserFollowing")
-  followers         Follow[]    @relation("UserFollowers")
-  artistFollows     ArtistFollow[]
-  stories           Story[]
-  storyViews        StoryView[]
-  notifications          Notification[] @relation("NotificationsReceived")
-  triggeredNotifications Notification[] @relation("NotificationsTriggered")
-  preferences       UserPreferences?
-  hiddenPosts       HiddenPost[]
-  reports           Report[]
-  commentLikes      CommentLike[]
-  postViews         PostView[]
-  blocking          UserBlock[]  @relation("UserBlocking")
-  blockedBy         UserBlock[]  @relation("UserBlocked")
-  artistProfile        Artist?              @relation("UserArtistProfile")
-  labelProfile         Label?               @relation("UserLabelProfile")
-  playlists            Playlist[]
-  creatorApplications  CreatorApplication[]
-  reviewedApplications CreatorApplication[] @relation("ApplicationReviewer")
+  posts                     Post[]
+  comments                  Comment[]
+  downloads                 Download[]
+  accounts                  Account[]
+  sessions                  Session[]
+  media                     Media[]
+  pushSubscriptions         PushSubscription[]
+  subscription              Subscription?
+  transactions              Transaction[]
+  searchQueries             SearchQuery[]
+  interactionEvents         InteractionEvent[]         @relation("InteractionEventUser")
+  recommendationImpressions RecommendationImpression[] @relation("RecommendationImpressionUser")
+  affinitySnapshots         UserAffinitySnapshot[]
+  bookmarks                 Bookmark[]
+  favorites                 Favorite[]
+  reactions                 Reaction[]
+  following                 Follow[]                   @relation("UserFollowing")
+  followers                 Follow[]                   @relation("UserFollowers")
+  artistFollows             ArtistFollow[]
+  stories                   Story[]
+  storyViews                StoryView[]
+  notifications             Notification[]             @relation("NotificationsReceived")
+  triggeredNotifications    Notification[]             @relation("NotificationsTriggered")
+  preferences               UserPreferences?
+  hiddenPosts               HiddenPost[]
+  reports                   Report[]
+  commentLikes              CommentLike[]
+  postViews                 PostView[]
+  blocking                  UserBlock[]                @relation("UserBlocking")
+  blockedBy                 UserBlock[]                @relation("UserBlocked")
+  artistProfile             Artist?                    @relation("UserArtistProfile")
+  labelProfile              Label?                     @relation("UserLabelProfile")
+  playlists                 Playlist[]
+  creatorApplications       CreatorApplication[]
+  reviewedApplications      CreatorApplication[]       @relation("ApplicationReviewer")
 }
 
 enum UserRole {
@@ -68,36 +71,36 @@ enum UserRole {
 
 // ── Posts ─────────────────────────────────────────────────────────────
 model Post {
-  id          String     @id @default(cuid())
-  title       String
-  slug        String     @unique
-  excerpt     String?
-  body        Json
-  coverImage  String?
-  status      PostStatus @default(DRAFT)
-  type        PostType   @default(NEWS)
-  publishedAt DateTime?
-  views       Int        @default(0)
-  wpPostId       Int?       @unique // WordPress post ID for import tracing
-  bloggerPostId  String?    @unique // Blogger post ID for import tracing
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  id            String     @id @default(cuid())
+  title         String
+  slug          String     @unique
+  excerpt       String?
+  body          Json
+  coverImage    String?
+  status        PostStatus @default(DRAFT)
+  type          PostType   @default(NEWS)
+  publishedAt   DateTime?
+  views         Int        @default(0)
+  wpPostId      Int?       @unique // WordPress post ID for import tracing
+  bloggerPostId String?    @unique // Blogger post ID for import tracing
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
 
-  authorId   String
-  author     User      @relation(fields: [authorId], references: [id])
-  categoryId String?
-  category   Category? @relation(fields: [categoryId], references: [id])
-  tags       PostTag[]
-  comments   Comment[]
-  music      Music?
-  enableDownload Boolean @default(false)
-  downloadLabel  String?
-  downloadCount  Int      @default(0)
+  authorId        String
+  author          User       @relation(fields: [authorId], references: [id])
+  categoryId      String?
+  category        Category?  @relation(fields: [categoryId], references: [id])
+  tags            PostTag[]
+  comments        Comment[]
+  music           Music?
+  enableDownload  Boolean    @default(false)
+  downloadLabel   String?
+  downloadCount   Int        @default(0)
   downloadMediaId String?
-  downloadMedia   Media?   @relation("PostDownloadMedia", fields: [downloadMediaId], references: [id], onDelete: SetNull)
-  bookmarks  Bookmark[]
-  favorites  Favorite[]
-  reactions  Reaction[]
+  downloadMedia   Media?     @relation("PostDownloadMedia", fields: [downloadMediaId], references: [id], onDelete: SetNull)
+  bookmarks       Bookmark[]
+  favorites       Favorite[]
+  reactions       Reaction[]
 
   // SEO overrides (optional — auto-generated from title/excerpt if empty)
   metaTitle       String?
@@ -105,11 +108,11 @@ model Post {
   focusKeyword    String?
 
   // User-generated content (feed posts by contributors)
-  isUserGenerated  Boolean  @default(false)
-  mediaAttachments Json     @default("[]")  // Array of { url, type, key } for feed post media
-  hiddenBy     HiddenPost[]
-  reports      Report[]
-  postViews    PostView[]
+  isUserGenerated  Boolean      @default(false)
+  mediaAttachments Json         @default("[]") // Array of { url, type, key } for feed post media
+  hiddenBy         HiddenPost[]
+  reports          Report[]
+  postViews        PostView[]
 
   @@index([slug])
   @@index([status, publishedAt])
@@ -135,53 +138,51 @@ enum PostType {
   COMMUNITY
 }
 
-
-
 // ── Music ─────────────────────────────────────────────────────────────
 model Music {
-  id            String   @id @default(cuid())
-  title         String
-  slug          String   @unique
-  r2Key         String
-  filename      String
-  fileSize      BigInt
-  duration      Int?
-  format        String
-  bitrate       Int?
-  coverArt      String?
-  downloadCount Int      @default(0)
-  streamCount   Int      @default(0)
-  year          Int?
-  genre         String?
-  label         String?
-  isExclusive   Boolean  @default(false)
-  enableDownload Boolean @default(true)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id             String   @id @default(cuid())
+  title          String
+  slug           String   @unique
+  r2Key          String
+  filename       String
+  fileSize       BigInt
+  duration       Int?
+  format         String
+  bitrate        Int?
+  coverArt       String?
+  downloadCount  Int      @default(0)
+  streamCount    Int      @default(0)
+  year           Int?
+  genre          String?
+  label          String?
+  isExclusive    Boolean  @default(false)
+  enableDownload Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   trackNumber Int?
 
   // ── Audio processing fields ──
-  processedR2Key   String?  // R2 key for the processed (transcoded) file
-  processedFormat  String?  // e.g. "aac", "mp3"
-  processedBitrate Int?     // e.g. 128, 256
-  processedSize    BigInt?  // file size of processed version
-  loudnessLUFS     Float?   // integrated loudness (EBU R128)
-  waveformData     Json?    // array of amplitude peaks for waveform UI
-  processingStatus String   @default("pending") // pending | processing | completed | failed
-  processingError  String?  // error message if processing failed
+  processedR2Key   String? // R2 key for the processed (transcoded) file
+  processedFormat  String? // e.g. "aac", "mp3"
+  processedBitrate Int? // e.g. 128, 256
+  processedSize    BigInt? // file size of processed version
+  loudnessLUFS     Float? // integrated loudness (EBU R128)
+  waveformData     Json? // array of amplitude peaks for waveform UI
+  processingStatus String  @default("pending") // pending | processing | completed | failed
+  processingError  String? // error message if processing failed
 
   processingJobs AudioProcessingJob[]
 
-  postId    String     @unique
-  post      Post       @relation(fields: [postId], references: [id])
-  artistId  String
-  artist    Artist     @relation(fields: [artistId], references: [id])
-  albumId   String?
-  album     Album?     @relation(fields: [albumId], references: [id])
-  downloads    Download[]
-  transactions Transaction[]
-  price        Int?            // kobo, null = use default
+  postId         String          @unique
+  post           Post            @relation(fields: [postId], references: [id])
+  artistId       String
+  artist         Artist          @relation(fields: [artistId], references: [id])
+  albumId        String?
+  album          Album?          @relation(fields: [albumId], references: [id])
+  downloads      Download[]
+  transactions   Transaction[]
+  price          Int? // kobo, null = use default
   bookmarks      Bookmark[]
   favorites      Favorite[]
   playlistTracks PlaylistTrack[]
@@ -214,10 +215,10 @@ model Artist {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  ownerId   String?  @unique
-  owner     User?    @relation("UserArtistProfile", fields: [ownerId], references: [id], onDelete: SetNull)
-  labelId   String?
-  label     Label?   @relation(fields: [labelId], references: [id], onDelete: SetNull)
+  ownerId String? @unique
+  owner   User?   @relation("UserArtistProfile", fields: [ownerId], references: [id], onDelete: SetNull)
+  labelId String?
+  label   Label?  @relation(fields: [labelId], references: [id], onDelete: SetNull)
 
   music         Music[]
   albums        Album[]
@@ -249,7 +250,7 @@ model Label {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  artists    Artist[]
+  artists Artist[]
 
   @@index([slug])
   @@index([ownerId])
@@ -333,18 +334,19 @@ model Download {
   user    User?   @relation(fields: [userId], references: [id])
 
   @@index([musicId])
+  @@index([userId, createdAt])
   @@index([createdAt])
 }
 
 // ── Categories & Tags ─────────────────────────────────────────────────
 model Category {
-  id          String   @id @default(cuid())
-  name        String   @unique
-  slug        String   @unique
+  id          String  @id @default(cuid())
+  name        String  @unique
+  slug        String  @unique
   description String?
   color       String?
   icon        String?
-  sortOrder   Int      @default(0)
+  sortOrder   Int     @default(0)
   posts       Post[]
 
   @@index([slug])
@@ -383,12 +385,12 @@ model Comment {
   guestWebsite String?
 
   postId   String
-  post     Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  post     Post          @relation(fields: [postId], references: [id], onDelete: Cascade)
   authorId String?
-  author   User?     @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  author   User?         @relation(fields: [authorId], references: [id], onDelete: SetNull)
   parentId String?
-  parent   Comment?  @relation("CommentReplies", fields: [parentId], references: [id])
-  replies  Comment[] @relation("CommentReplies")
+  parent   Comment?      @relation("CommentReplies", fields: [parentId], references: [id])
+  replies  Comment[]     @relation("CommentReplies")
   likes    CommentLike[]
 
   @@index([postId, status])
@@ -398,7 +400,7 @@ model Comment {
 // ── Comment Likes ────────────────────────────────────────────────────
 model CommentLike {
   id        String   @id @default(cuid())
-  type      String   // "LIKE" | "DISLIKE"
+  type      String // "LIKE" | "DISLIKE"
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   commentId String
@@ -486,14 +488,14 @@ model SiteSettings {
   updatedAt DateTime @updatedAt
 
   // General / Site Identity
-  siteName      String  @default("Soundloaded Blog")
-  tagline       String  @default("Nigeria's #1 music download & entertainment blog")
-  siteUrl       String  @default("https://soundloaded.ng")
-  contactEmail  String  @default("")
-  copyrightText String  @default("Soundloaded Nigeria. All rights reserved.")
-  logoLight     String? // R2 key
-  logoDark      String? // R2 key
-  favicon       String? // R2 key
+  siteName       String  @default("Soundloaded Blog")
+  tagline        String  @default("Nigeria's #1 music download & entertainment blog")
+  siteUrl        String  @default("https://soundloaded.ng")
+  contactEmail   String  @default("")
+  copyrightText  String  @default("Soundloaded Nigeria. All rights reserved.")
+  logoLight      String? // R2 key
+  logoDark       String? // R2 key
+  favicon        String? // R2 key
   defaultOgImage String? // R2 key (1200x630)
 
   // SEO & Meta
@@ -526,11 +528,11 @@ model SiteSettings {
   pwaSplashScreens   Json   @default("[]")
 
   // Notifications
-  discordWebhookUrl       String  @default("")
-  notifyOnNewComment      Boolean @default(true)
-  notifyOnNewSubscriber   Boolean @default(true)
-  notifyOnNewMusicUpload  Boolean @default(false)
-  notifyOnPublish         Boolean @default(false)
+  discordWebhookUrl      String  @default("")
+  notifyOnNewComment     Boolean @default(true)
+  notifyOnNewSubscriber  Boolean @default(true)
+  notifyOnNewMusicUpload Boolean @default(false)
+  notifyOnPublish        Boolean @default(false)
 
   // Social Auto-Sharing
   autoShareTwitter        Boolean @default(false)
@@ -553,13 +555,13 @@ model SiteSettings {
   categoryBase       String @default("category") // prefix for category archive pages
 
   // Discussion / Comments
-  enableComments           Boolean @default(true)
-  autoApproveComments      Boolean @default(false)
-  requireLoginToComment    Boolean @default(false)
-  commentNestingDepth      Int     @default(2) // 1–5 levels
-  commentsPerPage          Int     @default(20)
-  commentOrder             String  @default("oldest") // "oldest" | "newest"
-  closeCommentsAfterDays   Int     @default(0) // 0 = never
+  enableComments            Boolean @default(true)
+  autoApproveComments       Boolean @default(false)
+  requireLoginToComment     Boolean @default(false)
+  commentNestingDepth       Int     @default(2) // 1–5 levels
+  commentsPerPage           Int     @default(20)
+  commentOrder              String  @default("oldest") // "oldest" | "newest"
+  closeCommentsAfterDays    Int     @default(0) // 0 = never
   commentPreviouslyApproved Boolean @default(false) // require prior approved comment
   commentMaxLinks           Int     @default(2) // hold if N+ links, 0 = disabled
   emailOnNewComment         Boolean @default(true)
@@ -640,24 +642,24 @@ enum MediaType {
 }
 
 model Media {
-  id         String    @id @default(cuid())
-  filename   String
-  r2Key      String    @unique
-  url        String
-  mimeType   String
-  size       Int
-  width      Int?
-  height     Int?
-  alt        String    @default("")
-  title      String    @default("")
-  caption    String    @default("")
-  folder     String    @default("")
-  type       MediaType @default(IMAGE)
-  uploadedBy String?
-  user       User?     @relation(fields: [uploadedBy], references: [id])
-  postDownloads Post[] @relation("PostDownloadMedia")
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
+  id            String    @id @default(cuid())
+  filename      String
+  r2Key         String    @unique
+  url           String
+  mimeType      String
+  size          Int
+  width         Int?
+  height        Int?
+  alt           String    @default("")
+  title         String    @default("")
+  caption       String    @default("")
+  folder        String    @default("")
+  type          MediaType @default(IMAGE)
+  uploadedBy    String?
+  user          User?     @relation(fields: [uploadedBy], references: [id])
+  postDownloads Post[]    @relation("PostDownloadMedia")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
   @@index([type])
   @@index([folder])
@@ -689,7 +691,170 @@ model SearchQuery {
   createdAt DateTime @default(now())
 
   @@index([query])
+  @@index([userId, createdAt])
+  @@index([query, createdAt])
   @@index([createdAt])
+}
+
+// ── Recommendation Events & Snapshots ────────────────────────────────
+enum RecommendationEntityType {
+  POST
+  MUSIC
+  ARTIST
+  PLAYLIST
+  USER
+  STORY
+  SEARCH_QUERY
+}
+
+enum RecommendationSurface {
+  FEED_FORYOU
+  FEED_FOLLOWING
+  FEED_DISCOVER
+  EXPLORE_LATEST
+  EXPLORE_TOP
+  EXPLORE_TRENDING
+  EXPLORE_HOT
+  POST_DETAIL
+  MUSIC_DETAIL
+  ARTIST_DETAIL
+  PLAYLIST_DETAIL
+  SEARCH_RESULTS
+  SEARCH_TRENDING
+  FOLLOW_SUGGESTIONS
+  LIBRARY_PLAYLIST
+  STORIES_VIEWER
+}
+
+enum RecommendationEventName {
+  POST_IMPRESSION
+  POST_VIEW
+  POST_REACTION_ADD
+  POST_REACTION_REMOVE
+  POST_COMMENT_CREATE
+  POST_BOOKMARK_ADD
+  POST_FAVORITE_ADD
+  POST_DOWNLOAD
+  POST_HIDE
+  MUSIC_IMPRESSION
+  MUSIC_PLAY_QUALIFIED
+  MUSIC_DOWNLOAD
+  MUSIC_BOOKMARK_ADD
+  MUSIC_FAVORITE_ADD
+  MUSIC_PLAYLIST_ADD
+  MUSIC_DETAIL_OPEN
+  ARTIST_FOLLOW
+  ARTIST_UNFOLLOW
+  ARTIST_DETAIL_OPEN
+  PLAYLIST_OPEN
+  PLAYLIST_TRACK_ADD
+  PLAYLIST_REORDER
+  USER_FOLLOW
+  USER_UNFOLLOW
+  STORY_VIEW
+  SEARCH_QUERY
+  SEARCH_NO_RESULT
+  SEARCH_RESULT_CLICK
+  RECOMMENDATION_IMPRESSION
+  RECOMMENDATION_CLICK
+  RECOMMENDATION_DISMISS
+}
+
+enum AffinityDimensionType {
+  CATEGORY
+  TAG
+  ARTIST
+  GENRE
+  AUTHOR
+  POST_TYPE
+}
+
+model InteractionEvent {
+  id         String                   @id @default(cuid())
+  eventName  RecommendationEventName
+  entityType RecommendationEntityType
+  entityId   String?
+
+  userId      String?
+  user        User?   @relation("InteractionEventUser", fields: [userId], references: [id], onDelete: SetNull)
+  anonymousId String?
+  sessionId   String?
+
+  surface    RecommendationSurface
+  placement  String?
+  position   Int?
+  occurredAt DateTime              @default(now())
+
+  recommendationRequestId String?
+  candidateSource         String?
+  reasonKey               String?
+
+  referrerEntityType RecommendationEntityType?
+  referrerEntityId   String?
+  queryText          String?
+  artistId           String?
+  albumId            String?
+  categoryId         String?
+  tagSlug            String?
+  genre              String?
+  weightHint         Float?
+  metadata           Json?
+  dedupeKey          String?
+  createdAt          DateTime                  @default(now())
+
+  @@unique([dedupeKey])
+  @@index([userId, occurredAt])
+  @@index([anonymousId, occurredAt])
+  @@index([entityType, entityId, occurredAt])
+  @@index([eventName, occurredAt])
+  @@index([surface, occurredAt])
+  @@index([recommendationRequestId])
+}
+
+model RecommendationImpression {
+  id        String @id @default(cuid())
+  requestId String
+
+  userId      String?
+  user        User?   @relation("RecommendationImpressionUser", fields: [userId], references: [id], onDelete: SetNull)
+  anonymousId String?
+  sessionId   String?
+
+  surface         RecommendationSurface
+  strategy        String
+  entityType      RecommendationEntityType
+  entityId        String
+  position        Int
+  candidateSource String?
+  reasonKey       String?
+  score           Float?
+  servedAt        DateTime                 @default(now())
+  metadata        Json?
+
+  @@index([requestId, position])
+  @@index([userId, surface, servedAt])
+  @@index([anonymousId, surface, servedAt])
+  @@index([entityType, entityId, servedAt])
+}
+
+model UserAffinitySnapshot {
+  id String @id @default(cuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  dimensionType AffinityDimensionType
+  dimensionKey  String
+  score         Float
+  eventCount    Int                   @default(0)
+  windowDays    Int
+  lastEventAt   DateTime?
+  metadata      Json?
+  updatedAt     DateTime              @updatedAt
+  createdAt     DateTime              @default(now())
+
+  @@unique([userId, dimensionType, dimensionKey, windowDays])
+  @@index([userId, dimensionType, score])
 }
 
 // ── Payments ──────────────────────────────────────────────────────────
@@ -718,11 +883,11 @@ model Transaction {
   id          String   @id @default(cuid())
   userId      String
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  type        String   // "subscription" | "download"
-  amount      Int      // kobo (smallest NGN unit)
+  type        String // "subscription" | "download"
+  amount      Int // kobo (smallest NGN unit)
   currency    String   @default("NGN")
   paystackRef String   @unique
-  status      String   // "success" | "failed" | "pending"
+  status      String // "success" | "failed" | "pending"
   musicId     String?
   music       Music?   @relation(fields: [musicId], references: [id])
   metadata    Json?
@@ -746,6 +911,8 @@ model Bookmark {
   @@unique([userId, postId])
   @@unique([userId, musicId])
   @@index([userId, createdAt])
+  @@index([postId, createdAt])
+  @@index([musicId, createdAt])
 }
 
 // ── Favorites ──────────────────────────────────────────────────────────
@@ -762,6 +929,8 @@ model Favorite {
   @@unique([userId, postId])
   @@unique([userId, musicId])
   @@index([userId, createdAt])
+  @@index([postId, createdAt])
+  @@index([musicId, createdAt])
 }
 
 // ── Reactions ──────────────────────────────────────────────────────────
@@ -776,6 +945,7 @@ model Reaction {
 
   @@unique([userId, postId])
   @@index([postId, emoji])
+  @@index([postId, createdAt])
   @@index([userId, createdAt])
 }
 
@@ -844,6 +1014,7 @@ model Follow {
   @@unique([followerId, followingId])
   @@index([followerId])
   @@index([followingId])
+  @@index([followingId, createdAt])
 }
 
 model ArtistFollow {
@@ -857,6 +1028,7 @@ model ArtistFollow {
   @@unique([userId, artistId])
   @@index([userId])
   @@index([artistId])
+  @@index([artistId, createdAt])
 }
 
 // ── Stories ───────────────────────────────────────────────────────────
@@ -893,8 +1065,8 @@ model StoryItem {
 
   // Audio overlay (TEXT and IMAGE stories only)
   audioUrl       String?
-  audioStartTime Float?   @default(0)
-  audioEndTime   Float?   @default(30)
+  audioStartTime Float?  @default(0)
+  audioEndTime   Float?  @default(30)
 
   // Text story fields
   backgroundColor String?
@@ -930,15 +1102,16 @@ model HiddenPost {
 
 // ── Post Views (Facebook-style: deduped per user, 24h window) ────────
 model PostView {
-  id        String   @id @default(cuid())
-  postId    String
-  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
-  viewerId  String
-  viewer    User     @relation(fields: [viewerId], references: [id], onDelete: Cascade)
-  viewedAt  DateTime @default(now())
+  id       String   @id @default(cuid())
+  postId   String
+  post     Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  viewerId String
+  viewer   User     @relation(fields: [viewerId], references: [id], onDelete: Cascade)
+  viewedAt DateTime @default(now())
 
   @@unique([postId, viewerId])
   @@index([postId])
+  @@index([postId, viewedAt])
   @@index([viewerId, viewedAt])
 }
 
@@ -949,7 +1122,7 @@ model Report {
   user       User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   postId     String
   post       Post         @relation(fields: [postId], references: [id], onDelete: Cascade)
-  reason     String       // "spam" | "harassment" | "misinformation" | "hate_speech" | "violence" | "other"
+  reason     String // "spam" | "harassment" | "misinformation" | "hate_speech" | "violence" | "other"
   details    String?      @db.Text
   status     ReportStatus @default(PENDING)
   adminNote  String?      @db.Text
@@ -1020,24 +1193,25 @@ model PlaylistTrack {
 
   @@unique([playlistId, musicId])
   @@index([playlistId, position])
+  @@index([musicId, addedAt])
 }
 
 // ── Audio Processing Jobs ─────────────────────────────────────────────
 model AudioProcessingJob {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   musicId     String
-  music       Music    @relation(fields: [musicId], references: [id], onDelete: Cascade)
-  jobType     String   // transcode | normalize | waveform | full
-  status      String   @default("pending") // pending | processing | completed | failed
-  priority    Int      @default(0)
-  attempts    Int      @default(0)
-  maxAttempts Int      @default(3)
+  music       Music     @relation(fields: [musicId], references: [id], onDelete: Cascade)
+  jobType     String // transcode | normalize | waveform | full
+  status      String    @default("pending") // pending | processing | completed | failed
+  priority    Int       @default(0)
+  attempts    Int       @default(0)
+  maxAttempts Int       @default(3)
   error       String?
-  result      Json?    // output metadata from FFmpeg
+  result      Json? // output metadata from FFmpeg
   startedAt   DateTime?
   completedAt DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   @@index([status, priority, createdAt])
   @@index([musicId])

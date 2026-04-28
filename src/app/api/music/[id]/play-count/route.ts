@@ -1,6 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { redis } from "@/lib/redis";
+import {
+  RecommendationEntityType,
+  RecommendationEventName,
+  RecommendationSurface,
+} from "@prisma/client";
+import { trackInteractionEvent } from "@/lib/recommendation";
 
 // Increment stream count — called client-side after 30s of actual playback
 // IP-deduped: one count per IP per track per 5 minutes
@@ -28,6 +34,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     await db.music.update({
       where: { id },
       data: { streamCount: { increment: 1 } },
+    });
+    trackInteractionEvent({
+      eventName: RecommendationEventName.MUSIC_PLAY_QUALIFIED,
+      entityType: RecommendationEntityType.MUSIC,
+      entityId: id,
+      surface: RecommendationSurface.MUSIC_DETAIL,
+      weightHint: 2,
+      metadata: { dedupeWindowSeconds: 300 },
     });
     return NextResponse.json({ ok: true });
   } catch {

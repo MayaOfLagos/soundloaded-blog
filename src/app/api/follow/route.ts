@@ -1,9 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { Prisma } from "@prisma/client";
 import { notifyNewFollower } from "@/lib/services/notifications";
 import { isBlocked } from "@/lib/services/blocks";
+import {
+  Prisma,
+  RecommendationEntityType,
+  RecommendationEventName,
+  RecommendationSurface,
+} from "@prisma/client";
+import { trackInteractionEvent } from "@/lib/recommendation";
 
 /** POST — follow a user */
 export async function POST(request: NextRequest) {
@@ -36,6 +42,14 @@ export async function POST(request: NextRequest) {
     await db.follow.create({
       data: { followerId, followingId: userId },
     });
+    trackInteractionEvent({
+      eventName: RecommendationEventName.USER_FOLLOW,
+      entityType: RecommendationEntityType.USER,
+      entityId: userId,
+      userId: followerId,
+      surface: RecommendationSurface.FOLLOW_SUGGESTIONS,
+      weightHint: 7,
+    });
 
     // Fire-and-forget notification
     const actorName = (session.user as { name?: string }).name ?? "Someone";
@@ -65,9 +79,19 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: "userId is required" }, { status: 400 });
   }
 
-  await db.follow.deleteMany({
+  const deleted = await db.follow.deleteMany({
     where: { followerId, followingId: userId },
   });
+  if (deleted.count > 0) {
+    trackInteractionEvent({
+      eventName: RecommendationEventName.USER_UNFOLLOW,
+      entityType: RecommendationEntityType.USER,
+      entityId: userId,
+      userId: followerId,
+      surface: RecommendationSurface.FOLLOW_SUGGESTIONS,
+      weightHint: -3,
+    });
+  }
 
   return NextResponse.json({ following: false });
 }

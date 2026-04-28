@@ -26,12 +26,13 @@ import { usePlayerStore } from "@/store/player.store";
 import type { Track } from "@/store/player.store";
 import { ScrollShelf } from "@/components/music/ScrollShelf";
 import { MusicShelfCard } from "@/components/music/MusicShelfCard";
+import { ArtistCard } from "@/components/music/ArtistCard";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogPortal, DialogTitle } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useArtistFollow } from "@/hooks/useArtistFollow";
 import { cn, formatDuration } from "@/lib/utils";
-import type { MusicCardData, AlbumCardData } from "@/lib/api/music";
+import type { MusicCardData, AlbumCardData, ArtistCardData } from "@/lib/api/music";
 
 /* ─── Types ─── */
 
@@ -69,6 +70,7 @@ interface ArtistDetailClientProps {
   popularTracks: PopularTrack[];
   allTracks: MusicCardData[];
   albums: AlbumCardData[];
+  similarArtists: ArtistCardData[];
   siteUrl: string;
 }
 
@@ -154,6 +156,7 @@ export function ArtistDetailClient({
   popularTracks,
   allTracks,
   albums,
+  similarArtists,
   siteUrl,
 }: ArtistDetailClientProps) {
   const [activeTab, setActiveTab] = useState<TabId>("overview");
@@ -355,6 +358,7 @@ export function ArtistDetailClient({
                 albums={albums}
                 artistName={artist.name}
                 artistSlug={artist.slug}
+                similarArtists={similarArtists}
                 onSeeAllSongs={() => setActiveTab("songs")}
               />
             )}
@@ -518,6 +522,7 @@ function OverviewTab({
   albums,
   artistName,
   artistSlug,
+  similarArtists,
   onSeeAllSongs,
 }: {
   popularTracks: PopularTrack[];
@@ -525,6 +530,7 @@ function OverviewTab({
   albums: AlbumCardData[];
   artistName: string;
   artistSlug: string;
+  similarArtists: ArtistCardData[];
   onSeeAllSongs: () => void;
 }) {
   return (
@@ -606,6 +612,18 @@ function OverviewTab({
             </div>
           ))}
         </ScrollShelf>
+      )}
+
+      {similarArtists.length > 0 && (
+        <div className="mt-8">
+          <ScrollShelf title="Similar Artists">
+            {similarArtists.map((similarArtist) => (
+              <div key={similarArtist.id} className="w-[150px] flex-shrink-0 sm:w-[170px]">
+                <ArtistCard artist={similarArtist} />
+              </div>
+            ))}
+          </ScrollShelf>
+        </div>
       )}
     </>
   );

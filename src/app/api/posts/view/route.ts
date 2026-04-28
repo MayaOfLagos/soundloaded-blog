@@ -2,7 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { redis } from "@/lib/redis";
-import { Prisma } from "@prisma/client";
+import {
+  Prisma,
+  RecommendationEntityType,
+  RecommendationEventName,
+  RecommendationSurface,
+} from "@prisma/client";
+import { buildRecommendationDedupeKey, trackInteractionEvent } from "@/lib/recommendation";
 
 /**
  * POST /api/posts/view
@@ -34,6 +40,15 @@ export async function POST(request: NextRequest) {
           where: { id: postId },
           data: { views: { increment: 1 } },
         });
+        trackInteractionEvent({
+          eventName: RecommendationEventName.POST_VIEW,
+          entityType: RecommendationEntityType.POST,
+          entityId: postId,
+          userId,
+          surface: RecommendationSurface.POST_DETAIL,
+          weightHint: 1,
+          dedupeKey: buildRecommendationDedupeKey(["post", "view", userId, postId]),
+        });
       } catch (err) {
         // P2002 = unique constraint violation → already viewed
         if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
@@ -59,6 +74,14 @@ export async function POST(request: NextRequest) {
           await db.post.update({
             where: { id: postId },
             data: { views: { increment: 1 } },
+          });
+          trackInteractionEvent({
+            eventName: RecommendationEventName.POST_VIEW,
+            entityType: RecommendationEntityType.POST,
+            entityId: postId,
+            surface: RecommendationSurface.POST_DETAIL,
+            weightHint: 1,
+            metadata: { viewerType: "guest" },
           });
         } else {
           return NextResponse.json({ viewed: true, duplicate: true });

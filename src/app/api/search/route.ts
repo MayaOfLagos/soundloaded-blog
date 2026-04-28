@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { getPostUrl } from "@/lib/urls";
 import { searchAll } from "@/lib/meilisearch";
+import {
+  RecommendationEntityType,
+  RecommendationEventName,
+  RecommendationSurface,
+} from "@prisma/client";
+import { trackInteractionEvent } from "@/lib/recommendation";
 
 function trackSearch(
   query: string,
@@ -9,12 +15,22 @@ function trackSearch(
   _ip: string | null,
   engine: string = "meilisearch"
 ) {
+  const normalizedQuery = query.toLowerCase().slice(0, 200);
   // Note: IP is no longer stored for GDPR compliance
   db.searchQuery
     .create({
-      data: { query: query.toLowerCase().slice(0, 200), results, ip: null, engine },
+      data: { query: normalizedQuery, results, ip: null, engine },
     })
     .catch(() => {});
+  trackInteractionEvent({
+    eventName:
+      results > 0 ? RecommendationEventName.SEARCH_QUERY : RecommendationEventName.SEARCH_NO_RESULT,
+    entityType: RecommendationEntityType.SEARCH_QUERY,
+    surface: RecommendationSurface.SEARCH_RESULTS,
+    queryText: normalizedQuery,
+    weightHint: results > 0 ? 0.5 : 0,
+    metadata: { results, engine },
+  });
 }
 
 export async function GET(req: NextRequest) {

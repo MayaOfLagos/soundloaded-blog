@@ -4,6 +4,12 @@ import { auth } from "@/lib/auth";
 import { getPresignedDownloadUrl, MUSIC_BUCKET } from "@/lib/r2";
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
+import {
+  RecommendationEntityType,
+  RecommendationEventName,
+  RecommendationSurface,
+} from "@prisma/client";
+import { trackInteractionEvent } from "@/lib/recommendation";
 
 const hasUpstash = !!process.env.UPSTASH_REDIS_REST_URL && !!process.env.UPSTASH_REDIS_REST_TOKEN;
 
@@ -19,6 +25,8 @@ function getDownloadRatelimit(maxDownloadsPerHour: number) {
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+  const session = await auth();
+  const userId = (session?.user as { id?: string } | undefined)?.id;
 
   try {
     const [music, siteSettings] = await Promise.all([
@@ -31,6 +39,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
           enableDownload: true,
           isExclusive: true,
           price: true,
+          artistId: true,
+          albumId: true,
+          genre: true,
         },
       }),
       db.siteSettings.findUnique({
@@ -53,17 +64,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
     // Premium gating for exclusive tracks
     if (music.isExclusive) {
-      const session = await auth();
       if (!session?.user) {
         return NextResponse.json(
           { error: "Premium content", requiresAuth: true, price: music.price },
           { status: 402 }
         );
       }
+      const authenticatedUserId = userId!;
 
-      const userId = (session.user as { id: string }).id;
       const subscription = await db.subscription.findUnique({
-        where: { userId },
+        where: { userId: authenticatedUserId },
         select: { status: true, currentPeriodEnd: true },
       });
 
@@ -74,7 +84,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
       if (!hasActiveSub) {
         const purchase = await db.transaction.findFirst({
-          where: { userId, musicId: id, type: "download", status: "success" },
+          where: { userId: authenticatedUserId, musicId: id, type: "download", status: "success" },
         });
 
         if (!purchase) {
@@ -114,11 +124,24 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       db.download.create({
         data: {
           musicId: id,
+          userId,
           ip,
           userAgent: req.headers.get("user-agent") ?? undefined,
         },
       }),
     ]).catch(() => {});
+    trackInteractionEvent({
+      eventName: RecommendationEventName.MUSIC_DOWNLOAD,
+      entityType: RecommendationEntityType.MUSIC,
+      entityId: id,
+      userId,
+      surface: RecommendationSurface.MUSIC_DETAIL,
+      artistId: music.artistId,
+      albumId: music.albumId,
+      genre: music.genre,
+      weightHint: 10,
+      metadata: { isExclusive: music.isExclusive },
+    });
 
     return NextResponse.json({ url, filename: music.filename });
   } catch (err) {

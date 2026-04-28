@@ -4,6 +4,18 @@ import { db } from "@/lib/db";
 import sanitizeHtml from "sanitize-html";
 import { createUserPostSchema } from "@/lib/validations/post";
 import { getExcludedUserIds } from "@/lib/services/blocks";
+import {
+  createRecommendationCacheKey,
+  createRecommendationRequestId,
+  diversifyRankedPosts,
+  getRecommendationCacheTtlSeconds,
+  getUserAffinityProfile,
+  isRecommendationV1Enabled,
+  rankPosts,
+  trackRecommendationImpressions,
+  withRecommendationCache,
+} from "@/lib/recommendation";
+import { RecommendationEntityType, RecommendationSurface } from "@prisma/client";
 
 // ── Role hierarchy ────────────────────────────────────────────────────
 const ROLE_LEVELS: Record<string, number> = {
@@ -77,8 +89,8 @@ function sanitizeBody(body: unknown): unknown {
   return node;
 }
 
-// ── Scoring helpers for algorithmic feeds ─────────────────────────────
-interface ScoredPost {
+// ── Feed post shape for algorithmic ranking ───────────────────────────
+interface FeedPost {
   id: string;
   slug: string;
   title: string;
@@ -91,56 +103,62 @@ interface ScoredPost {
   publishedAt: Date | null;
   createdAt: Date;
   views: number;
-  author: { id: string; name: string | null; image: string | null };
+  author: { id: string; name: string | null; image: string | null; username?: string | null };
   category: { name: string; slug: string } | null;
   commentCount: number;
   reactionCount: number;
+  bookmarkCount?: number;
+  favoriteCount?: number;
   _score?: number;
+  _reasonKey?: string;
+  _candidateSource?: string;
 }
 
-function scorePosts(
-  posts: ScoredPost[],
-  followingIds: Set<string>,
-  decayPower: number,
-  followBoost: number
-): ScoredPost[] {
-  const now = Date.now();
-  return posts
-    .map((p) => {
-      const hoursAge = (now - new Date(p.createdAt).getTime()) / 3600000;
-      const base = p.reactionCount * 3 + p.commentCount * 5 + p.views * 0.5;
-      const boost = followingIds.has(p.author.id) ? followBoost : 0;
-      p._score = (base + boost) / Math.pow(hoursAge + 2, decayPower);
-      return p;
-    })
-    .sort((a, b) => (b._score ?? 0) - (a._score ?? 0));
+interface FeedPageResult {
+  posts: FeedPost[];
+  nextCursor: string | null;
 }
 
-function applyDiversity(posts: ScoredPost[], maxConsecutive = 3): ScoredPost[] {
-  const result: ScoredPost[] = [];
-  let consecutiveAuthor = "";
-  let consecutiveCount = 0;
-  const deferred: ScoredPost[] = [];
-
-  for (const p of posts) {
-    if (p.author.id === consecutiveAuthor) {
-      consecutiveCount++;
-      if (consecutiveCount > maxConsecutive) {
-        deferred.push(p);
-        continue;
-      }
-    } else {
-      consecutiveAuthor = p.author.id;
-      consecutiveCount = 1;
-    }
-    result.push(p);
-  }
-
-  // Append deferred posts at the end
-  return [...result, ...deferred];
+function getFeedOffset(cursor: string | null) {
+  if (!cursor?.startsWith("offset:")) return 0;
+  const parsed = Number.parseInt(cursor.slice(7), 10);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
 }
 
-function formatPost(p: ScoredPost) {
+function getFeedSurface(feed: "foryou" | "following" | "discover") {
+  if (feed === "following") return RecommendationSurface.FEED_FOLLOWING;
+  if (feed === "discover") return RecommendationSurface.FEED_DISCOVER;
+  return RecommendationSurface.FEED_FORYOU;
+}
+
+function trackFeedImpressions({
+  posts,
+  userId,
+  feed,
+  offset = 0,
+}: {
+  posts: FeedPost[];
+  userId?: string;
+  feed: "foryou" | "following" | "discover";
+  offset?: number;
+}) {
+  const surface = getFeedSurface(feed);
+  trackRecommendationImpressions({
+    requestId: createRecommendationRequestId(surface),
+    userId,
+    surface,
+    items: posts.map((post, index) => ({
+      entityType: RecommendationEntityType.POST,
+      entityId: post.id,
+      position: offset + index + 1,
+      candidateSource: post._candidateSource ?? feed,
+      reasonKey: post._reasonKey,
+      score: post._score,
+    })),
+  });
+}
+
+function formatPost(p: FeedPost) {
   return {
     id: p.id,
     slug: p.slug,
@@ -219,7 +237,7 @@ export async function GET(req: NextRequest) {
       const includeFields = {
         author: { select: { id: true, name: true, image: true, username: true } },
         category: { select: { name: true, slug: true } },
-        _count: { select: { comments: true, reactions: true } },
+        _count: { select: { comments: true, reactions: true, bookmarks: true, favorites: true } },
       };
 
       // ── "following" — reverse-chronological from followed users ──
@@ -241,15 +259,19 @@ export async function GET(req: NextRequest) {
         const hasMore = posts.length > limit;
         const items = hasMore ? posts.slice(0, limit) : posts;
         const nextCursor = hasMore ? items[items.length - 1].id : null;
+        const mappedItems = items.map((p) => ({
+          ...p,
+          commentCount: p._count.comments,
+          reactionCount: p._count.reactions,
+          bookmarkCount: p._count.bookmarks,
+          favoriteCount: p._count.favorites,
+          _candidateSource: "following",
+          _reasonKey: "FOLLOWED_CREATOR",
+        }));
+        trackFeedImpressions({ posts: mappedItems, userId, feed: "following" });
 
         return NextResponse.json({
-          posts: items.map((p) =>
-            formatPost({
-              ...p,
-              commentCount: p._count.comments,
-              reactionCount: p._count.reactions,
-            })
-          ),
+          posts: mappedItems.map(formatPost),
           nextCursor,
         });
       }
@@ -259,28 +281,75 @@ export async function GET(req: NextRequest) {
         const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
         where.createdAt = { gte: sevenDaysAgo };
 
-        const offset = cursor?.startsWith("offset:") ? parseInt(cursor.slice(7), 10) : 0;
+        const offset = getFeedOffset(cursor);
 
-        const pool = await db.post.findMany({
-          where,
-          orderBy: { createdAt: "desc" },
-          take: 100,
-          include: includeFields,
-        });
+        const loadDiscoverPage = async (): Promise<FeedPageResult> => {
+          if (!isRecommendationV1Enabled()) {
+            const posts = await db.post.findMany({
+              where,
+              orderBy: { createdAt: "desc" },
+              take: limit + 1,
+              skip: offset,
+              include: includeFields,
+            });
+            const hasMore = posts.length > limit;
+            const items = hasMore ? posts.slice(0, limit) : posts;
 
-        const mapped: ScoredPost[] = pool.map((p) => ({
-          ...p,
-          commentCount: p._count.comments,
-          reactionCount: p._count.reactions,
-        }));
+            return {
+              posts: items.map((p) => ({
+                ...p,
+                commentCount: p._count.comments,
+                reactionCount: p._count.reactions,
+                bookmarkCount: p._count.bookmarks,
+                favoriteCount: p._count.favorites,
+                _candidateSource: "legacy_discover",
+              })),
+              nextCursor: hasMore ? `offset:${offset + limit}` : null,
+            };
+          }
 
-        const scored = scorePosts(mapped, new Set(), 1.5, 0);
-        const paginated = scored.slice(offset, offset + limit);
-        const nextCursor = offset + limit < scored.length ? `offset:${offset + limit}` : null;
+          const pool = await db.post.findMany({
+            where,
+            orderBy: { createdAt: "desc" },
+            take: 100,
+            include: includeFields,
+          });
+
+          const mapped: FeedPost[] = pool.map((p) => ({
+            ...p,
+            commentCount: p._count.comments,
+            reactionCount: p._count.reactions,
+            bookmarkCount: p._count.bookmarks,
+            favoriteCount: p._count.favorites,
+          }));
+
+          const scored = diversifyRankedPosts(
+            rankPosts(mapped, {
+              decayPower: 1.5,
+              viewWeight: 0.25,
+              candidateSource: "trending_community",
+            }),
+            { maxConsecutiveAuthors: 2, maxConsecutiveCategories: 3 }
+          );
+
+          return {
+            posts: scored.slice(offset, offset + limit),
+            nextCursor: offset + limit < scored.length ? `offset:${offset + limit}` : null,
+          };
+        };
+
+        const pageResult = userId
+          ? await loadDiscoverPage()
+          : await withRecommendationCache({
+              key: createRecommendationCacheKey(["feed", "discover", offset, limit]),
+              ttlSeconds: getRecommendationCacheTtlSeconds("feed"),
+              load: loadDiscoverPage,
+            });
+        trackFeedImpressions({ posts: pageResult.posts, userId, feed: "discover", offset });
 
         return NextResponse.json({
-          posts: paginated.map(formatPost),
-          nextCursor,
+          posts: pageResult.posts.map(formatPost),
+          nextCursor: pageResult.nextCursor,
         });
       }
 
@@ -292,32 +361,87 @@ export async function GET(req: NextRequest) {
         const cutoff = new Date(Date.now() - daysBack * 24 * 60 * 60 * 1000);
         where.createdAt = { gte: cutoff };
 
-        const offset = cursor?.startsWith("offset:") ? parseInt(cursor.slice(7), 10) : 0;
+        const offset = getFeedOffset(cursor);
 
-        const pool = await db.post.findMany({
-          where,
-          orderBy: { createdAt: "desc" },
-          take: poolLimit,
-          include: includeFields,
-        });
+        const loadForYouPage = async (): Promise<FeedPageResult> => {
+          if (!isRecommendationV1Enabled()) {
+            const posts = await db.post.findMany({
+              where,
+              orderBy: { createdAt: "desc" },
+              take: limit + 1,
+              skip: offset,
+              include: includeFields,
+            });
+            const hasMore = posts.length > limit;
+            const items = hasMore ? posts.slice(0, limit) : posts;
 
-        const mapped: ScoredPost[] = pool.map((p) => ({
-          ...p,
-          commentCount: p._count.comments,
-          reactionCount: p._count.reactions,
-        }));
+            return {
+              posts: items.map((p) => ({
+                ...p,
+                commentCount: p._count.comments,
+                reactionCount: p._count.reactions,
+                bookmarkCount: p._count.bookmarks,
+                favoriteCount: p._count.favorites,
+                _candidateSource: "legacy_foryou",
+              })),
+              nextCursor: hasMore ? `offset:${offset + limit}` : null,
+            };
+          }
 
-        let scored = scorePosts(mapped, followingIds, 1.2, 50);
-        if (userId) {
-          scored = applyDiversity(scored, 3);
-        }
+          const [pool, affinity] = await Promise.all([
+            db.post.findMany({
+              where,
+              orderBy: { createdAt: "desc" },
+              take: poolLimit,
+              include: includeFields,
+            }),
+            userId ? getUserAffinityProfile({ userId }) : Promise.resolve(null),
+          ]);
 
-        const paginated = scored.slice(offset, offset + limit);
-        const nextCursor = offset + limit < scored.length ? `offset:${offset + limit}` : null;
+          const mapped: FeedPost[] = pool.map((p) => ({
+            ...p,
+            commentCount: p._count.comments,
+            reactionCount: p._count.reactions,
+            bookmarkCount: p._count.bookmarks,
+            favoriteCount: p._count.favorites,
+          }));
+
+          let scored = rankPosts(mapped, {
+            followingIds,
+            decayPower: 1.2,
+            followBoost: 50,
+            viewWeight: 0.25,
+            candidateSource: userId ? "personalized_recent" : "trending_community",
+            authorAffinity: affinity?.authorScores,
+            categoryAffinity: affinity?.categoryScores,
+            postTypeAffinity: affinity?.postTypeScores,
+            affinityWeight: 8,
+          });
+          if (userId) {
+            scored = diversifyRankedPosts(scored, {
+              maxConsecutiveAuthors: 3,
+              maxConsecutiveCategories: 3,
+            });
+          }
+
+          return {
+            posts: scored.slice(offset, offset + limit),
+            nextCursor: offset + limit < scored.length ? `offset:${offset + limit}` : null,
+          };
+        };
+
+        const pageResult = userId
+          ? await loadForYouPage()
+          : await withRecommendationCache({
+              key: createRecommendationCacheKey(["feed", "foryou-anonymous", offset, limit]),
+              ttlSeconds: getRecommendationCacheTtlSeconds("feed"),
+              load: loadForYouPage,
+            });
+        trackFeedImpressions({ posts: pageResult.posts, userId, feed: "foryou", offset });
 
         return NextResponse.json({
-          posts: paginated.map(formatPost),
-          nextCursor,
+          posts: pageResult.posts.map(formatPost),
+          nextCursor: pageResult.nextCursor,
         });
       }
     }

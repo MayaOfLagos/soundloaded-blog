@@ -4,6 +4,12 @@ import { db } from "@/lib/db";
 import { reactionSchema, reactionDeleteSchema } from "@/lib/validations/reactions";
 import type { ReactionState } from "@/lib/api/reactions";
 import { notifyReaction } from "@/lib/services/notifications";
+import {
+  RecommendationEntityType,
+  RecommendationEventName,
+  RecommendationSurface,
+} from "@prisma/client";
+import { trackInteractionEvent } from "@/lib/recommendation";
 
 async function getReactionState(postId: string, userId: string): Promise<ReactionState> {
   const [userReaction, counts] = await Promise.all([
@@ -71,6 +77,15 @@ export async function POST(request: NextRequest) {
     create: { userId, postId, emoji },
     update: { emoji },
   });
+  trackInteractionEvent({
+    eventName: RecommendationEventName.POST_REACTION_ADD,
+    entityType: RecommendationEntityType.POST,
+    entityId: postId,
+    userId,
+    surface: RecommendationSurface.FEED_FORYOU,
+    weightHint: 5,
+    metadata: { emoji },
+  });
 
   // Fire-and-forget notification to post owner
   const post = await db.post.findUnique({ where: { id: postId }, select: { authorId: true } });
@@ -102,6 +117,14 @@ export async function DELETE(request: NextRequest) {
 
   await db.reaction.deleteMany({
     where: { userId, postId },
+  });
+  trackInteractionEvent({
+    eventName: RecommendationEventName.POST_REACTION_REMOVE,
+    entityType: RecommendationEntityType.POST,
+    entityId: postId,
+    userId,
+    surface: RecommendationSurface.FEED_FORYOU,
+    weightHint: -2,
   });
 
   const state = await getReactionState(postId, userId);

@@ -1,8 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { getPresignedDownloadUrl, MEDIA_BUCKET, MUSIC_BUCKET } from "@/lib/r2";
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
+import {
+  RecommendationEntityType,
+  RecommendationEventName,
+  RecommendationSurface,
+} from "@prisma/client";
+import { trackInteractionEvent } from "@/lib/recommendation";
 
 const hasUpstash = !!process.env.UPSTASH_REDIS_REST_URL && !!process.env.UPSTASH_REDIS_REST_TOKEN;
 
@@ -18,6 +25,8 @@ function getDownloadRatelimit(maxDownloadsPerHour: number) {
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
+  const session = await auth();
+  const userId = (session?.user as { id?: string } | undefined)?.id;
 
   try {
     const [post, siteSettings] = await Promise.all([
@@ -94,6 +103,15 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         data: { downloadCount: { increment: 1 } },
       })
       .catch(() => {});
+    trackInteractionEvent({
+      eventName: RecommendationEventName.POST_DOWNLOAD,
+      entityType: RecommendationEntityType.POST,
+      entityId: post.id,
+      userId,
+      surface: RecommendationSurface.POST_DETAIL,
+      weightHint: 8,
+      metadata: { mediaType: post.downloadMedia.type },
+    });
 
     return NextResponse.json({
       url,

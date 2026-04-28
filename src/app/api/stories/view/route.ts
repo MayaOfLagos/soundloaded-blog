@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { Prisma } from "@prisma/client";
+import {
+  Prisma,
+  RecommendationEntityType,
+  RecommendationEventName,
+  RecommendationSurface,
+} from "@prisma/client";
+import { trackInteractionEvent } from "@/lib/recommendation";
 
 /** POST — mark a story item as viewed */
 export async function POST(request: NextRequest) {
@@ -20,6 +26,14 @@ export async function POST(request: NextRequest) {
   try {
     await db.storyView.create({
       data: { storyItemId, viewerId },
+    });
+    trackInteractionEvent({
+      eventName: RecommendationEventName.STORY_VIEW,
+      entityType: RecommendationEntityType.STORY,
+      entityId: storyItemId,
+      userId: viewerId,
+      surface: RecommendationSurface.STORIES_VIEWER,
+      weightHint: 2,
     });
   } catch (err) {
     // Already viewed — ignore duplicate

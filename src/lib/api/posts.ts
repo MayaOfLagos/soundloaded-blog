@@ -1,6 +1,15 @@
 import { db } from "@/lib/db";
 import type { PostCardData } from "@/components/blog/PostCard";
 import { getPostUrl } from "@/lib/urls";
+import {
+  createRecommendationCacheKey,
+  diversifyRankedPosts,
+  getRecommendationCacheTtlSeconds,
+  isRecommendationV1Enabled,
+  rankRelatedPosts,
+  withRecommendationCache,
+} from "@/lib/recommendation";
+import type { Prisma } from "@prisma/client";
 
 const SELECT = {
   id: true,
@@ -12,6 +21,15 @@ const SELECT = {
   views: true,
   category: { select: { name: true, slug: true } },
   author: { select: { name: true, image: true } },
+} as const;
+
+const RELATED_SELECT = {
+  ...SELECT,
+  type: true,
+  createdAt: true,
+  author: { select: { id: true, name: true, image: true } },
+  tags: { select: { tag: { select: { slug: true } } } },
+  _count: { select: { comments: true, reactions: true, bookmarks: true, favorites: true } },
 } as const;
 
 type RawPost = {
@@ -26,6 +44,28 @@ type RawPost = {
   author: { name: string | null; image: string | null };
 };
 
+type RelatedPostCandidate = RawPost & {
+  type: string;
+  createdAt: Date;
+  author: { id: string; name: string | null; image: string | null };
+  tags: { tag: { slug: string } }[];
+  _count: {
+    comments: number;
+    reactions: number;
+    bookmarks: number;
+    favorites: number;
+  };
+};
+
+type RankableRelatedPostCandidate = RelatedPostCandidate & {
+  createdAt: Date;
+  tagSlugs: string[];
+  commentCount: number;
+  reactionCount: number;
+  bookmarkCount: number;
+  favoriteCount: number;
+};
+
 function mapPost(p: RawPost, permalinkStructure?: string): PostCardData {
   return {
     id: p.id,
@@ -38,6 +78,31 @@ function mapPost(p: RawPost, permalinkStructure?: string): PostCardData {
     category: p.category ? { name: p.category.name, slug: p.category.slug } : null,
     author: p.author.name ? { name: p.author.name, avatar: p.author.image } : null,
     href: permalinkStructure ? getPostUrl(p, permalinkStructure) : undefined,
+  };
+}
+
+function dedupeById<T extends { id: string }>(items: T[]) {
+  const seen = new Set<string>();
+  const result: T[] = [];
+
+  for (const item of items) {
+    if (seen.has(item.id)) continue;
+    seen.add(item.id);
+    result.push(item);
+  }
+
+  return result;
+}
+
+function toRankableRelatedPost(post: RelatedPostCandidate): RankableRelatedPostCandidate {
+  return {
+    ...post,
+    createdAt: post.publishedAt ?? post.createdAt,
+    tagSlugs: post.tags.map(({ tag }) => tag.slug),
+    commentCount: post._count.comments,
+    reactionCount: post._count.reactions,
+    bookmarkCount: post._count.bookmarks,
+    favoriteCount: post._count.favorites,
   };
 }
 
@@ -226,44 +291,136 @@ export async function getRelatedPostsByType(
   type: string,
   categorySlug?: string,
   limit = 4,
-  permalinkStructure?: string
+  permalinkStructure?: string,
+  tagSlugs: string[] = []
 ): Promise<PostCardData[]> {
   try {
-    // First: try same category
-    const sameCat = categorySlug
-      ? await db.post.findMany({
-          where: {
-            status: "PUBLISHED",
-            id: { not: postId },
-            type: type as never,
-            category: { slug: categorySlug },
-          },
-          orderBy: { publishedAt: "desc" },
-          take: limit,
-          select: SELECT,
-        })
-      : [];
-
-    // Fallback: fill remaining slots from any category of the same type
-    if (sameCat.length < limit) {
-      const excludeIds = [postId, ...sameCat.map((p) => p.id)];
-      const filler = await db.post.findMany({
-        where: {
-          status: "PUBLISHED",
-          id: { notIn: excludeIds },
-          type: type as never,
-        },
-        orderBy: { publishedAt: "desc" },
-        take: limit - sameCat.length,
-        select: SELECT,
-      });
-      return [...sameCat, ...filler].map((p) => mapPost(p, permalinkStructure));
+    if (!isRecommendationV1Enabled()) {
+      return getLegacyRelatedPostsByType(postId, type, categorySlug, limit, permalinkStructure);
     }
 
-    return sameCat.map((p) => mapPost(p, permalinkStructure));
+    const cleanTagSlugs = Array.from(new Set(tagSlugs.filter(Boolean)));
+    const cacheKey = createRecommendationCacheKey([
+      "related-posts",
+      postId,
+      type,
+      categorySlug ?? "none",
+      cleanTagSlugs.join(",") || "none",
+      limit,
+      permalinkStructure ?? "default",
+    ]);
+
+    return await withRecommendationCache({
+      key: cacheKey,
+      ttlSeconds: getRecommendationCacheTtlSeconds("relatedPosts"),
+      load: async () =>
+        getRankedRelatedPostsByType(
+          postId,
+          type,
+          categorySlug,
+          limit,
+          permalinkStructure,
+          cleanTagSlugs
+        ),
+    });
   } catch {
     return [];
   }
+}
+
+async function getRankedRelatedPostsByType(
+  postId: string,
+  type: string,
+  categorySlug: string | undefined,
+  limit: number,
+  permalinkStructure: string | undefined,
+  cleanTagSlugs: string[]
+): Promise<PostCardData[]> {
+  const candidateTake = Math.min(Math.max(limit * 8, 24), 80);
+  const baseWhere: Prisma.PostWhereInput = {
+    status: "PUBLISHED",
+    id: { not: postId },
+    type: type as never,
+  };
+  const affinityWhere: Prisma.PostWhereInput[] = [];
+
+  if (categorySlug) {
+    affinityWhere.push({ category: { slug: categorySlug } });
+  }
+
+  if (cleanTagSlugs.length > 0) {
+    affinityWhere.push({ tags: { some: { tag: { slug: { in: cleanTagSlugs } } } } });
+  }
+
+  const [focused, broad] = await Promise.all([
+    affinityWhere.length > 0
+      ? db.post.findMany({
+          where: { ...baseWhere, OR: affinityWhere },
+          orderBy: [{ publishedAt: "desc" }, { views: "desc" }],
+          take: candidateTake,
+          select: RELATED_SELECT,
+        })
+      : Promise.resolve([] as RelatedPostCandidate[]),
+    db.post.findMany({
+      where: baseWhere,
+      orderBy: [{ publishedAt: "desc" }, { views: "desc" }],
+      take: candidateTake,
+      select: RELATED_SELECT,
+    }),
+  ]);
+
+  const candidates = dedupeById([...focused, ...broad]).map(toRankableRelatedPost);
+  const ranked = rankRelatedPosts(candidates, {
+    type,
+    categorySlug,
+    tagSlugs: cleanTagSlugs,
+    candidateSource: "same_content_type",
+  });
+  const diversified = diversifyRankedPosts(ranked, {
+    maxConsecutiveAuthors: 2,
+    maxConsecutiveCategories: 3,
+  });
+
+  return diversified.slice(0, limit).map((p) => mapPost(p, permalinkStructure));
+}
+
+async function getLegacyRelatedPostsByType(
+  postId: string,
+  type: string,
+  categorySlug?: string,
+  limit = 4,
+  permalinkStructure?: string
+): Promise<PostCardData[]> {
+  const sameCat = categorySlug
+    ? await db.post.findMany({
+        where: {
+          status: "PUBLISHED",
+          id: { not: postId },
+          type: type as never,
+          category: { slug: categorySlug },
+        },
+        orderBy: { publishedAt: "desc" },
+        take: limit,
+        select: SELECT,
+      })
+    : [];
+
+  if (sameCat.length < limit) {
+    const excludeIds = [postId, ...sameCat.map((p) => p.id)];
+    const filler = await db.post.findMany({
+      where: {
+        status: "PUBLISHED",
+        id: { notIn: excludeIds },
+        type: type as never,
+      },
+      orderBy: { publishedAt: "desc" },
+      take: limit - sameCat.length,
+      select: SELECT,
+    });
+    return [...sameCat, ...filler].map((p) => mapPost(p, permalinkStructure));
+  }
+
+  return sameCat.map((p) => mapPost(p, permalinkStructure));
 }
 
 export async function getMoreFromArtist(artistId: string, excludeMusicId: string, limit = 5) {

@@ -6,6 +6,12 @@ import { getSettings } from "@/lib/settings";
 import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
 import { notifyComment, notifyCommentReply } from "@/lib/services/notifications";
+import {
+  RecommendationEntityType,
+  RecommendationEventName,
+  RecommendationSurface,
+} from "@prisma/client";
+import { trackInteractionEvent } from "@/lib/recommendation";
 
 // Rate limit: 5 comments per hour per IP
 const commentRatelimit =
@@ -280,6 +286,17 @@ export async function POST(req: NextRequest) {
         author: { select: { name: true, image: true } },
       },
     });
+    if (comment.status === "APPROVED") {
+      trackInteractionEvent({
+        eventName: RecommendationEventName.POST_COMMENT_CREATE,
+        entityType: RecommendationEntityType.POST,
+        entityId: data.postId,
+        userId,
+        surface: RecommendationSurface.POST_DETAIL,
+        weightHint: 6,
+        metadata: { parentId: data.parentId ?? null },
+      });
+    }
 
     // In-app notifications (fire-and-forget)
     if (userId && comment.status === "APPROVED" && session?.user) {

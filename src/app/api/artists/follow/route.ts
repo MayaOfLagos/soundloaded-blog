@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import { Prisma } from "@prisma/client";
+import {
+  Prisma,
+  RecommendationEntityType,
+  RecommendationEventName,
+  RecommendationSurface,
+} from "@prisma/client";
 import { db } from "@/lib/db";
+import { trackInteractionEvent } from "@/lib/recommendation";
 
 /** POST — follow an artist */
 export async function POST(request: NextRequest) {
@@ -19,6 +25,14 @@ export async function POST(request: NextRequest) {
 
   try {
     await db.artistFollow.create({ data: { userId, artistId } });
+    trackInteractionEvent({
+      eventName: RecommendationEventName.ARTIST_FOLLOW,
+      entityType: RecommendationEntityType.ARTIST,
+      entityId: artistId,
+      userId,
+      surface: RecommendationSurface.ARTIST_DETAIL,
+      weightHint: 10,
+    });
     const count = await db.artistFollow.count({ where: { artistId } });
     return NextResponse.json({ following: true, followerCount: count });
   } catch (err) {
@@ -44,7 +58,17 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: "artistId is required" }, { status: 400 });
   }
 
-  await db.artistFollow.deleteMany({ where: { userId, artistId } });
+  const deleted = await db.artistFollow.deleteMany({ where: { userId, artistId } });
+  if (deleted.count > 0) {
+    trackInteractionEvent({
+      eventName: RecommendationEventName.ARTIST_UNFOLLOW,
+      entityType: RecommendationEntityType.ARTIST,
+      entityId: artistId,
+      userId,
+      surface: RecommendationSurface.ARTIST_DETAIL,
+      weightHint: -4,
+    });
+  }
   const count = await db.artistFollow.count({ where: { artistId } });
 
   return NextResponse.json({ following: false, followerCount: count });

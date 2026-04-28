@@ -31,7 +31,8 @@ export async function PostPageContent({ post, settings, currentPath }: PostPageC
     post.type,
     post.category?.slug,
     relatedLimit,
-    settings.permalinkStructure
+    settings.permalinkStructure,
+    post.tags?.map(({ tag }) => tag.slug) ?? []
   );
 
   const articleUrl = `${settings.siteUrl}${canonicalPath}`;

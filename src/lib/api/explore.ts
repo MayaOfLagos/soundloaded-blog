@@ -2,6 +2,17 @@ import { db } from "@/lib/db";
 import { getPostUrl } from "@/lib/urls";
 import { getSettings } from "@/lib/settings";
 import { getExcludedUserIds } from "@/lib/services/blocks";
+import {
+  createRecommendationCacheKey,
+  createRecommendationRequestId,
+  diversifyRankedPosts,
+  getRecommendationCacheTtlSeconds,
+  isRecommendationV1Enabled,
+  rankPosts,
+  trackRecommendationImpressions,
+  withRecommendationCache,
+} from "@/lib/recommendation";
+import { RecommendationEntityType, RecommendationSurface } from "@prisma/client";
 
 export interface ExplorePost {
   id: string;
@@ -69,6 +80,21 @@ type RawExplorePost = {
   author: { id: string; name: string | null; image: string | null; username: string | null };
   _count: { comments: number; bookmarks: number; favorites: number; reactions: number };
 };
+
+type RankableExplorePost = RawExplorePost & {
+  commentCount: number;
+  bookmarkCount: number;
+  favoriteCount: number;
+  reactionCount: number;
+  _score?: number;
+  _reasonKey?: string;
+  _candidateSource?: string;
+};
+
+interface ExploreRankedResult {
+  posts: RankableExplorePost[];
+  total: number;
+}
 
 function mapExplorePost(p: RawExplorePost, permalinkStructure?: string): ExplorePost {
   const media = Array.isArray(p.mediaAttachments)
@@ -146,65 +172,47 @@ async function buildBaseWhere(excludeUserId?: string, type?: string): Promise<an
   return where;
 }
 
-// ── Deterministic daily hash for stable randomization ───────────────────
-function simpleHash(str: string): number {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    const char = str.charCodeAt(i);
-    hash = (hash << 5) - hash + char;
-    hash = hash & hash; // Convert to 32-bit integer
-  }
-  return Math.abs(hash);
+function toRankableExplorePost(p: RawExplorePost): RankableExplorePost {
+  return {
+    ...p,
+    commentCount: p._count.comments,
+    bookmarkCount: p._count.bookmarks,
+    favoriteCount: p._count.favorites,
+    reactionCount: p._count.reactions,
+  };
 }
 
-// ── Algorithmic scoring ─────────────────────────────────────────────────
-function scorePost(p: RawExplorePost, followingIds: Set<string>, seed: number): number {
-  const now = Date.now();
-  const hoursAge = (now - new Date(p.createdAt).getTime()) / 3600000;
-
-  // Engagement score (weighted)
-  const engagement =
-    p._count.reactions * 3 +
-    p._count.comments * 5 +
-    p._count.bookmarks * 4 +
-    p._count.favorites * 4 +
-    p.views * 0.1;
-
-  // Follow boost
-  const followBoost = followingIds.has(p.author.id) ? 30 : 0;
-
-  // Time decay (gravity algorithm like Hacker News)
-  const decayFactor = 1 / Math.pow(hoursAge + 2, 1.2);
-
-  // Deterministic random factor (varies daily, stable within a day)
-  const postHash = simpleHash(p.id + seed);
-  const randomFactor = 0.7 + (postHash % 60) / 100; // 0.7 – 1.3
-
-  return (engagement + followBoost) * decayFactor * randomFactor;
-}
-
-// ── Author diversity (max 2 consecutive from same author) ───────────────
-function diversifyPosts(posts: ExplorePost[]): ExplorePost[] {
-  const result: ExplorePost[] = [];
-  const deferred: ExplorePost[] = [];
-  let lastAuthorId = "";
-  let consecutiveCount = 0;
-
-  for (const p of posts) {
-    if (p.author.id === lastAuthorId) {
-      consecutiveCount++;
-      if (consecutiveCount > 2) {
-        deferred.push(p);
-        continue;
-      }
-    } else {
-      lastAuthorId = p.author.id;
-      consecutiveCount = 1;
-    }
-    result.push(p);
-  }
-
-  return [...result, ...deferred];
+function trackExploreImpressions({
+  posts,
+  userId,
+  surface,
+  page,
+  limit,
+  candidateSource,
+}: {
+  posts: Array<
+    RawExplorePost & { _score?: number; _reasonKey?: string; _candidateSource?: string }
+  >;
+  userId?: string;
+  surface: RecommendationSurface;
+  page: number;
+  limit: number;
+  candidateSource: string;
+}) {
+  const offset = Math.max(0, page - 1) * limit;
+  trackRecommendationImpressions({
+    requestId: createRecommendationRequestId(surface),
+    userId,
+    surface,
+    items: posts.map((post, index) => ({
+      entityType: RecommendationEntityType.POST,
+      entityId: post.id,
+      position: offset + index + 1,
+      candidateSource: post._candidateSource ?? candidateSource,
+      reasonKey: post._reasonKey,
+      score: post._score,
+    })),
+  });
 }
 
 // ── Get user's following list ───────────────────────────────────────────
@@ -238,6 +246,15 @@ export async function getExploreLatest(
     db.post.count({ where }),
   ]);
 
+  trackExploreImpressions({
+    posts: posts as RawExplorePost[],
+    userId: excludeUserId,
+    surface: RecommendationSurface.EXPLORE_LATEST,
+    page,
+    limit,
+    candidateSource: "explore_latest",
+  });
+
   return {
     posts: posts.map((p) => mapExplorePost(p as RawExplorePost, settings.permalinkStructure)),
     pagination: buildPagination(page, limit, total),
@@ -265,6 +282,15 @@ export async function getExploreTop(
     db.post.count({ where }),
   ]);
 
+  trackExploreImpressions({
+    posts: posts as RawExplorePost[],
+    userId: excludeUserId,
+    surface: RecommendationSurface.EXPLORE_TOP,
+    page,
+    limit,
+    candidateSource: "explore_top",
+  });
+
   return {
     posts: posts.map((p) => mapExplorePost(p as RawExplorePost, settings.permalinkStructure)),
     pagination: buildPagination(page, limit, total),
@@ -286,20 +312,70 @@ export async function getExploreTrending(
     publishedAt: { gte: sevenDaysAgo },
   };
 
-  const [posts, total] = await Promise.all([
-    db.post.findMany({
-      where,
-      orderBy: { views: "desc" },
-      take: limit,
-      skip: (page - 1) * limit,
-      select: EXPLORE_SELECT,
-    }),
-    db.post.count({ where }),
-  ]);
+  const loadTrending = async (): Promise<ExploreRankedResult> => {
+    if (!isRecommendationV1Enabled()) {
+      const [legacyPosts, total] = await Promise.all([
+        db.post.findMany({
+          where,
+          orderBy: [{ views: "desc" }, { publishedAt: "desc" }],
+          take: page * limit,
+          select: EXPLORE_SELECT,
+        }),
+        db.post.count({ where }),
+      ]);
+
+      return {
+        posts: (legacyPosts as RawExplorePost[]).map((post) => ({
+          ...toRankableExplorePost(post),
+          _candidateSource: "legacy_explore_trending",
+        })),
+        total,
+      };
+    }
+
+    const [pool, total] = await Promise.all([
+      db.post.findMany({
+        where,
+        orderBy: { publishedAt: "desc" },
+        take: 200,
+        select: EXPLORE_SELECT,
+      }),
+      db.post.count({ where }),
+    ]);
+
+    const scored = diversifyRankedPosts(
+      rankPosts((pool as RawExplorePost[]).map(toRankableExplorePost), {
+        decayPower: 1.1,
+        viewWeight: 0.1,
+        candidateSource: "explore_trending",
+      }),
+      { maxConsecutiveAuthors: 2, maxConsecutiveCategories: 3 }
+    );
+
+    return { posts: scored, total };
+  };
+
+  const ranked = excludeUserId
+    ? await loadTrending()
+    : await withRecommendationCache({
+        key: createRecommendationCacheKey(["explore", "trending", type ?? "all", page, limit]),
+        ttlSeconds: getRecommendationCacheTtlSeconds("explore"),
+        load: loadTrending,
+      });
+  const start = (page - 1) * limit;
+  const posts = ranked.posts.slice(start, start + limit);
+  trackExploreImpressions({
+    posts,
+    userId: excludeUserId,
+    surface: RecommendationSurface.EXPLORE_TRENDING,
+    page,
+    limit,
+    candidateSource: "explore_trending",
+  });
 
   return {
-    posts: posts.map((p) => mapExplorePost(p as RawExplorePost, settings.permalinkStructure)),
-    pagination: buildPagination(page, limit, total),
+    posts: posts.map((p) => mapExplorePost(p, settings.permalinkStructure)),
+    pagination: buildPagination(page, limit, ranked.total),
   };
 }
 
@@ -313,42 +389,82 @@ export async function getExploreHot(
   const settings = await getSettings();
   const where = await buildBaseWhere(excludeUserId, type);
 
-  // Daily seed for stable-within-a-day randomization
-  const today = new Date().toISOString().slice(0, 10);
-  const seed = simpleHash(today);
+  const loadHot = async (): Promise<ExploreRankedResult> => {
+    if (!isRecommendationV1Enabled()) {
+      const [legacyPosts, total] = await Promise.all([
+        db.post.findMany({
+          where,
+          orderBy: [{ views: "desc" }, { publishedAt: "desc" }],
+          take: page * limit,
+          select: EXPLORE_SELECT,
+        }),
+        db.post.count({ where }),
+      ]);
 
-  // Get following IDs for boost
-  const followingIds = await getFollowingIds(excludeUserId);
+      return {
+        posts: (legacyPosts as RawExplorePost[]).map((post) => ({
+          ...toRankableExplorePost(post),
+          _candidateSource: "legacy_explore_hot",
+        })),
+        total,
+      };
+    }
 
-  // Fetch a larger pool for scoring (up to 200 posts from last 14 days)
-  const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
-  const pool = await db.post.findMany({
-    where: {
-      ...where,
-      publishedAt: { gte: fourteenDaysAgo },
-    },
-    orderBy: { publishedAt: "desc" },
-    take: 200,
-    select: EXPLORE_SELECT,
-  });
+    const today = new Date().toISOString().slice(0, 10);
+    const followingIds = await getFollowingIds(excludeUserId);
+    const fourteenDaysAgo = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000);
 
-  const total = await db.post.count({ where });
+    const [pool, total] = await Promise.all([
+      db.post.findMany({
+        where: {
+          ...where,
+          publishedAt: { gte: fourteenDaysAgo },
+        },
+        orderBy: { publishedAt: "desc" },
+        take: 200,
+        select: EXPLORE_SELECT,
+      }),
+      db.post.count({ where }),
+    ]);
 
-  // Score and sort
-  const scored = (pool as RawExplorePost[])
-    .map((p) => ({ post: p, score: scorePost(p, followingIds, seed) }))
-    .sort((a, b) => b.score - a.score);
+    const scored = diversifyRankedPosts(
+      rankPosts((pool as RawExplorePost[]).map(toRankableExplorePost), {
+        followingIds,
+        decayPower: 1.2,
+        followBoost: 30,
+        viewWeight: 0.1,
+        randomSeed: today,
+        randomSpread: 0.3,
+        candidateSource: "explore_hot",
+      }),
+      { maxConsecutiveAuthors: 2, maxConsecutiveCategories: 3 }
+    );
+
+    return { posts: scored, total };
+  };
+
+  const ranked = excludeUserId
+    ? await loadHot()
+    : await withRecommendationCache({
+        key: createRecommendationCacheKey(["explore", "hot", type ?? "all", page, limit]),
+        ttlSeconds: getRecommendationCacheTtlSeconds("explore"),
+        load: loadHot,
+      });
 
   // Paginate from scored results
   const start = (page - 1) * limit;
-  const paginated = scored.slice(start, start + limit);
-
-  // Map and diversify
-  const mapped = paginated.map((s) => mapExplorePost(s.post, settings.permalinkStructure));
-  const diversified = diversifyPosts(mapped);
+  const paginated = ranked.posts.slice(start, start + limit);
+  trackExploreImpressions({
+    posts: paginated,
+    userId: excludeUserId,
+    surface: RecommendationSurface.EXPLORE_HOT,
+    page,
+    limit,
+    candidateSource: "explore_hot",
+  });
 
   return {
-    posts: diversified,
-    pagination: buildPagination(page, limit, total),
+    posts: paginated.map((p) => mapExplorePost(p, settings.permalinkStructure)),
+    pagination: buildPagination(page, limit, ranked.total),
   };
 }

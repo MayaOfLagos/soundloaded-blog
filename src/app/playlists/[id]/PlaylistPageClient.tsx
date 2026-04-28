@@ -88,7 +88,7 @@ export function PlaylistPageClient({ playlistId }: PlaylistPageClientProps) {
         playlists: (PlaylistSummary & {
           creator: { name: string | null; username: string | null; image: string | null };
         })[];
-      }>("/api/playlists?limit=10");
+      }>(`/api/playlists?limit=10&relatedTo=${playlistId}`);
       return data.playlists.filter((p) => p.id !== playlistId);
     },
     enabled: !!data?.playlist,

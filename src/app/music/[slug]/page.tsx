@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import {
   getMusicBySlug,
   getMoreByArtist,
-  getRelatedByGenre,
+  getRelatedMusicForTrack,
   getMusicFavoriteCount,
 } from "@/lib/api/music";
 import { getPostBySlug } from "@/lib/api/posts";
@@ -76,9 +76,12 @@ export default async function MusicDetailPage({ params }: Props) {
   // Fetch additional data in parallel
   const [moreByArtist, relatedTracks, favoriteCount, dominantColor] = await Promise.all([
     getMoreByArtist({ artistId: track.artistId, excludeMusicId: track.id }),
-    track.genre
-      ? getRelatedByGenre({ genre: track.genre, excludeMusicId: track.id })
-      : Promise.resolve([]),
+    getRelatedMusicForTrack({
+      musicId: track.id,
+      artistId: track.artistId,
+      albumId: track.albumId,
+      genre: track.genre,
+    }),
     getMusicFavoriteCount(track.id),
     track.coverArt ? extractDominantColor(track.coverArt) : Promise.resolve(null),
   ]);

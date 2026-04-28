@@ -135,6 +135,37 @@ function SearchContent() {
     router.push(`/search?q=${encodeURIComponent(term)}`);
   }
 
+  function trackSearchClick(
+    entityType: "POST" | "MUSIC" | "ARTIST",
+    entityId: string,
+    position: number,
+    href: string
+  ) {
+    const payload = JSON.stringify({
+      entityType,
+      entityId,
+      surface: "SEARCH_RESULTS",
+      queryText: q,
+      position,
+      href,
+    });
+
+    if (navigator.sendBeacon) {
+      navigator.sendBeacon(
+        "/api/recommendations/click",
+        new Blob([payload], { type: "application/json" })
+      );
+      return;
+    }
+
+    fetch("/api/recommendations/click", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: payload,
+      keepalive: true,
+    }).catch(() => {});
+  }
+
   const total = results.posts.length + results.music.length + results.artists.length;
 
   return (
@@ -313,12 +344,15 @@ function SearchContent() {
                   ? `/music/${topTrack.slug}`
                   : (topPost as PostCardData).href || `/${topPost!.slug}`;
               const badge = isArtist ? "Artist" : isTrack ? "Song" : "Article";
+              const entityType = isArtist ? "ARTIST" : isTrack ? "MUSIC" : "POST";
+              const entityId = isArtist ? topArtist.id : isTrack ? topTrack.id : topPost!.id;
 
               return (
                 <div>
                   <h2 className="text-foreground mb-3 text-sm font-bold">Top Result</h2>
                   <Link
                     href={href}
+                    onClick={() => trackSearchClick(entityType, entityId, 1, href)}
                     className="bg-card/50 ring-border/40 group hover:ring-brand/30 relative flex h-56 flex-col justify-end overflow-hidden rounded-2xl p-5 ring-1 transition-all hover:shadow-lg"
                   >
                     {coverSrc ? (
@@ -362,10 +396,13 @@ function SearchContent() {
                 <h2 className="text-foreground mb-3 text-sm font-bold">Songs</h2>
                 <div className="bg-card/30 ring-border/40 overflow-hidden rounded-2xl ring-1">
                   <div className="divide-border/20 divide-y">
-                    {results.music.slice(0, 4).map((track) => (
+                    {results.music.slice(0, 4).map((track, index) => (
                       <Link
                         key={track.id}
                         href={`/music/${track.slug}`}
+                        onClick={() =>
+                          trackSearchClick("MUSIC", track.id, index + 1, `/music/${track.slug}`)
+                        }
                         className="hover:bg-muted/50 flex items-center gap-3 px-4 py-3 transition-colors"
                       >
                         <div className="bg-muted relative h-10 w-10 flex-shrink-0 overflow-hidden rounded">
@@ -435,8 +472,14 @@ function SearchContent() {
                 News &amp; Articles
               </h2>
               <div className="grid grid-cols-1 gap-3 @sm:grid-cols-2 @xl:grid-cols-3">
-                {results.posts.map((post) => (
-                  <div key={post.id} className="bg-card/50 ring-border/40 rounded-xl px-3 ring-1">
+                {results.posts.map((post, index) => (
+                  <div
+                    key={post.id}
+                    onClick={() =>
+                      trackSearchClick("POST", post.id, index + 1, post.href || `/${post.slug}`)
+                    }
+                    className="bg-card/50 ring-border/40 rounded-xl px-3 ring-1"
+                  >
                     <PostCard post={post} variant="compact" />
                   </div>
                 ))}

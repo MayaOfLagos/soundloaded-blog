@@ -2,7 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { bookmarkSchema } from "@/lib/validations/user";
-import { Prisma } from "@prisma/client";
+import {
+  Prisma,
+  RecommendationEntityType,
+  RecommendationEventName,
+  RecommendationSurface,
+} from "@prisma/client";
+import { trackInteractionEvent } from "@/lib/recommendation";
 
 export async function GET(request: NextRequest) {
   const session = await auth();
@@ -80,6 +86,20 @@ export async function POST(request: NextRequest) {
         postId: parsed.data.postId,
         musicId: parsed.data.musicId,
       },
+    });
+    trackInteractionEvent({
+      eventName: parsed.data.postId
+        ? RecommendationEventName.POST_BOOKMARK_ADD
+        : RecommendationEventName.MUSIC_BOOKMARK_ADD,
+      entityType: parsed.data.postId
+        ? RecommendationEntityType.POST
+        : RecommendationEntityType.MUSIC,
+      entityId: parsed.data.postId ?? parsed.data.musicId,
+      userId,
+      surface: parsed.data.postId
+        ? RecommendationSurface.POST_DETAIL
+        : RecommendationSurface.MUSIC_DETAIL,
+      weightHint: parsed.data.postId ? 6 : 7,
     });
 
     return NextResponse.json({ bookmark }, { status: 201 });

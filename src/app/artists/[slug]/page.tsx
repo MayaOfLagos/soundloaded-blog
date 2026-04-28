@@ -103,6 +103,9 @@ export default async function ArtistPage({ params }: Props) {
           fileSize: t.fileSize,
           releaseYear: t.year,
           r2Key: t.r2Key,
+          accessModel: t.accessModel,
+          streamAccess: t.streamAccess,
+          creatorPrice: t.creatorPrice,
         }))}
         albums={artist.albums.map((a) => ({
           id: a.id,

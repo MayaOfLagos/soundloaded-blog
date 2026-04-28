@@ -6,6 +6,7 @@ import { useSession, signOut } from "next-auth/react";
 import {
   LayoutDashboard,
   FileText,
+  Files,
   Music,
   Video,
   Mic2,
@@ -53,6 +54,7 @@ export type AdminLogo = {
 const mainNav = [
   { title: "Dashboard", href: "/admin", icon: LayoutDashboard },
   { title: "Posts", href: "/admin/posts", icon: FileText },
+  { title: "Pages", href: "/admin/pages", icon: Files },
   { title: "Music", href: "/admin/music", icon: Music },
   { title: "Videos", href: "/admin/videos", icon: Video },
   { title: "Artists", href: "/admin/artists", icon: Mic2 },

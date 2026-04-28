@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { motion } from "motion/react";
-import { Home, Compass, Rss, Tag, Menu, X, Upload, icons } from "lucide-react";
+import { Home, Compass, Rss, Tag, Menu, X, Upload, FileText, icons } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { Button } from "@/components/ui/button";
@@ -64,6 +64,11 @@ interface Category {
   name: string;
   slug: string;
   icon: string | null;
+}
+
+interface NavigationPages {
+  header: Array<{ id: string; title: string; href: string }>;
+  footer: Array<{ id: string; title: string; href: string; systemKey: string | null }>;
 }
 
 /* ── Helpers ── */
@@ -170,6 +175,15 @@ export function MobileNav() {
     staleTime: 5 * 60 * 1000,
   });
 
+  const { data: navigationPages } = useQuery({
+    queryKey: ["pages-navigation"],
+    queryFn: async () => {
+      const res = await axios.get<NavigationPages>("/api/pages/navigation");
+      return res.data;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
   const close = () => setOpen(false);
 
   // Filter nav items by feature toggles
@@ -185,6 +199,16 @@ export function MobileNav() {
     if (toggleKey && settings && !(settings as any)[toggleKey]) return false;
     return true;
   });
+  const headerPages = navigationPages?.header ?? [];
+  const footerPages =
+    navigationPages?.footer && navigationPages.footer.length > 0
+      ? navigationPages.footer
+      : [
+          { id: "about", title: "About", href: "/about", systemKey: "about" },
+          { id: "contact", title: "Contact", href: "/contact", systemKey: "contact" },
+          { id: "privacy", title: "Privacy", href: "/privacy", systemKey: "privacy" },
+          { id: "terms", title: "Terms", href: "/terms", systemKey: "terms" },
+        ];
 
   // Social links
   const socialLinks =
@@ -268,6 +292,24 @@ export function MobileNav() {
               ))}
             </div>
           </StaggerSection>
+
+          {headerPages.length > 0 && (
+            <StaggerSection index={1}>
+              <SectionLabel>Pages</SectionLabel>
+              <div className="space-y-0.5">
+                {headerPages.map((page) => (
+                  <NavItem
+                    key={page.id}
+                    href={page.href}
+                    label={page.title}
+                    icon={FileText}
+                    isActive={pathname === page.href}
+                    onClose={close}
+                  />
+                ))}
+              </div>
+            </StaggerSection>
+          )}
 
           {/* [B3] Browse Categories */}
           {categories.length > 0 && (
@@ -361,37 +403,18 @@ export function MobileNav() {
           {/* Footer links & copyright */}
           <StaggerSection index={5} className="pt-2">
             <div className="text-muted-foreground/60 flex flex-wrap items-center justify-center gap-x-2 gap-y-0.5 text-[10px]">
-              <Link
-                href="/about"
-                onClick={close}
-                className="hover:text-foreground transition-colors"
-              >
-                About
-              </Link>
-              <span className="text-muted-foreground/30">·</span>
-              <Link
-                href="/contact"
-                onClick={close}
-                className="hover:text-foreground transition-colors"
-              >
-                Contact
-              </Link>
-              <span className="text-muted-foreground/30">·</span>
-              <Link
-                href="/privacy"
-                onClick={close}
-                className="hover:text-foreground transition-colors"
-              >
-                Privacy
-              </Link>
-              <span className="text-muted-foreground/30">·</span>
-              <Link
-                href="/terms"
-                onClick={close}
-                className="hover:text-foreground transition-colors"
-              >
-                Terms
-              </Link>
+              {footerPages.slice(0, 6).map((page, index) => (
+                <span key={page.id} className="inline-flex items-center gap-x-2">
+                  {index > 0 && <span className="text-muted-foreground/30">·</span>}
+                  <Link
+                    href={page.href}
+                    onClick={close}
+                    className="hover:text-foreground transition-colors"
+                  >
+                    {page.title}
+                  </Link>
+                </span>
+              ))}
             </div>
             <p
               className="text-muted-foreground/40 mt-1.5 text-center text-[10px]"

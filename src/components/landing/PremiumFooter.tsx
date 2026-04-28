@@ -2,13 +2,14 @@ import Link from "next/link";
 import { Facebook, Instagram, Music, Send, Smartphone, Twitter, Youtube } from "lucide-react";
 import { Logo } from "@/components/common/Logo";
 import type { PublicSettings } from "@/lib/settings";
+import { getPageUrl } from "@/lib/pages";
 
 type FooterColumn = {
   heading: string;
   links: Array<{ label: string; href: string }>;
 };
 
-const FOOTER_COLUMNS: FooterColumn[] = [
+const CORE_FOOTER_COLUMNS: FooterColumn[] = [
   {
     heading: "Discover",
     links: [
@@ -30,30 +31,25 @@ const FOOTER_COLUMNS: FooterColumn[] = [
       { label: "Artist Resources", href: "/api/enter?next=/help/artists" },
     ],
   },
-  {
-    heading: "Company",
-    links: [
-      { label: "About", href: "/about" },
-      { label: "Press", href: "/press" },
-      { label: "Careers", href: "/careers" },
-      { label: "Contact", href: "/contact" },
-      { label: "Newsroom", href: "/api/enter?next=/" },
-    ],
-  },
-  {
-    heading: "Help & Legal",
-    links: [
-      { label: "Help Center", href: "/help" },
-      { label: "Privacy Policy", href: "/privacy" },
-      { label: "Terms of Service", href: "/terms" },
-      { label: "Cookie Policy", href: "/cookies" },
-      { label: "DMCA / Copyright", href: "/dmca" },
-      { label: "Acceptable Use", href: "/acceptable-use" },
-    ],
-  },
 ];
 
 type SocialLink = { icon: typeof Instagram; label: string; href: string };
+type ManagedFooterPage = { id: string; title: string; slug: string };
+
+const FALLBACK_PAGE_LINKS = [
+  { label: "About", href: "/about" },
+  { label: "Contact", href: "/contact" },
+  { label: "Privacy Policy", href: "/privacy" },
+  { label: "Terms of Service", href: "/terms" },
+  { label: "DMCA / Copyright", href: "/dmca" },
+];
+
+const HELP_LINKS = [
+  { label: "Help Center", href: "/help" },
+  { label: "Cookie Policy", href: "/cookies" },
+  { label: "Acceptable Use", href: "/acceptable-use" },
+  { label: "Newsroom", href: "/api/enter?next=/" },
+];
 
 function buildSocialLinks(settings: PublicSettings): SocialLink[] {
   const result: SocialLink[] = [];
@@ -96,10 +92,36 @@ function buildSocialLinks(settings: PublicSettings): SocialLink[] {
   return result;
 }
 
-export function PremiumFooter({ settings }: { settings: PublicSettings }) {
+function buildFooterColumns(managedPages: ManagedFooterPage[]): FooterColumn[] {
+  const managedLinks = managedPages.map((page) => ({
+    label: page.title,
+    href: getPageUrl(page),
+  }));
+
+  return [
+    ...CORE_FOOTER_COLUMNS,
+    {
+      heading: "Pages",
+      links: managedLinks.length > 0 ? managedLinks : FALLBACK_PAGE_LINKS,
+    },
+    {
+      heading: "Help",
+      links: HELP_LINKS,
+    },
+  ];
+}
+
+export function PremiumFooter({
+  settings,
+  managedPages = [],
+}: {
+  settings: PublicSettings;
+  managedPages?: ManagedFooterPage[];
+}) {
   const siteName = settings.siteName || "Soundloaded";
   const tagline = settings.tagline || "The home of Afrobeats — stream, download, discover.";
   const socials = buildSocialLinks(settings);
+  const footerColumns = buildFooterColumns(managedPages);
   const year = new Date().getFullYear();
   const copyrightLine = settings.copyrightText
     ? `© ${year} ${settings.copyrightText}`
@@ -148,7 +170,7 @@ export function PremiumFooter({ settings }: { settings: PublicSettings }) {
           </div>
 
           {/* Link columns */}
-          {FOOTER_COLUMNS.map((col) => (
+          {footerColumns.map((col) => (
             <div key={col.heading} className="flex flex-col gap-4">
               <h3 className="text-foreground text-sm font-bold tracking-wider uppercase">
                 {col.heading}

@@ -1,11 +1,21 @@
 import { getServerSideSitemap } from "next-sitemap";
 import { db } from "@/lib/db";
+import { getPageUrl } from "@/lib/pages";
 import { getPostUrl } from "@/lib/urls";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "https://soundloaded.ng";
 
 export async function GET() {
-  const [posts, artists, albums, music, settingsRaw] = await Promise.all([
+  const [pages, posts, artists, albums, music, settingsRaw] = await Promise.all([
+    db.page.findMany({
+      where: {
+        status: "PUBLISHED",
+        OR: [{ publishedAt: null }, { publishedAt: { lte: new Date() } }],
+      },
+      select: { slug: true, updatedAt: true, template: true },
+      orderBy: { updatedAt: "desc" },
+      take: 500,
+    }),
     db.post.findMany({
       where: { status: "PUBLISHED" },
       select: {
@@ -42,6 +52,13 @@ export async function GET() {
 
   const permalinkStructure = settingsRaw?.permalinkStructure ?? "/%postname%";
 
+  const pageEntries = pages.map((page) => ({
+    loc: `${SITE_URL}${getPageUrl(page)}`,
+    lastmod: page.updatedAt.toISOString(),
+    changefreq: page.template === "LEGAL" ? ("monthly" as const) : ("weekly" as const),
+    priority: page.template === "LEGAL" ? 0.5 : 0.7,
+  }));
+
   const postEntries = posts.map((post) => ({
     loc: `${SITE_URL}${getPostUrl(post, permalinkStructure)}`,
     lastmod: post.updatedAt.toISOString(),
@@ -70,5 +87,11 @@ export async function GET() {
     priority: 0.7,
   }));
 
-  return getServerSideSitemap([...postEntries, ...artistEntries, ...albumEntries, ...musicEntries]);
+  return getServerSideSitemap([
+    ...pageEntries,
+    ...postEntries,
+    ...artistEntries,
+    ...albumEntries,
+    ...musicEntries,
+  ]);
 }

@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Home, Rss, Compass } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import axios from "axios";
 import { Logo } from "@/components/common/Logo";
 import { SearchBar } from "@/components/search/SearchBar";
 import { NotificationBell } from "./NotificationBell";
@@ -21,6 +23,16 @@ const ALL_NAV_LINKS = [
 export function Navbar() {
   const pathname = usePathname();
   const { data: settings } = useSettings();
+  const { data: navigationPages } = useQuery({
+    queryKey: ["pages-navigation"],
+    queryFn: async () => {
+      const res = await axios.get<{ header: Array<{ id: string; title: string; href: string }> }>(
+        "/api/pages/navigation"
+      );
+      return res.data.header;
+    },
+    staleTime: 5 * 60 * 1000,
+  });
 
   const NAV_LINKS = ALL_NAV_LINKS.filter((item) => {
     if (!item.settingsKey) return true;
@@ -54,6 +66,23 @@ export function Navbar() {
               >
                 <Icon className={cn("h-4 w-4", isActive && "text-brand")} />
                 {label}
+              </Link>
+            );
+          })}
+          {(navigationPages ?? []).slice(0, 4).map((page) => {
+            const isActive = pathname === page.href;
+            return (
+              <Link
+                key={page.id}
+                href={page.href}
+                className={cn(
+                  "relative flex items-center rounded-full px-4 py-2 text-sm transition-all duration-200",
+                  isActive
+                    ? "bg-brand/10 text-brand font-bold"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted/60 font-semibold"
+                )}
+              >
+                {page.title}
               </Link>
             );
           })}

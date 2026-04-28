@@ -3,7 +3,9 @@ import type { Metadata } from "next";
 import { getPostBySlug, getPostById } from "@/lib/api/posts";
 import { getSettings } from "@/lib/settings";
 import { getPostUrl, resolveSlugFromSegments, usesPostId } from "@/lib/urls";
+import { getPageUrl, getPublishedPageBySlug } from "@/lib/pages";
 import { PostPageContent } from "@/components/blog/PostPageContent";
+import { PublicPageContent } from "@/components/pages/PublicPageContent";
 
 interface Props {
   params: Promise<{ segments: string[] }>;
@@ -39,6 +41,35 @@ async function resolvePost(segments: string[], permalinkStructure: string) {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { segments } = await params;
   const settings = await getSettings();
+  const pagePath = segments.join("/");
+  const page = await getPublishedPageBySlug(pagePath);
+
+  if (page) {
+    const title = page.metaTitle || page.title;
+    const description = page.metaDescription || page.excerpt || settings.metaDescription;
+    const images = page.coverImage ? [{ url: page.coverImage }] : [];
+
+    return {
+      title,
+      description,
+      ...(page.focusKeyword
+        ? { keywords: page.focusKeyword.split(",").map((keyword) => keyword.trim()) }
+        : {}),
+      openGraph: {
+        title,
+        description,
+        images,
+        type: "article",
+      },
+      twitter: {
+        card: "summary_large_image",
+        title,
+        description,
+      },
+      alternates: { canonical: getPageUrl(page) },
+    };
+  }
+
   const post = await resolvePost(segments, settings.permalinkStructure);
 
   if (!post || post.isUserGenerated) return { title: "Post Not Found" };
@@ -106,6 +137,13 @@ export const revalidate = 3600;
 export default async function PostPage({ params }: Props) {
   const { segments } = await params;
   const settings = await getSettings();
+  const pagePath = segments.join("/");
+  const page = await getPublishedPageBySlug(pagePath);
+
+  if (page) {
+    return <PublicPageContent page={page} settings={settings} />;
+  }
+
   const post = await resolvePost(segments, settings.permalinkStructure);
 
   if (!post) notFound();

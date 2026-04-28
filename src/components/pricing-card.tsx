@@ -224,6 +224,7 @@ function PricingCard() {
                                   e.stopPropagation();
                                   setUserCount(Math.max(1, userCount - 1));
                                 }}
+                                aria-label="Remove one user"
                                 className="hover:bg-background text-muted-foreground/60 hover:text-foreground rounded-lg p-1.5 transition-all hover:shadow-sm active:scale-95"
                               >
                                 <HugeiconsIcon icon={MinusSignIcon} size={14} />
@@ -236,6 +237,7 @@ function PricingCard() {
                                   e.stopPropagation();
                                   setUserCount(userCount + 1);
                                 }}
+                                aria-label="Add one user"
                                 className="hover:bg-background text-muted-foreground/60 hover:text-foreground rounded-lg p-1.5 transition-all hover:shadow-sm active:scale-95"
                               >
                                 <HugeiconsIcon icon={Add01Icon} size={16} />

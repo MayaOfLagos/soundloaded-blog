@@ -25,6 +25,7 @@ model User {
   socialLinks Json?
 
   posts                     Post[]
+  pages                     Page[]                     @relation("PageAuthor")
   comments                  Comment[]
   downloads                 Download[]
   accounts                  Account[]
@@ -136,6 +137,43 @@ enum PostType {
   VIDEO
   LYRICS
   COMMUNITY
+}
+
+model Page {
+  id      String  @id @default(cuid())
+  title   String
+  slug    String  @unique
+  excerpt String?
+  body    Json
+
+  coverImage  String?
+  status      PostStatus @default(DRAFT)
+  template    String     @default("DEFAULT") // DEFAULT | LEGAL | CONTACT | FULL_WIDTH
+  publishedAt DateTime?
+  views       Int        @default(0)
+
+  authorId String?
+  author   User?   @relation("PageAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+
+  showInHeader Boolean @default(false)
+  showInFooter Boolean @default(false)
+  sortOrder    Int     @default(0)
+
+  isSystem  Boolean @default(false)
+  systemKey String? @unique
+
+  metaTitle       String?
+  metaDescription String?
+  focusKeyword    String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([slug])
+  @@index([status, publishedAt])
+  @@index([showInHeader, sortOrder])
+  @@index([showInFooter, sortOrder])
+  @@index([systemKey])
 }
 
 // ── Music ─────────────────────────────────────────────────────────────

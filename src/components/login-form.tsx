@@ -370,14 +370,14 @@ export function LoginForm({
             </div>
           </form>
 
-          <div className="bg-muted relative hidden min-h-[520px] md:block">
+          <div className="bg-muted relative hidden min-h-130 md:block">
             <Image
               src={heroImage}
               alt={`${siteName} editorial preview`}
               fill
               className="object-cover"
             />
-            <div className="absolute inset-0 bg-gradient-to-br from-black/30 via-black/40 to-black/75" />
+            <div className="absolute inset-0 bg-linear-to-br from-black/30 via-black/40 to-black/75" />
             <div className="absolute inset-x-0 bottom-0 flex flex-col gap-4 p-8 text-white">
               <div className="space-y-2">
                 <p className="text-xs font-medium tracking-[0.24em] text-white/75 uppercase">

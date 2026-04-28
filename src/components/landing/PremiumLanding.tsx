@@ -10,6 +10,7 @@ import {
   getPopularMusic,
 } from "@/lib/api/music";
 import { getSettings } from "@/lib/settings";
+import { getNavigationPages } from "@/lib/pages";
 import { NewsletterForm } from "@/components/common/NewsletterForm";
 import { Logo } from "@/components/common/Logo";
 import { formatRelativeDate } from "@/lib/utils";
@@ -23,16 +24,25 @@ import { PremiumFooter } from "@/components/landing/PremiumFooter";
 import "@/styles/solar-system-orbit.css";
 
 export async function PremiumLanding() {
-  const [settings, posts, tracks, orbitArtists, chartTracks, featuredArtists, genres] =
-    await Promise.all([
-      getSettings(),
-      getLatestPosts({ limit: 6, permalinkStructure: undefined }),
-      getPopularMusic({ limit: 5 }),
-      getOrbitArtists({ limit: 12 }),
-      getMostStreamedMusic({ limit: 10 }),
-      getLatestArtists({ limit: 12 }),
-      getDistinctGenres(),
-    ]);
+  const [
+    settings,
+    posts,
+    tracks,
+    orbitArtists,
+    chartTracks,
+    featuredArtists,
+    genres,
+    navigationPages,
+  ] = await Promise.all([
+    getSettings(),
+    getLatestPosts({ limit: 6, permalinkStructure: undefined }),
+    getPopularMusic({ limit: 5 }),
+    getOrbitArtists({ limit: 12 }),
+    getMostStreamedMusic({ limit: 10 }),
+    getLatestArtists({ limit: 12 }),
+    getDistinctGenres(),
+    getNavigationPages(),
+  ]);
 
   const siteName = settings.siteName ?? "Soundloaded";
   const featuredPost = posts[0] ?? null;
@@ -305,7 +315,7 @@ export async function PremiumLanding() {
       </section>
 
       {/* ── FOOTER ──────────────────────────────────────────────────────── */}
-      <PremiumFooter settings={settings} />
+      <PremiumFooter settings={settings} managedPages={navigationPages.footer} />
     </div>
   );
 }

@@ -19,7 +19,12 @@ const ratelimit =
 const schema = z.object({
   type: z.enum(["subscription", "download"]),
   musicId: z.string().optional(),
+  /** Legacy: "monthly" | "yearly" — used when planId is not provided */
   plan: z.enum(["monthly", "yearly"]).optional().default("monthly"),
+  /** New: DB Plan id — takes precedence over legacy plan field */
+  planId: z.string().optional(),
+  /** Billing interval for planId-based subscriptions */
+  interval: z.enum(["monthly", "yearly"]).optional().default("monthly"),
 });
 
 export async function POST(req: NextRequest) {
@@ -49,6 +54,8 @@ export async function POST(req: NextRequest) {
     const body = schema.parse(await req.json());
     let amount: number;
     let musicId: string | null = null;
+    let resolvedPlanId: string | null = null;
+    let paystackPlanCode: string | null = null;
 
     if (body.type === "download") {
       if (!body.musicId) {
@@ -56,15 +63,39 @@ export async function POST(req: NextRequest) {
       }
       const music = await db.music.findUnique({
         where: { id: body.musicId },
-        select: { id: true, price: true, isExclusive: true },
+        select: { id: true, price: true, creatorPrice: true, isExclusive: true, accessModel: true },
       });
-      if (!music || !music.isExclusive) {
-        return NextResponse.json({ error: "Track not found or not premium" }, { status: 404 });
+      if (!music) {
+        return NextResponse.json({ error: "Track not found" }, { status: 404 });
       }
-      amount = music.price ?? PRICES.DOWNLOAD_DEFAULT;
+      if (music.accessModel === "free") {
+        return NextResponse.json({ error: "Track is free — no payment required" }, { status: 400 });
+      }
+      // Creator price takes priority, then track price, then global default
+      amount = music.creatorPrice ?? music.price ?? PRICES.DOWNLOAD_DEFAULT;
       musicId = music.id;
     } else {
-      amount = body.plan === "yearly" ? PRICES.YEARLY_SUB : PRICES.MONTHLY_SUB;
+      // ── Subscription: resolve Plan from DB ──────────────────────────
+      if (body.planId) {
+        const dbPlan = await db.plan.findUnique({ where: { id: body.planId } });
+        if (!dbPlan || !dbPlan.isActive) {
+          return NextResponse.json({ error: "Plan not found" }, { status: 404 });
+        }
+        if (dbPlan.priceMonthly === 0 && dbPlan.priceYearly === 0) {
+          return NextResponse.json({ error: "Free plan requires no payment" }, { status: 400 });
+        }
+        resolvedPlanId = dbPlan.id;
+        if (body.interval === "yearly") {
+          amount = dbPlan.priceYearly;
+          paystackPlanCode = dbPlan.paystackPlanCodeYearly;
+        } else {
+          amount = dbPlan.priceMonthly;
+          paystackPlanCode = dbPlan.paystackPlanCodeMonthly;
+        }
+      } else {
+        // Legacy fallback
+        amount = body.plan === "yearly" ? PRICES.YEARLY_SUB : PRICES.MONTHLY_SUB;
+      }
     }
 
     const reference = `sl_${body.type}_${randomUUID().replace(/-/g, "").slice(0, 16)}`;
@@ -78,11 +109,16 @@ export async function POST(req: NextRequest) {
         paystackRef: reference,
         status: "pending",
         musicId,
-        metadata: { plan: body.plan },
+        metadata: {
+          plan: body.plan,
+          planId: resolvedPlanId,
+          interval: body.interval,
+          paystackPlanCode,
+        },
       },
     });
 
-    const result = await initializeTransaction({
+    const txParams: Parameters<typeof initializeTransaction>[0] = {
       email: user.email,
       amount,
       reference,
@@ -92,8 +128,17 @@ export async function POST(req: NextRequest) {
         type: body.type,
         musicId,
         plan: body.plan,
+        planId: resolvedPlanId,
+        interval: body.interval,
       },
-    });
+    };
+
+    // If Paystack plan code is available, set it to enable auto-renewal
+    if (paystackPlanCode) {
+      (txParams as Record<string, unknown>).plan = paystackPlanCode;
+    }
+
+    const result = await initializeTransaction(txParams);
 
     return NextResponse.json({
       authorization_url: result.data.authorization_url,

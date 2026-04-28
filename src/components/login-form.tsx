@@ -132,13 +132,15 @@ export function LoginForm({
   const heroImage = settings?.defaultOgImage ?? "/uploads/seed/cover-1.jpg";
   const siteName = settings?.siteName ?? "Soundloaded";
   const tagline = settings?.tagline ?? "Nigeria's #1 music download & entertainment blog";
+  // Show Turnstile only when env key exists AND admin hasn't disabled it in settings
+  const showTurnstile = !!TURNSTILE_SITE_KEY && (settings?.enableTurnstile ?? true);
 
   const onSubmit = async (data: FormData) => {
     setError(null);
     setIsLocked(false);
     setHideInitialBanner(true);
 
-    if (TURNSTILE_SITE_KEY && !turnstileToken) {
+    if (showTurnstile && !turnstileToken) {
       setError("Please complete the security check.");
       return;
     }
@@ -323,11 +325,11 @@ export function LoginForm({
                   ) : null}
                 </div>
 
-                {TURNSTILE_SITE_KEY ? (
+                {showTurnstile ? (
                   <div className="flex justify-center md:justify-start">
                     <Turnstile
                       ref={turnstileRef}
-                      siteKey={TURNSTILE_SITE_KEY}
+                      siteKey={TURNSTILE_SITE_KEY!}
                       onSuccess={setTurnstileToken}
                       onError={() => setTurnstileToken(null)}
                       onExpire={() => setTurnstileToken(null)}
@@ -338,7 +340,7 @@ export function LoginForm({
 
                 <Button
                   type="submit"
-                  disabled={isSubmitting || isLocked || (!!TURNSTILE_SITE_KEY && !turnstileToken)}
+                  disabled={isSubmitting || isLocked || (showTurnstile && !turnstileToken)}
                   className="bg-brand hover:bg-brand/90 text-brand-foreground h-11 w-full"
                 >
                   {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}

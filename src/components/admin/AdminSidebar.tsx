@@ -28,6 +28,7 @@ import {
   ChevronUp,
   AudioWaveform,
   Sparkles,
+  CreditCard,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -76,6 +77,7 @@ const manageNav = [
 
 const bottomNav = [
   { title: "Analytics", href: "/admin/analytics", icon: BarChart3 },
+  { title: "Monetization", href: "/admin/monetization", icon: CreditCard },
   { title: "Settings", href: "/admin/settings", icon: Settings },
 ];
 

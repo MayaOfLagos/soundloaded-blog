@@ -27,6 +27,7 @@ import {
   Mail,
   Link2,
   ToggleRight,
+  CreditCard,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Form } from "@/components/ui/form";
@@ -47,6 +48,7 @@ import { EmailSettings } from "./_components/EmailSettings";
 import { PermalinkSettings } from "./_components/PermalinkSettings";
 import { FeaturesSettings } from "./_components/FeaturesSettings";
 import { EnvironmentStatus } from "./_components/EnvironmentStatus";
+import { BillingSettings } from "./_components/BillingSettings";
 
 // ── Schema ───────────────────────────────────────────────────────────
 const settingsSchema = z.object({
@@ -143,6 +145,7 @@ const settingsSchema = z.object({
   requireStrongPasswords: z.boolean().default(true),
   allowRegistration: z.boolean().default(true),
   defaultUserRole: z.string().default("READER"),
+  enableTurnstile: z.boolean().default(true),
   // Email
   emailFromName: z.string().max(100).default("Soundloaded Blog"),
   emailFromAddress: z.string().email().or(z.literal("")).default(""),
@@ -169,6 +172,11 @@ const settingsSchema = z.object({
   enableSearch: z.boolean().default(true),
   // Player Experience
   enableNowPlayingDrawer: z.boolean().default(true),
+  // Billing & Monetization
+  creatorRevenuePercent: z.number().int().min(0).max(100).default(70),
+  enableCreatorMonetization: z.boolean().default(false),
+  freeDownloadQuota: z.number().int().min(0).max(1000).default(5),
+  paystackPublicKey: z.string().max(100).default(""),
 });
 
 export type SettingsFormValues = z.infer<typeof settingsSchema>;
@@ -189,6 +197,7 @@ const SETTINGS_TABS = [
   { value: "maintenance", label: "Maintenance", icon: Construction },
   { value: "code-injection", label: "Code Injection", icon: Code },
   { value: "features", label: "Features", icon: ToggleRight },
+  { value: "billing", label: "Billing", icon: CreditCard },
   { value: "environment", label: "Environment", icon: Server },
 ] as const;
 
@@ -315,6 +324,9 @@ export default function SettingsPage() {
               </TabsContent>
               <TabsContent value="features" className="mt-0">
                 <FeaturesSettings form={form} />
+              </TabsContent>
+              <TabsContent value="billing" className="mt-0">
+                <BillingSettings form={form} />
               </TabsContent>
               <TabsContent value="environment" className="mt-0">
                 <EnvironmentStatus />

@@ -183,6 +183,12 @@ model Music {
   downloads      Download[]
   transactions   Transaction[]
   price          Int? // kobo, null = use default
+
+  // ── Monetization ──
+  accessModel  String  @default("free") // "free" | "subscription" | "purchase" | "both"
+  streamAccess String  @default("free") // "free" | "subscription"
+  creatorPrice Int?                     // kobo — creator-set per-purchase price
+
   bookmarks      Bookmark[]
   favorites      Favorite[]
   playlistTracks PlaylistTrack[]
@@ -599,6 +605,7 @@ model SiteSettings {
   requireStrongPasswords Boolean @default(true)
   allowRegistration      Boolean @default(true)
   defaultUserRole        String  @default("READER")
+  enableTurnstile        Boolean @default(true)  // Cloudflare Turnstile bot protection on login/register
 
   // Email
   emailFromName       String  @default("Soundloaded Blog")
@@ -631,6 +638,12 @@ model SiteSettings {
 
   // Feature Toggles — Player Experience
   enableNowPlayingDrawer Boolean @default(true)
+
+  // Billing & Monetization
+  creatorRevenuePercent     Int     @default(70)    // % of revenue paid to creators
+  enableCreatorMonetization Boolean @default(false) // allow creators to set access model
+  freeDownloadQuota         Int     @default(5)     // monthly free downloads on Free plan
+  paystackPublicKey         String  @default("")    // publishable key for frontend
 }
 
 // ── Media Library ────────────────────────────────────────────────────
@@ -864,19 +877,43 @@ enum SubscriptionStatus {
   CANCELLED
 }
 
+model Plan {
+  id                      String         @id @default(cuid())
+  name                    String         // e.g. "Free", "Standard", "Pro"
+  slug                    String         @unique // "free" | "standard" | "pro"
+  priceMonthly            Int            @default(0)  // kobo
+  priceYearly             Int            @default(0)  // kobo
+  paystackPlanCodeMonthly String?        // Paystack plan_code for monthly billing
+  paystackPlanCodeYearly  String?        // Paystack plan_code for yearly billing
+  features                Json           @default("[]") // string[] — bullet points
+  downloadQuota           Int            @default(5)  // monthly download limit (0 = unlimited)
+  isActive                Boolean        @default(true)
+  sortOrder               Int            @default(0)
+  createdAt               DateTime       @default(now())
+  updatedAt               DateTime       @updatedAt
+
+  subscriptions Subscription[]
+
+  @@index([slug])
+  @@index([isActive, sortOrder])
+}
+
 model Subscription {
   id               String             @id @default(cuid())
   userId           String             @unique
   user             User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   paystackSubCode  String?            @unique
   paystackCustCode String?
-  plan             String             @default("monthly")
+  plan             String             @default("monthly") // kept for backwards compat
+  planId           String?            // FK to Plan table
+  planRef          Plan?              @relation(fields: [planId], references: [id])
   status           SubscriptionStatus @default(ACTIVE)
   currentPeriodEnd DateTime?
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @updatedAt
 
   @@index([userId])
+  @@index([planId])
 }
 
 model Transaction {

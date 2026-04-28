@@ -57,9 +57,80 @@ export function verifyWebhookSignature(body: string, signature: string): boolean
   return timingSafeEqual(Buffer.from(hash), Buffer.from(signature));
 }
 
-/** Default prices in kobo */
+/** Default prices in kobo (fallback when no Plan row found) */
 export const PRICES = {
   DOWNLOAD_DEFAULT: 10000, // ₦100
   MONTHLY_SUB: 100000, // ₦1,000
   YEARLY_SUB: 1000000, // ₦10,000
 } as const;
+
+// ── Paystack Plan (subscription plan) API ────────────────────────────
+
+export interface PaystackPlan {
+  id: number;
+  plan_code: string;
+  name: string;
+  description?: string;
+  amount: number; // kobo
+  interval: "monthly" | "annually" | "weekly" | "daily" | "quarterly" | "biannually";
+  currency: string;
+  is_deleted: boolean;
+  is_archived: boolean;
+}
+
+/** Create a recurring plan on Paystack */
+export async function createPaystackPlan(params: {
+  name: string;
+  amount: number; // kobo
+  interval: "monthly" | "annually";
+  description?: string;
+  currency?: string;
+}): Promise<{ status: boolean; data: PaystackPlan }> {
+  return paystackFetch("/plan", {
+    method: "POST",
+    body: JSON.stringify({ currency: "NGN", ...params }),
+  });
+}
+
+/** Fetch a single plan by plan_code */
+export async function getPaystackPlan(
+  planCode: string
+): Promise<{ status: boolean; data: PaystackPlan }> {
+  return paystackFetch(`/plan/${encodeURIComponent(planCode)}`);
+}
+
+/** List all plans from Paystack */
+export async function listPaystackPlans(): Promise<{
+  status: boolean;
+  data: PaystackPlan[];
+}> {
+  return paystackFetch("/plan?perPage=50");
+}
+
+/** Initialize a subscription checkout (Paystack's inline plan subscription flow) */
+export async function initializeSubscription(params: {
+  email: string;
+  plan: string; // plan_code
+  reference: string;
+  callback_url: string;
+  metadata?: Record<string, unknown>;
+}) {
+  return paystackFetch<{
+    status: boolean;
+    data: { authorization_url: string; access_code: string; reference: string };
+  }>("/transaction/initialize", {
+    method: "POST",
+    body: JSON.stringify({ amount: 0, ...params }), // amount ignored when plan is set
+  });
+}
+
+/** Disable (cancel) a Paystack subscription */
+export async function cancelPaystackSubscription(params: {
+  code: string; // subscription code
+  token: string; // email token
+}): Promise<{ status: boolean; message: string }> {
+  return paystackFetch("/subscription/disable", {
+    method: "POST",
+    body: JSON.stringify(params),
+  });
+}

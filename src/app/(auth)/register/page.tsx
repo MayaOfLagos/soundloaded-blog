@@ -42,6 +42,7 @@ export default function RegisterPage() {
   const { data: settings, isLoading: settingsLoading } = useSettings();
 
   const allowRegistration = settings?.allowRegistration ?? true;
+  const showTurnstile = !!TURNSTILE_SITE_KEY && (settings?.enableTurnstile ?? true);
 
   const {
     register,
@@ -54,7 +55,7 @@ export default function RegisterPage() {
   const onSubmit = async (data: FormData) => {
     setError(null);
 
-    if (TURNSTILE_SITE_KEY && !turnstileToken) {
+    if (showTurnstile && !turnstileToken) {
       setError("Please complete the security check.");
       return;
     }
@@ -234,11 +235,11 @@ export default function RegisterPage() {
           )}
 
           {/* Turnstile */}
-          {TURNSTILE_SITE_KEY && (
+          {showTurnstile && (
             <div className="flex justify-center">
               <Turnstile
                 ref={turnstileRef}
-                siteKey={TURNSTILE_SITE_KEY}
+                siteKey={TURNSTILE_SITE_KEY!}
                 onSuccess={setTurnstileToken}
                 onError={() => setTurnstileToken(null)}
                 onExpire={() => setTurnstileToken(null)}
@@ -250,7 +251,7 @@ export default function RegisterPage() {
           {/* Submit */}
           <Button
             type="submit"
-            disabled={isSubmitting || (!!TURNSTILE_SITE_KEY && !turnstileToken)}
+            disabled={isSubmitting || (showTurnstile && !turnstileToken)}
             className="bg-brand hover:bg-brand/90 text-brand-foreground h-11 w-full text-sm font-bold"
           >
             {isSubmitting ? (

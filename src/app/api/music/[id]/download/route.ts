@@ -39,6 +39,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
           enableDownload: true,
           isExclusive: true,
           price: true,
+          creatorPrice: true,
+          accessModel: true,
           artistId: true,
           albumId: true,
           genre: true,
@@ -46,7 +48,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       }),
       db.siteSettings.findUnique({
         where: { id: "default" },
-        select: { enableDownloads: true, maxDownloadsPerHour: true },
+        select: {
+          enableDownloads: true,
+          maxDownloadsPerHour: true,
+          freeDownloadQuota: true,
+          enableCreatorMonetization: true,
+        },
       }),
     ]);
 
@@ -62,11 +69,23 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       return NextResponse.json({ error: "Downloads are disabled for this track" }, { status: 403 });
     }
 
-    // Premium gating for exclusive tracks
-    if (music.isExclusive) {
+    // ── Access model gating ──────────────────────────────────────────
+    const accessModel = music.accessModel ?? "free";
+    const isPremiumTrack =
+      music.isExclusive ||
+      accessModel === "purchase" ||
+      accessModel === "subscription" ||
+      accessModel === "both";
+
+    if (isPremiumTrack) {
       if (!session?.user) {
         return NextResponse.json(
-          { error: "Premium content", requiresAuth: true, price: music.price },
+          {
+            error: "Premium content",
+            requiresAuth: true,
+            price: music.creatorPrice ?? music.price,
+            accessModel,
+          },
           { status: 402 }
         );
       }
@@ -74,7 +93,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
       const subscription = await db.subscription.findUnique({
         where: { userId: authenticatedUserId },
-        select: { status: true, currentPeriodEnd: true },
+        select: { status: true, currentPeriodEnd: true, planRef: true },
       });
 
       const hasActiveSub =
@@ -82,16 +101,72 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         subscription.currentPeriodEnd &&
         subscription.currentPeriodEnd > new Date();
 
-      if (!hasActiveSub) {
+      // Subscription covers "subscription" and "both" access models
+      if (
+        hasActiveSub &&
+        (accessModel === "subscription" || accessModel === "both" || music.isExclusive)
+      ) {
+        // Access granted via subscription — fall through to download
+      } else if (accessModel === "purchase" || accessModel === "both") {
+        // Requires individual purchase
         const purchase = await db.transaction.findFirst({
           where: { userId: authenticatedUserId, musicId: id, type: "download", status: "success" },
         });
-
         if (!purchase) {
           return NextResponse.json(
-            { error: "Premium content", requiresPurchase: true, price: music.price },
+            {
+              error: "Premium content",
+              requiresPurchase: true,
+              price: music.creatorPrice ?? music.price,
+            },
             { status: 402 }
           );
+        }
+      } else if (!hasActiveSub) {
+        return NextResponse.json(
+          {
+            error: "Premium content",
+            requiresSubscription: true,
+            price: music.creatorPrice ?? music.price,
+          },
+          { status: 402 }
+        );
+      }
+    } else {
+      // ── Free track — enforce monthly quota for non-subscribers ──────
+      const freeQuota = siteSettings?.freeDownloadQuota ?? 5;
+      if (freeQuota > 0 && userId) {
+        const subscription = await db.subscription.findUnique({
+          where: { userId },
+          select: { status: true, currentPeriodEnd: true },
+        });
+
+        const hasActiveSub =
+          subscription?.status === "ACTIVE" &&
+          subscription.currentPeriodEnd &&
+          subscription.currentPeriodEnd > new Date();
+
+        if (!hasActiveSub) {
+          // Count downloads this calendar month
+          const startOfMonth = new Date();
+          startOfMonth.setDate(1);
+          startOfMonth.setHours(0, 0, 0, 0);
+
+          const monthlyCount = await db.download.count({
+            where: { userId, createdAt: { gte: startOfMonth } },
+          });
+
+          if (monthlyCount >= freeQuota) {
+            return NextResponse.json(
+              {
+                error: "Monthly download quota reached",
+                quotaExceeded: true,
+                quota: freeQuota,
+                used: monthlyCount,
+              },
+              { status: 402 }
+            );
+          }
         }
       }
     }

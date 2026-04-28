@@ -104,6 +104,7 @@ const settingsSchema = z
     requireStrongPasswords: z.boolean(),
     allowRegistration: z.boolean(),
     defaultUserRole: z.enum(["READER", "CONTRIBUTOR"]),
+    enableTurnstile: z.boolean(),
     // Email
     emailFromName: z.string().max(100),
     emailFromAddress: z.string().email().or(z.literal("")),
@@ -138,6 +139,11 @@ const settingsSchema = z
     enableSearch: z.boolean(),
     // Player Experience
     enableNowPlayingDrawer: z.boolean(),
+    // Billing & Monetization
+    creatorRevenuePercent: z.number().int().min(0).max(100),
+    enableCreatorMonetization: z.boolean(),
+    freeDownloadQuota: z.number().int().min(0).max(1000),
+    paystackPublicKey: z.string().max(100),
   })
   .partial();
 
@@ -183,6 +189,7 @@ export async function PUT(req: NextRequest) {
       "requireStrongPasswords",
       "allowRegistration",
       "defaultUserRole",
+      "enableTurnstile",
     ] as const;
     const hasSecurityChange = securityFields.some(
       (f) => (data as Record<string, unknown>)[f] !== undefined

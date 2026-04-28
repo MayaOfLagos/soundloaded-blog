@@ -66,6 +66,7 @@ export interface PublicSettings {
   maintenanceMessage: string;
   // Security (public subset)
   allowRegistration: boolean;
+  enableTurnstile: boolean;
   // Code Injection
   headerScripts: string;
   footerScripts: string;
@@ -150,6 +151,7 @@ const DEFAULTS: PublicSettings = {
   maintenanceMode: false,
   maintenanceMessage: "We're upgrading. Be right back!",
   allowRegistration: true,
+  enableTurnstile: true,
   headerScripts: "",
   footerScripts: "",
   customCss: "",
@@ -264,6 +266,7 @@ export function buildPublicSettings(
     maintenanceMode: bool(raw, "maintenanceMode", DEFAULTS.maintenanceMode),
     maintenanceMessage: str(raw, "maintenanceMessage", DEFAULTS.maintenanceMessage),
     allowRegistration: bool(raw, "allowRegistration", DEFAULTS.allowRegistration),
+    enableTurnstile: bool(raw, "enableTurnstile", DEFAULTS.enableTurnstile),
     headerScripts: str(raw, "headerScripts", DEFAULTS.headerScripts),
     footerScripts: str(raw, "footerScripts", DEFAULTS.footerScripts),
     customCss: str(raw, "customCss", DEFAULTS.customCss),

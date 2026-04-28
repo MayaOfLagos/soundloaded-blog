@@ -1,10 +1,35 @@
 import type { Metadata } from "next";
+import { db } from "@/lib/db";
 import { DashboardLeftSidebar } from "@/components/dashboard/DashboardLeftSidebar";
 import { BillingView } from "@/components/dashboard/BillingView";
 
 export const metadata: Metadata = { title: "Billing — Soundloaded" };
 
-export default function BillingPage() {
+export default async function BillingPage() {
+  const [plans, settings] = await Promise.all([
+    db.plan.findMany({
+      where: { isActive: true },
+      orderBy: { sortOrder: "asc" },
+      select: {
+        id: true,
+        slug: true,
+        name: true,
+        priceMonthly: true,
+        priceYearly: true,
+        downloadQuota: true,
+        features: true,
+        paystackPlanCodeMonthly: true,
+        paystackPlanCodeYearly: true,
+      },
+    }),
+    db.siteSettings.findFirst({ select: { paystackPublicKey: true } }),
+  ]);
+
+  const typedPlans = plans.map((p) => ({
+    ...p,
+    features: (p.features ?? []) as string[],
+  }));
+
   return (
     <div className="mx-auto max-w-[1440px] px-4 sm:px-6">
       <div className="grid grid-cols-1 gap-6 py-5 xl:grid-cols-[220px_1fr]">
@@ -16,7 +41,7 @@ export default function BillingPage() {
               Manage your subscription and payments
             </p>
           </div>
-          <BillingView />
+          <BillingView plans={typedPlans} paystackPublicKey={settings?.paystackPublicKey ?? ""} />
         </main>
       </div>
     </div>

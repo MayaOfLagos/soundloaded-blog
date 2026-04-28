@@ -99,6 +99,29 @@ export function SecuritySettings({ form }: Props) {
         )}
       />
 
+      <FormField
+        control={form.control}
+        name="enableTurnstile"
+        render={({ field }) => (
+          <FormItem className="flex items-center justify-between rounded-lg border p-4">
+            <div className="space-y-0.5">
+              <FormLabel className="text-foreground text-sm font-medium">
+                Cloudflare Turnstile
+              </FormLabel>
+              <p className="text-muted-foreground text-xs">
+                Show bot-protection challenge on login and registration. Requires{" "}
+                <code className="bg-muted rounded px-1">NEXT_PUBLIC_TURNSTILE_SITE_KEY</code> and{" "}
+                <code className="bg-muted rounded px-1">TURNSTILE_SECRET_KEY</code> env vars to be
+                set.
+              </p>
+            </div>
+            <FormControl>
+              <Switch checked={field.value} onCheckedChange={field.onChange} />
+            </FormControl>
+          </FormItem>
+        )}
+      />
+
       <Separator />
       <h3 className="text-foreground text-sm font-semibold">Registration</h3>
 

@@ -13,6 +13,9 @@ import {
   Download,
   Pencil,
   ExternalLink,
+  CreditCard,
+  Lock,
+  Unlock,
 } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import { adminApi } from "@/lib/admin-api";
@@ -39,6 +42,23 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { formatFileSize } from "@/lib/utils";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 interface Track {
   id: string;
@@ -65,6 +85,34 @@ export function MusicTable({ tracks }: MusicTableProps) {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+
+  const [monetizationTrack, setMonetizationTrack] = useState<Track | null>(null);
+  const [accessModel, setAccessModel] = useState("free");
+  const [streamAccess, setStreamAccess] = useState("free");
+  const [creatorPrice, setCreatorPrice] = useState("");
+
+  function openMonetization(track: Track) {
+    setMonetizationTrack(track);
+    const t = track as unknown as Record<string, unknown>;
+    setAccessModel((t.accessModel as string) ?? "free");
+    setStreamAccess((t.streamAccess as string) ?? "free");
+    setCreatorPrice("");
+  }
+
+  const { mutate: saveMonetization, isPending: isSavingMon } = useMutation({
+    mutationFn: (id: string) =>
+      adminApi.patch(`/api/admin/music/${id}/monetization`, {
+        accessModel,
+        streamAccess,
+        creatorPrice: creatorPrice ? Math.round(parseFloat(creatorPrice) * 100) : null,
+      }),
+    onSuccess: () => {
+      toast.success("Monetization settings saved");
+      setMonetizationTrack(null);
+      router.refresh();
+    },
+    onError: () => toast.error("Failed to save monetization settings"),
+  });
 
   const allSelected = tracks.length > 0 && selected.size === tracks.length;
   const someSelected = selected.size > 0 && selected.size < tracks.length;
@@ -250,6 +298,15 @@ export function MusicTable({ tracks }: MusicTableProps) {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center justify-end gap-0.5">
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-8 w-8"
+                          title="Monetization settings"
+                          onClick={() => openMonetization(track)}
+                        >
+                          <CreditCard className="h-3.5 w-3.5" />
+                        </Button>
                         <Link href={`/admin/posts/${track.postId}`}>
                           <Button size="icon" variant="ghost" className="h-8 w-8" title="Edit post">
                             <Pencil className="h-3.5 w-3.5" />
@@ -283,6 +340,91 @@ export function MusicTable({ tracks }: MusicTableProps) {
           </Table>
         </div>
       </div>
+
+      {/* Monetization dialog */}
+      <Dialog open={!!monetizationTrack} onOpenChange={(o) => !o && setMonetizationTrack(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CreditCard className="h-4 w-4" />
+              Monetization
+            </DialogTitle>
+            <DialogDescription>
+              Set access model for &ldquo;{monetizationTrack?.title}&rdquo;
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium">Download Access</Label>
+              <Select value={accessModel} onValueChange={setAccessModel}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="free">
+                    <span className="flex items-center gap-2">
+                      <Unlock className="h-3.5 w-3.5 text-green-500" /> Free for all
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="subscription">
+                    <span className="flex items-center gap-2">
+                      <Lock className="text-brand h-3.5 w-3.5" /> Subscribers only
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="purchase">
+                    <span className="flex items-center gap-2">
+                      <CreditCard className="h-3.5 w-3.5 text-amber-500" /> Purchase required
+                    </span>
+                  </SelectItem>
+                  <SelectItem value="both">
+                    <span className="flex items-center gap-2">
+                      <Lock className="h-3.5 w-3.5 text-purple-500" /> Subscription or purchase
+                    </span>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-sm font-medium">Stream Access</Label>
+              <Select value={streamAccess} onValueChange={setStreamAccess}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="free">Free to stream</SelectItem>
+                  <SelectItem value="subscription">Subscribers only</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {(accessModel === "purchase" || accessModel === "both") && (
+              <div className="space-y-1.5">
+                <Label className="text-sm font-medium">Creator Price (₦)</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="e.g. 100"
+                  value={creatorPrice}
+                  onChange={(e) => setCreatorPrice(e.target.value)}
+                />
+                <p className="text-muted-foreground text-xs">Leave blank to use platform default</p>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setMonetizationTrack(null)}>
+              Cancel
+            </Button>
+            <Button
+              disabled={isSavingMon}
+              onClick={() => monetizationTrack && saveMonetization(monetizationTrack.id)}
+            >
+              {isSavingMon && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Single delete dialog */}
       <AlertDialog open={!!deleteId} onOpenChange={(open) => !open && setDeleteId(null)}>

@@ -34,9 +34,11 @@ export async function GET(req: NextRequest) {
 
       // Only process subscription if we actually changed the status
       if (updated.count > 0 && transaction.type === "subscription") {
-        const plan =
-          ((transaction.metadata as Record<string, unknown>)?.plan as string) || "monthly";
-        const daysToAdd = plan === "yearly" ? 365 : 30;
+        const meta = (transaction.metadata as Record<string, unknown>) ?? {};
+        const plan = (meta.plan as string) || "monthly";
+        const interval = (meta.interval as string) || plan;
+        const planId = (meta.planId as string) || null;
+        const daysToAdd = interval === "yearly" ? 365 : 30;
         const currentPeriodEnd = new Date(Date.now() + daysToAdd * 24 * 60 * 60 * 1000);
 
         await db.subscription.upsert({
@@ -44,6 +46,7 @@ export async function GET(req: NextRequest) {
           update: {
             status: "ACTIVE",
             plan,
+            planId,
             currentPeriodEnd,
             paystackCustCode: result.data.customer?.customer_code ?? null,
           },
@@ -51,6 +54,7 @@ export async function GET(req: NextRequest) {
             userId: transaction.userId,
             status: "ACTIVE",
             plan,
+            planId,
             currentPeriodEnd,
             paystackCustCode: result.data.customer?.customer_code ?? null,
           },

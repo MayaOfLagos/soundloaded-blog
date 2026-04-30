@@ -1,15 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { getMusicAccess, musicAccessDeniedResponse } from "@/lib/music-access";
 
 /**
  * GET /api/music/[id]/waveform
- * Public endpoint to fetch waveform data for a track.
+ * Fetch waveform data for a track, following the same premium stream gate.
  * Returns the pre-computed waveform peaks array.
  */
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  const session = await auth();
+  const userId = (session?.user as { id?: string } | undefined)?.id;
 
   try {
+    const access = await getMusicAccess({ musicId: id, userId, intent: "waveform" });
+    if (!access.allowed) {
+      return musicAccessDeniedResponse(access);
+    }
+
     const music = await db.music.findUnique({
       where: { id },
       select: {

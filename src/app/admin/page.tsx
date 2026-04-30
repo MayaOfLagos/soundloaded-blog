@@ -1,9 +1,30 @@
 export const dynamic = "force-dynamic";
 
 import { db } from "@/lib/db";
-import { FileText, Music, Download, Users, MessageSquare, Mail, Flag, Camera } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowRight,
+  Camera,
+  CheckCircle2,
+  Clock,
+  Download,
+  FileText,
+  Flag,
+  ImageIcon,
+  Mail,
+  MessageSquare,
+  Mic2,
+  Music,
+  Search,
+  Sparkles,
+  UserCheck,
+  Users,
+  Wrench,
+} from "lucide-react";
 import { StatWidget } from "@/components/admin/StatWidget";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { getAdminOpsSnapshot, type OpsSeverity } from "@/lib/admin-ops";
+import { getSessionRole } from "@/lib/admin-auth";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import Link from "next/link";
 
@@ -108,8 +129,39 @@ const typeLabels: Record<string, string> = {
   COMMUNITY: "Community",
 };
 
+const opsSeverityStyles: Record<OpsSeverity, string> = {
+  critical: "border-destructive/30 bg-destructive/5 text-destructive",
+  warning: "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300",
+  info: "border-blue-500/30 bg-blue-500/10 text-blue-600 dark:text-blue-300",
+  ok: "border-success/30 bg-success/10 text-success",
+};
+
+const opsIcons = {
+  "failed-audio-jobs": Wrench,
+  "creator-applications": UserCheck,
+  reports: Flag,
+  comments: MessageSquare,
+  "scheduled-content": Clock,
+  "premium-config": Sparkles,
+  "missing-artwork": ImageIcon,
+  "artist-profiles": Mic2,
+  "search-health": Search,
+  "pwa-health": CheckCircle2,
+};
+
 export default async function AdminDashboardPage() {
-  const stats = await getDashboardStats();
+  const [stats, sessionRole] = await Promise.all([getDashboardStats(), getSessionRole()]);
+  const ops = await getAdminOpsSnapshot(sessionRole?.role ?? "");
+  const activeOpsCards = ops.cards.filter((card) => card.severity !== "ok");
+  const displayedOpsCards =
+    activeOpsCards.length > 0 ? activeOpsCards : ops.cards.filter((card) => card.severity === "ok");
+  const quickActions = [
+    { label: "Create post", href: "/admin/posts/new" },
+    { label: "Upload music", href: "/admin/music/upload" },
+    { label: "Review reports", href: "/admin/reports" },
+    { label: "Search ops", href: "/admin/search" },
+    { label: "PWA settings", href: "/admin/settings" },
+  ];
 
   return (
     <div className="space-y-6">
@@ -180,6 +232,125 @@ export default async function AdminDashboardPage() {
           iconClassName="bg-pink-500/10 text-pink-500 dark:bg-pink-500/20"
         />
       </div>
+
+      {/* Operations Command Center */}
+      <Card>
+        <CardHeader className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+          <div>
+            <CardTitle>Operations Command Center</CardTitle>
+            <CardDescription>
+              Work that needs admin attention before it reaches users.
+            </CardDescription>
+          </div>
+          <Badge
+            variant="outline"
+            className={
+              activeOpsCards.length > 0
+                ? "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300"
+                : "border-success/30 bg-success/10 text-success"
+            }
+          >
+            {activeOpsCards.length > 0
+              ? `${activeOpsCards.length} active issue${activeOpsCards.length === 1 ? "" : "s"}`
+              : "All clear"}
+          </Badge>
+        </CardHeader>
+        <CardContent className="space-y-5">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {displayedOpsCards.slice(0, 9).map((card) => {
+              const Icon = opsIcons[card.key as keyof typeof opsIcons] ?? AlertTriangle;
+
+              return (
+                <Link
+                  key={card.key}
+                  href={card.href}
+                  className="border-border bg-muted/20 hover:bg-muted/40 group flex min-h-[124px] flex-col justify-between rounded-lg border p-4 transition-colors"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div
+                      className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-md border ${opsSeverityStyles[card.severity]}`}
+                    >
+                      <Icon className="h-5 w-5" />
+                    </div>
+                    <Badge variant="outline" className={opsSeverityStyles[card.severity]}>
+                      {card.severity}
+                    </Badge>
+                  </div>
+                  <div>
+                    <div className="mt-3 flex items-end justify-between gap-3">
+                      <div>
+                        <p className="text-foreground text-sm font-semibold">{card.title}</p>
+                        <p className="text-foreground mt-1 text-2xl font-black">{card.value}</p>
+                      </div>
+                      <ArrowRight className="text-muted-foreground group-hover:text-primary h-4 w-4 transition-colors" />
+                    </div>
+                    <p className="text-muted-foreground mt-1 line-clamp-2 text-xs">
+                      {card.subtitle}
+                    </p>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+
+          <div className="border-border grid gap-4 border-t pt-5 lg:grid-cols-[1.2fr_1fr]">
+            <div>
+              <p className="text-foreground mb-3 text-sm font-bold">Quick actions</p>
+              <div className="flex flex-wrap gap-2">
+                {quickActions.map((action) => (
+                  <Link
+                    key={action.href}
+                    href={action.href}
+                    className="border-border hover:bg-muted rounded-md border px-3 py-2 text-sm font-medium transition-colors"
+                  >
+                    {action.label}
+                  </Link>
+                ))}
+              </div>
+            </div>
+            <div>
+              <p className="text-foreground mb-3 text-sm font-bold">Recent admin queue</p>
+              <div className="space-y-2">
+                {ops.recentFailedAudioJobs.length === 0 &&
+                ops.recentPendingApplications.length === 0 ? (
+                  <p className="text-muted-foreground text-sm">No failed jobs or creator requests.</p>
+                ) : (
+                  <>
+                    {ops.recentFailedAudioJobs.slice(0, 2).map((job) => (
+                      <Link
+                        key={job.id}
+                        href="/admin/audio-processing"
+                        className="border-border hover:bg-muted/40 block rounded-md border px-3 py-2 transition-colors"
+                      >
+                        <p className="text-foreground line-clamp-1 text-sm font-medium">
+                          {job.music.title}
+                        </p>
+                        <p className="text-muted-foreground line-clamp-1 text-xs">
+                          {job.music.artist.name} &middot; {job.error || "Processing failed"}
+                        </p>
+                      </Link>
+                    ))}
+                    {ops.recentPendingApplications.slice(0, 2).map((application) => (
+                      <Link
+                        key={application.id}
+                        href="/admin/creators"
+                        className="border-border hover:bg-muted/40 block rounded-md border px-3 py-2 transition-colors"
+                      >
+                        <p className="text-foreground line-clamp-1 text-sm font-medium">
+                          {application.displayName}
+                        </p>
+                        <p className="text-muted-foreground text-xs">
+                          {application.type.toLowerCase()} request
+                        </p>
+                      </Link>
+                    ))}
+                  </>
+                )}
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Recent Activity */}
       <Card>

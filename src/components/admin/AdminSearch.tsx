@@ -2,11 +2,12 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Search, FileText, Music, Mic2, Loader2 } from "lucide-react";
+import { Search, FileText, Music, Mic2, Loader2, Files } from "lucide-react";
 import axios from "axios";
 
 type SearchResult = {
   posts: { id: string; title: string; href: string; category?: string | null }[];
+  pages: { id: string; title: string; href: string; excerpt?: string | null }[];
   music: { id: string; title: string; href: string; artist?: string | null }[];
   artists: { id: string; name: string; href: string; genre?: string | null }[];
 };
@@ -33,7 +34,11 @@ export function AdminSearch() {
         params: { q },
       });
       setResults(data);
-      const hasResults = data.posts.length > 0 || data.music.length > 0 || data.artists.length > 0;
+      const hasResults =
+        data.posts.length > 0 ||
+        data.pages.length > 0 ||
+        data.music.length > 0 ||
+        data.artists.length > 0;
       setOpen(hasResults || q.length >= 2);
     } catch {
       setResults(null);
@@ -77,22 +82,30 @@ export function AdminSearch() {
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  function navigate(href: string) {
+  function navigate(href: string, type?: "post" | "page" | "music" | "artist") {
     // Convert public URLs to admin URLs where applicable
-    const adminHref = href.startsWith("/music/")
-      ? `/admin/music`
-      : href.startsWith("/artists/")
-        ? `/admin/artists`
-        : href.startsWith("/")
-          ? `/admin/posts`
-          : href;
+    let adminHref = href;
+    if (type === "page") {
+      adminHref = "/admin/pages";
+    } else if (href.startsWith("/music/")) {
+      adminHref = "/admin/music";
+    } else if (href.startsWith("/artists/")) {
+      adminHref = "/admin/artists";
+    } else if (href.startsWith("/")) {
+      adminHref = "/admin/posts";
+    }
+
     router.push(adminHref);
     setOpen(false);
     setQuery("");
   }
 
   const hasResults =
-    results && (results.posts.length > 0 || results.music.length > 0 || results.artists.length > 0);
+    results &&
+    (results.posts.length > 0 ||
+      results.pages.length > 0 ||
+      results.music.length > 0 ||
+      results.artists.length > 0);
 
   return (
     <div ref={containerRef} className="relative hidden md:block">
@@ -132,7 +145,7 @@ export function AdminSearch() {
                 <button
                   key={post.id}
                   type="button"
-                  onClick={() => navigate(post.href)}
+                  onClick={() => navigate(post.href, "post")}
                   className="text-popover-foreground hover:bg-accent hover:text-accent-foreground flex w-full items-center gap-2.5 rounded-sm px-3 py-2 text-left text-sm transition-colors"
                 >
                   <FileText className="text-muted-foreground h-4 w-4 shrink-0" />
@@ -140,6 +153,30 @@ export function AdminSearch() {
                     <p className="truncate font-medium">{post.title}</p>
                     {post.category && (
                       <p className="text-muted-foreground truncate text-xs">{post.category}</p>
+                    )}
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {results && results.pages.length > 0 && (
+            <div>
+              <p className="text-muted-foreground px-3 py-1.5 text-xs font-semibold tracking-wider uppercase">
+                Pages
+              </p>
+              {results.pages.slice(0, 5).map((page) => (
+                <button
+                  key={page.id}
+                  type="button"
+                  onClick={() => navigate(page.href, "page")}
+                  className="text-popover-foreground hover:bg-accent hover:text-accent-foreground flex w-full items-center gap-2.5 rounded-sm px-3 py-2 text-left text-sm transition-colors"
+                >
+                  <Files className="text-muted-foreground h-4 w-4 shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-medium">{page.title}</p>
+                    {page.excerpt && (
+                      <p className="text-muted-foreground truncate text-xs">{page.excerpt}</p>
                     )}
                   </div>
                 </button>
@@ -156,7 +193,7 @@ export function AdminSearch() {
                 <button
                   key={track.id}
                   type="button"
-                  onClick={() => navigate(track.href)}
+                  onClick={() => navigate(track.href, "music")}
                   className="text-popover-foreground hover:bg-accent hover:text-accent-foreground flex w-full items-center gap-2.5 rounded-sm px-3 py-2 text-left text-sm transition-colors"
                 >
                   <Music className="text-muted-foreground h-4 w-4 shrink-0" />
@@ -180,7 +217,7 @@ export function AdminSearch() {
                 <button
                   key={artist.id}
                   type="button"
-                  onClick={() => navigate(artist.href)}
+                  onClick={() => navigate(artist.href, "artist")}
                   className="text-popover-foreground hover:bg-accent hover:text-accent-foreground flex w-full items-center gap-2.5 rounded-sm px-3 py-2 text-left text-sm transition-colors"
                 >
                   <Mic2 className="text-muted-foreground h-4 w-4 shrink-0" />

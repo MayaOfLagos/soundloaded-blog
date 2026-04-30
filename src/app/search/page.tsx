@@ -17,6 +17,15 @@ import type { MusicCardData, ArtistCardData } from "@/lib/api/music";
 
 interface SearchResults {
   posts: PostCardData[];
+  pages: Array<{
+    id: string;
+    slug: string;
+    title: string;
+    excerpt?: string | null;
+    coverImage?: string | null;
+    template?: string | null;
+    href: string;
+  }>;
   music: MusicCardData[];
   artists: ArtistCardData[];
 }
@@ -61,6 +70,7 @@ function SearchContent() {
   const [inputValue, setInputValue] = useState(q);
   const [results, setResults] = useState<SearchResults>({
     posts: [],
+    pages: [],
     music: [],
     artists: [],
   });
@@ -81,7 +91,7 @@ function SearchContent() {
   useEffect(() => {
     setInputValue(q);
     if (!q || q.length < 2) {
-      setResults({ posts: [], music: [], artists: [] });
+      setResults({ posts: [], pages: [], music: [], artists: [] });
       setHasSearched(false);
       return;
     }
@@ -94,6 +104,7 @@ function SearchContent() {
       .then((data) =>
         setResults({
           posts: data.posts ?? [],
+          pages: data.pages ?? [],
           music: data.music ?? [],
           artists: data.artists ?? [],
         })
@@ -166,7 +177,8 @@ function SearchContent() {
     }).catch(() => {});
   }
 
-  const total = results.posts.length + results.music.length + results.artists.length;
+  const total =
+    results.posts.length + results.pages.length + results.music.length + results.artists.length;
 
   return (
     <div className="@container py-3">
@@ -459,6 +471,32 @@ function SearchContent() {
                     shelfTracks={results.music as MusicCardData[]}
                     shelfLabel="Search Results"
                   />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* Managed Pages */}
+          {results.pages.length > 0 && (
+            <section>
+              <h2 className="text-foreground mb-3 flex items-center gap-2 text-sm font-bold">
+                <FileText className="text-muted-foreground h-4 w-4" />
+                Pages
+              </h2>
+              <div className="grid grid-cols-1 gap-3 @sm:grid-cols-2">
+                {results.pages.map((page) => (
+                  <Link
+                    key={page.id}
+                    href={page.href}
+                    className="bg-card/50 ring-border/40 hover:bg-muted/40 rounded-xl p-4 ring-1 transition-colors"
+                  >
+                    <p className="text-foreground line-clamp-1 text-sm font-bold">{page.title}</p>
+                    {page.excerpt && (
+                      <p className="text-muted-foreground mt-1 line-clamp-2 text-xs">
+                        {page.excerpt}
+                      </p>
+                    )}
+                  </Link>
                 ))}
               </div>
             </section>

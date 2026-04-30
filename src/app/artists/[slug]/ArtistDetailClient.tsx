@@ -62,6 +62,11 @@ interface PopularTrack {
   downloadCount: number;
   albumTitle: string | null;
   enableDownload: boolean;
+  isExclusive: boolean;
+  price: number | null;
+  accessModel: string;
+  streamAccess: string;
+  creatorPrice: number | null;
 }
 
 interface ArtistDetailClientProps {
@@ -649,6 +654,11 @@ function SongsTab({ tracks, artistName }: { tracks: MusicCardData[]; artistName:
       r2Key: t.r2Key,
       duration: 0,
       slug: t.slug,
+      isExclusive: t.isExclusive,
+      price: t.price,
+      accessModel: t.accessModel,
+      streamAccess: t.streamAccess,
+      creatorPrice: t.creatorPrice,
     }));
     setContextQueue(queue, artistName);
     setTrack(queue[index]);
@@ -911,6 +921,11 @@ function PopularTracksList({
       r2Key: t.r2Key,
       duration: t.duration ?? 0,
       slug: t.slug,
+      isExclusive: t.isExclusive,
+      price: t.price,
+      accessModel: t.accessModel,
+      streamAccess: t.streamAccess,
+      creatorPrice: t.creatorPrice,
     }));
     setContextQueue(queue, artistName);
     setTrack(queue[index]);

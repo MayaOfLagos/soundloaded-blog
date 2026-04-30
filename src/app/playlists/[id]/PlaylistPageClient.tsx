@@ -63,6 +63,11 @@ function toPlayerTrack(t: PlaylistTrackItem): Track {
     r2Key: t.music.r2Key,
     duration: t.music.duration ?? 0,
     slug: t.music.slug,
+    isExclusive: t.music.isExclusive,
+    price: t.music.price,
+    accessModel: t.music.accessModel,
+    streamAccess: t.music.streamAccess,
+    creatorPrice: t.music.creatorPrice,
   };
 }
 

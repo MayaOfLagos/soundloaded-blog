@@ -27,6 +27,11 @@ interface PlaylistTrackMusic {
   streamCount: number;
   downloadCount: number;
   enableDownload: boolean;
+  isExclusive: boolean;
+  price: number | null;
+  accessModel: string;
+  streamAccess: string;
+  creatorPrice: number | null;
   artist: { name: string; slug: string };
   album: { title: string; slug: string } | null;
 }

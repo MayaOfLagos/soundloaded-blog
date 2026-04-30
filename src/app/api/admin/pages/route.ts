@@ -4,6 +4,7 @@ import type { PostStatus } from "@prisma/client";
 import { db } from "@/lib/db";
 import { requireAdmin, unauthorizedResponse } from "@/lib/admin-auth";
 import { DEFAULT_PAGE_BODY } from "@/lib/pages";
+import { indexPage } from "@/lib/meilisearch";
 import {
   cleanNullable,
   handlePageWriteError,
@@ -97,6 +98,7 @@ export async function POST(request: NextRequest) {
     });
 
     revalidatePageCaches(page.slug);
+    indexPage(page);
     return NextResponse.json(page, { status: 201 });
   } catch (error) {
     return handlePageWriteError(error, "Failed to create page");

@@ -1,5 +1,5 @@
 import { PrismaClient, type Artist } from "@prisma/client";
-import { INDEXES, removeFromIndex, searchClient } from "../src/lib/meilisearch";
+import { INDEXES, getSearchClient, removeFromIndex } from "../src/lib/meilisearch";
 
 type ArtistWithCounts = Artist & {
   _count: {
@@ -385,7 +385,7 @@ async function refreshArtistSearchIndex(touchedCanonicalIds: string[], removedAr
 
   if (artists.length === 0) return;
 
-  await searchClient
+  await getSearchClient()
     .index(INDEXES.ARTISTS)
     .addDocuments(
       artists.map((artist) => ({

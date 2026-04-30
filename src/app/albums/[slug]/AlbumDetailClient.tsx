@@ -26,6 +26,11 @@ interface AlbumTrack {
   trackNumber: number | null;
   downloadCount: number;
   enableDownload: boolean;
+  isExclusive: boolean;
+  price: number | null;
+  accessModel: string;
+  streamAccess: string;
+  creatorPrice: number | null;
 }
 
 interface AlbumDetailClientProps {
@@ -90,6 +95,11 @@ export function AlbumDetailClient({
     r2Key: t.r2Key,
     duration: t.duration ?? 0,
     slug: t.slug,
+    isExclusive: t.isExclusive,
+    price: t.price,
+    accessModel: t.accessModel,
+    streamAccess: t.streamAccess,
+    creatorPrice: t.creatorPrice,
   }));
 
   const handlePlayAll = () => {
@@ -349,6 +359,8 @@ export function AlbumDetailClient({
                           musicId={track.id}
                           title={track.title}
                           enabled={track.enableDownload}
+                          isExclusive={track.isExclusive}
+                          price={track.creatorPrice ?? track.price}
                           size="sm"
                           variant="ghost"
                         />

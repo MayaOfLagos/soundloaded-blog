@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { Search, X, Newspaper, Music, Mic2, ArrowRight, Loader2 } from "lucide-react";
+import { Search, X, Newspaper, Music, Mic2, ArrowRight, Loader2, FileText } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useDebounce } from "@/hooks/useDebounce";
 import { cn } from "@/lib/utils";
@@ -28,6 +28,14 @@ interface MusicResult {
   href: string;
 }
 
+interface PageResult {
+  id: string;
+  slug: string;
+  title: string;
+  excerpt?: string | null;
+  href: string;
+}
+
 interface ArtistResult {
   id: string;
   slug: string;
@@ -39,19 +47,26 @@ interface ArtistResult {
 
 interface SearchResults {
   posts: PostResult[];
+  pages: PageResult[];
   music: MusicResult[];
   artists: ArtistResult[];
 }
 
 type FlatItem =
   | { type: "post"; data: PostResult }
+  | { type: "page"; data: PageResult }
   | { type: "music"; data: MusicResult }
   | { type: "artist"; data: ArtistResult };
 
 export function SearchBar() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<SearchResults>({ posts: [], music: [], artists: [] });
+  const [results, setResults] = useState<SearchResults>({
+    posts: [],
+    pages: [],
+    music: [],
+    artists: [],
+  });
   const [loading, setLoading] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
   const debouncedQuery = useDebounce(query, 300);
@@ -61,6 +76,7 @@ export function SearchBar() {
 
   const flatItems: FlatItem[] = [
     ...results.posts.map((p) => ({ type: "post" as const, data: p })),
+    ...results.pages.map((p) => ({ type: "page" as const, data: p })),
     ...results.music.map((m) => ({ type: "music" as const, data: m })),
     ...results.artists.map((a) => ({ type: "artist" as const, data: a })),
   ];
@@ -76,7 +92,7 @@ export function SearchBar() {
     setOpen((prev) => {
       if (prev) {
         setQuery("");
-        setResults({ posts: [], music: [], artists: [] });
+        setResults({ posts: [], pages: [], music: [], artists: [] });
         setActiveIndex(-1);
       }
       return !prev;
@@ -105,7 +121,7 @@ export function SearchBar() {
   const closeSearch = useCallback(() => {
     setOpen(false);
     setQuery("");
-    setResults({ posts: [], music: [], artists: [] });
+    setResults({ posts: [], pages: [], music: [], artists: [] });
     setActiveIndex(-1);
   }, []);
 
@@ -125,7 +141,7 @@ export function SearchBar() {
   useEffect(() => {
     if (!debouncedQuery || debouncedQuery.length < 2) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- clear on empty query
-      setResults({ posts: [], music: [], artists: [] });
+      setResults({ posts: [], pages: [], music: [], artists: [] });
 
       setLoading(false);
       return;
@@ -141,6 +157,7 @@ export function SearchBar() {
       .then((data) => {
         setResults({
           posts: data.posts ?? [],
+          pages: data.pages ?? [],
           music: data.music ?? [],
           artists: data.artists ?? [],
         });
@@ -300,10 +317,29 @@ export function SearchBar() {
                 </ResultSection>
               )}
 
+              {results.pages.length > 0 && (
+                <ResultSection label="Pages" icon={<FileText className="h-3.5 w-3.5" />}>
+                  {results.pages.map((page, i) => {
+                    const idx = results.posts.length + i;
+                    return (
+                      <ResultItem
+                        key={page.id}
+                        id={`search-item-${idx}`}
+                        active={activeIndex === idx}
+                        title={page.title}
+                        subtitle={page.excerpt ?? undefined}
+                        onClick={() => navigate(page.href)}
+                        onMouseEnter={() => setActiveIndex(idx)}
+                      />
+                    );
+                  })}
+                </ResultSection>
+              )}
+
               {results.music.length > 0 && (
                 <ResultSection label="Music" icon={<Music className="h-3.5 w-3.5" />}>
                   {results.music.map((track, i) => {
-                    const idx = results.posts.length + i;
+                    const idx = results.posts.length + results.pages.length + i;
                     return (
                       <ResultItem
                         key={track.id}
@@ -323,7 +359,7 @@ export function SearchBar() {
               {results.artists.length > 0 && (
                 <ResultSection label="Artists" icon={<Mic2 className="h-3.5 w-3.5" />}>
                   {results.artists.map((artist, i) => {
-                    const idx = results.posts.length + results.music.length + i;
+                    const idx = results.posts.length + results.pages.length + results.music.length + i;
                     return (
                       <ResultItem
                         key={artist.id}

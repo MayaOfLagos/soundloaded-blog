@@ -25,6 +25,8 @@ export interface MusicCardData {
   releaseYear?: number | null;
   r2Key: string;
   // Monetization
+  isExclusive?: boolean;
+  price?: number | null;
   accessModel: string; // "free" | "subscription" | "purchase" | "both"
   streamAccess: string; // "free" | "subscription"
   creatorPrice: number | null; // kobo
@@ -71,6 +73,8 @@ type MusicCardCandidate = {
   artist: { name: string; slug: string };
   album: { title: string } | null;
   // Monetization
+  isExclusive: boolean;
+  price: number | null;
   accessModel: string;
   streamAccess: string;
   creatorPrice: number | null;
@@ -101,6 +105,8 @@ function mapMusicCard(track: MusicCardCandidate): MusicCardData {
     fileSize: track.fileSize,
     releaseYear: track.year,
     r2Key: track.r2Key,
+    isExclusive: track.isExclusive,
+    price: track.price ?? null,
     accessModel: track.accessModel ?? "free",
     streamAccess: track.streamAccess ?? "free",
     creatorPrice: track.creatorPrice ?? null,
@@ -143,6 +149,8 @@ export async function getPopularMusic({ limit = 5 }: { limit?: number } = {}): P
       fileSize: t.fileSize,
       releaseYear: t.year,
       r2Key: t.r2Key,
+      isExclusive: t.isExclusive,
+      price: t.price ?? null,
       accessModel: t.accessModel ?? "free",
       streamAccess: t.streamAccess ?? "free",
       creatorPrice: t.creatorPrice ?? null,
@@ -180,6 +188,8 @@ export async function getMostStreamedMusic({ limit = 20 }: { limit?: number } = 
       fileSize: t.fileSize,
       releaseYear: t.year,
       r2Key: t.r2Key,
+      isExclusive: t.isExclusive,
+      price: t.price ?? null,
       accessModel: t.accessModel ?? "free",
       streamAccess: t.streamAccess ?? "free",
       creatorPrice: t.creatorPrice ?? null,
@@ -220,6 +230,8 @@ export async function getLatestMusic({
       fileSize: t.fileSize,
       releaseYear: t.year,
       r2Key: t.r2Key,
+      isExclusive: t.isExclusive,
+      price: t.price ?? null,
       accessModel: t.accessModel ?? "free",
       streamAccess: t.streamAccess ?? "free",
       creatorPrice: t.creatorPrice ?? null,

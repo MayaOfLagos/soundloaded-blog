@@ -12,12 +12,14 @@ import {
   User,
   Lock,
   Crown,
+  ShoppingCart,
 } from "lucide-react";
 import { motion } from "motion/react";
 import useMeasure from "react-use-measure";
 import { usePlayerStore } from "@/store/player.store";
 import type { Track } from "@/store/player.store";
 import { useMusicFavorite } from "@/hooks/useMusicFavorite";
+import { useMusicAccess } from "@/hooks/useMusicAccess";
 import { useSubscription } from "@/hooks/useSubscription";
 import { ShareButton } from "./ShareButton";
 import { PaystackButton } from "@/components/payments/PaystackButton";
@@ -166,6 +168,8 @@ export function TrackActionBar({ track, siteUrl, enableDownloads }: TrackActionB
   const { currentTrack, isPlaying, setTrack, togglePlay } = usePlayerStore();
   const { isFavorited, toggleFavorite } = useMusicFavorite(track.id);
   const { data: subscription } = useSubscription();
+  const { data: streamAccessStatus } = useMusicAccess(track.id, "stream");
+  const { data: downloadAccessStatus } = useMusicAccess(track.id, "download");
   const [activeAction, setActiveAction] = useState<string>("play");
   const [downloadState, setDownloadState] = useState<"idle" | "loading" | "done">("idle");
 
@@ -173,18 +177,45 @@ export function TrackActionBar({ track, siteUrl, enableDownloads }: TrackActionB
   const isActivelyPlaying = isCurrentTrack && isPlaying;
 
   const hasSubscription = subscription?.hasSubscription ?? false;
-  const isStreamGated =
-    track.streamAccess === "subscription" || track.accessModel === "subscription";
-  const streamLocked = isStreamGated && !hasSubscription;
-
   const isPurchaseGated = track.accessModel === "purchase" || track.accessModel === "both";
-  const isDownloadSubGated = track.accessModel === "subscription" || track.accessModel === "both";
-  const downloadLocked = (isPurchaseGated || isDownloadSubGated) && !hasSubscription;
+  const isDownloadSubGated =
+    track.isExclusive || track.accessModel === "subscription" || track.accessModel === "both";
+  const subscriptionCanUnlockStream =
+    track.isExclusive ||
+    track.streamAccess === "subscription" ||
+    track.accessModel === "subscription" ||
+    track.accessModel === "both";
+  const purchaseCanUnlockStream = isPurchaseGated;
+  const isStreamGated =
+    subscriptionCanUnlockStream || purchaseCanUnlockStream || track.streamAccess === "subscription";
+  const streamAllowed = streamAccessStatus?.allowed ?? !(isStreamGated && !hasSubscription);
+  const streamLocked = !streamAllowed;
+  const streamRequiresAuth = streamAccessStatus?.requiresAuth ?? false;
+  const streamRequiresSubscription =
+    streamAccessStatus?.requiresSubscription ?? (subscriptionCanUnlockStream && !hasSubscription);
+  const streamRequiresPurchase =
+    streamAccessStatus?.requiresPurchase ?? (purchaseCanUnlockStream && !hasSubscription);
+  const streamPrice = streamAccessStatus?.price ?? track.creatorPrice ?? track.price;
+  const downloadAllowed =
+    downloadAccessStatus?.allowed ?? !((isPurchaseGated || isDownloadSubGated) && !hasSubscription);
+  const downloadRequiresPurchase =
+    downloadAccessStatus?.requiresPurchase ?? (isPurchaseGated && !hasSubscription);
+  const downloadLocked = !downloadAllowed;
 
   const handlePlay = () => {
     setActiveAction("play");
     if (streamLocked) {
-      window.location.href = "/billing";
+      if (streamRequiresSubscription && !streamRequiresPurchase && !streamRequiresAuth) {
+        window.location.href = "/billing";
+        return;
+      }
+      notify.error(
+        streamRequiresPurchase
+          ? "Buy this track to play it."
+          : streamRequiresAuth
+            ? "Sign in to play this track."
+            : "This track is locked."
+      );
       return;
     }
     if (isCurrentTrack) {
@@ -200,6 +231,11 @@ export function TrackActionBar({ track, siteUrl, enableDownloads }: TrackActionB
       r2Key: track.r2Key,
       duration: track.duration ?? undefined,
       slug: track.slug,
+      isExclusive: track.isExclusive,
+      price: track.price,
+      accessModel: track.accessModel,
+      streamAccess: track.streamAccess,
+      creatorPrice: track.creatorPrice,
     };
     setTrack(playerTrack);
   };
@@ -212,7 +248,18 @@ export function TrackActionBar({ track, siteUrl, enableDownloads }: TrackActionB
     try {
       const res = await fetch(`/api/music/${track.id}/download`, { method: "POST" });
       if (!res.ok) {
+        const data = (await res.json().catch(() => null)) as {
+          error?: string;
+          requiresSubscription?: boolean;
+          requiresPurchase?: boolean;
+          quotaExceeded?: boolean;
+        } | null;
         setDownloadState("idle");
+        if (data?.requiresSubscription && !data.requiresPurchase) {
+          window.location.href = "/billing";
+          return;
+        }
+        notify.error(data?.error ?? "Download unavailable.");
         return;
       }
       const { url, filename } = await res.json();
@@ -240,30 +287,74 @@ export function TrackActionBar({ track, siteUrl, enableDownloads }: TrackActionB
     : isCurrentTrack
       ? "Resume"
       : streamLocked
-        ? "Subscribe to Play"
+        ? streamRequiresPurchase
+          ? "Buy to Play"
+          : streamRequiresAuth
+            ? "Sign in to Play"
+            : "Subscribe to Play"
         : "Play";
   const downloadLabel =
     downloadState === "loading" ? "Getting..." : downloadState === "done" ? "Done!" : "Download";
   const favoriteLabel = isFavorited ? "Saved" : "Save";
 
-  // Stream-locked: show subscribe CTA above action bar
+  // Stream-locked: show the best matching CTA above action bar
   if (streamLocked) {
+    const lockedTitle =
+      streamRequiresPurchase && streamRequiresSubscription
+        ? "Premium Track"
+        : streamRequiresPurchase
+          ? "Buy to Play"
+          : "Subscribers Only";
+    const lockedCopy =
+      streamRequiresPurchase && streamRequiresSubscription
+        ? "Buy this track or subscribe to unlock streaming and downloads"
+        : streamRequiresPurchase
+          ? "Buy this track to stream and download it"
+          : "Subscribe to stream and download this track";
+
     return (
       <div className="space-y-3">
         <div className="flex items-center gap-3 rounded-xl border border-amber-500/20 bg-amber-500/10 px-4 py-3">
-          <Crown className="h-5 w-5 shrink-0 text-amber-500" />
+          {streamRequiresPurchase ? (
+            <ShoppingCart className="h-5 w-5 shrink-0 text-amber-500" />
+          ) : (
+            <Crown className="h-5 w-5 shrink-0 text-amber-500" />
+          )}
           <div className="min-w-0 flex-1">
-            <p className="text-foreground text-sm font-semibold">Subscribers Only</p>
-            <p className="text-muted-foreground text-xs">
-              Subscribe to stream and download this track
-            </p>
+            <p className="text-foreground text-sm font-semibold">{lockedTitle}</p>
+            <p className="text-muted-foreground text-xs">{lockedCopy}</p>
           </div>
-          <Link
-            href="/billing"
-            className="shrink-0 rounded-full bg-amber-500 px-3 py-1.5 text-xs font-bold text-white transition-colors hover:bg-amber-400"
-          >
-            Subscribe
-          </Link>
+          {streamRequiresAuth ? (
+            <Link
+              href={`/login?callbackUrl=/music/${track.slug}`}
+              className="shrink-0 rounded-full bg-amber-500 px-3 py-1.5 text-xs font-bold text-white transition-colors hover:bg-amber-400"
+            >
+              Sign in
+            </Link>
+          ) : streamRequiresPurchase ? (
+            <PaystackButton
+              type="download"
+              musicId={track.id}
+              price={streamPrice}
+              label="Buy Track"
+              className="h-8 shrink-0 rounded-full px-3 text-xs font-bold"
+            />
+          ) : (
+            <Link
+              href="/billing"
+              className="shrink-0 rounded-full bg-amber-500 px-3 py-1.5 text-xs font-bold text-white transition-colors hover:bg-amber-400"
+            >
+              Subscribe
+            </Link>
+          )}
+          {!streamRequiresAuth && streamRequiresPurchase && streamRequiresSubscription && (
+            <Link
+              href="/billing"
+              className="text-foreground hover:text-brand hidden shrink-0 text-xs font-bold transition-colors sm:inline"
+            >
+              Subscribe
+            </Link>
+          )}
         </div>
         <div className="pointer-events-none flex flex-wrap items-center gap-2 opacity-50">
           <DiscreteAction
@@ -281,7 +372,7 @@ export function TrackActionBar({ track, siteUrl, enableDownloads }: TrackActionB
   }
 
   // Purchase-gated download: show buy CTA inline
-  const showBuyCTA = isPurchaseGated && !hasSubscription && enableDownloads && track.enableDownload;
+  const showBuyCTA = downloadRequiresPurchase && enableDownloads && track.enableDownload;
 
   return (
     <div className="flex flex-wrap items-center gap-2">

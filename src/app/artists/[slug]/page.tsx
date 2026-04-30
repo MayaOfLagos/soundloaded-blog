@@ -87,6 +87,11 @@ export default async function ArtistPage({ params }: Props) {
           downloadCount: t.downloadCount,
           albumTitle: t.album?.title ?? null,
           enableDownload: t.enableDownload,
+          isExclusive: t.isExclusive,
+          price: t.price,
+          accessModel: t.accessModel,
+          streamAccess: t.streamAccess,
+          creatorPrice: t.creatorPrice,
         }))}
         allTracks={artist.music.map((t) => ({
           id: t.id,
@@ -106,6 +111,8 @@ export default async function ArtistPage({ params }: Props) {
           accessModel: t.accessModel,
           streamAccess: t.streamAccess,
           creatorPrice: t.creatorPrice,
+          isExclusive: t.isExclusive,
+          price: t.price,
         }))}
         albums={artist.albums.map((a) => ({
           id: a.id,

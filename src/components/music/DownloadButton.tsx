@@ -83,8 +83,27 @@ export function DownloadButton({
       }
 
       if (res.status === 402) {
-        toast.error("This is premium content. Purchase to download.", { id: loadingToast });
-        setState("premium");
+        const data = (await res.json().catch(() => null)) as {
+          error?: string;
+          requiresPurchase?: boolean;
+          requiresSubscription?: boolean;
+          quotaExceeded?: boolean;
+        } | null;
+
+        if (data?.requiresPurchase) {
+          toast.error("This is premium content. Purchase to download.", { id: loadingToast });
+          setState("premium");
+          return;
+        }
+
+        if (data?.requiresSubscription) {
+          toast.error("This track requires a subscription.", { id: loadingToast });
+          setState("idle");
+          return;
+        }
+
+        toast.error(data?.error ?? "Download unavailable.", { id: loadingToast });
+        setState("idle");
         return;
       }
 

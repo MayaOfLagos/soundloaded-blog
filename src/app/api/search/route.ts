@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { getPageUrl } from "@/lib/pages";
 import { getPostUrl } from "@/lib/urls";
 import { searchAll } from "@/lib/meilisearch";
 import {
@@ -38,7 +39,7 @@ export async function GET(req: NextRequest) {
   const q = (searchParams.get("q") ?? "").trim();
 
   if (!q || q.length < 2) {
-    return NextResponse.json({ posts: [], music: [], artists: [] });
+    return NextResponse.json({ posts: [], pages: [], music: [], artists: [] });
   }
 
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? null;
@@ -53,7 +54,8 @@ export async function GET(req: NextRequest) {
     });
     const permalinkStructure = settingsRaw?.permalinkStructure ?? "/%postname%";
 
-    const totalResults = meili.posts.length + meili.music.length + meili.artists.length;
+    const totalResults =
+      meili.posts.length + meili.pages.length + meili.music.length + meili.artists.length;
     trackSearch(q, totalResults, ip);
 
     return NextResponse.json({
@@ -74,6 +76,16 @@ export async function GET(req: NextRequest) {
           },
           permalinkStructure
         ),
+      })),
+      pages: meili.pages.map((p: Record<string, unknown>) => ({
+        id: p.id,
+        slug: p.slug,
+        title: p.title,
+        excerpt: p.excerpt ?? null,
+        coverImage: p.coverImage ?? null,
+        template: p.template ?? null,
+        publishedAt: p.publishedAt ?? null,
+        href: getPageUrl(p.slug as string),
       })),
       music: meili.music.map((m: Record<string, unknown>) => ({
         id: m.id,
@@ -110,7 +122,7 @@ async function fallbackSearch(q: string, ip: string | null) {
     });
     const permalinkStructure = settingsRaw?.permalinkStructure ?? "/%postname%";
 
-    const [posts, music, artists] = await Promise.all([
+    const [posts, pages, music, artists] = await Promise.all([
       db.post.findMany({
         where: {
           status: "PUBLISHED",
@@ -132,6 +144,28 @@ async function fallbackSearch(q: string, ip: string | null) {
           publishedAt: true,
           createdAt: true,
           category: { select: { name: true, slug: true } },
+        },
+      }),
+      db.page.findMany({
+        where: {
+          status: "PUBLISHED",
+          OR: [
+            { title: { contains: q, mode: "insensitive" } },
+            { excerpt: { contains: q, mode: "insensitive" } },
+            { metaTitle: { contains: q, mode: "insensitive" } },
+            { metaDescription: { contains: q, mode: "insensitive" } },
+          ],
+        },
+        take: 5,
+        orderBy: [{ sortOrder: "asc" }, { publishedAt: "desc" }],
+        select: {
+          id: true,
+          slug: true,
+          title: true,
+          excerpt: true,
+          coverImage: true,
+          template: true,
+          publishedAt: true,
         },
       }),
       db.music.findMany({
@@ -166,7 +200,7 @@ async function fallbackSearch(q: string, ip: string | null) {
       }),
     ]);
 
-    trackSearch(q, posts.length + music.length + artists.length, ip, "postgresql");
+    trackSearch(q, posts.length + pages.length + music.length + artists.length, ip, "postgresql");
 
     return NextResponse.json({
       posts: posts.map((p) => ({
@@ -178,6 +212,16 @@ async function fallbackSearch(q: string, ip: string | null) {
         publishedAt: p.publishedAt ?? p.createdAt,
         category: p.category?.name ?? null,
         href: getPostUrl(p, permalinkStructure),
+      })),
+      pages: pages.map((p) => ({
+        id: p.id,
+        slug: p.slug,
+        title: p.title,
+        excerpt: p.excerpt,
+        coverImage: p.coverImage,
+        template: p.template,
+        publishedAt: p.publishedAt,
+        href: getPageUrl(p),
       })),
       music: music.map((m) => ({
         id: m.id,
@@ -202,6 +246,6 @@ async function fallbackSearch(q: string, ip: string | null) {
     });
   } catch (err) {
     console.error("[GET /api/search] fallback error:", err);
-    return NextResponse.json({ posts: [], music: [], artists: [] });
+    return NextResponse.json({ posts: [], pages: [], music: [], artists: [] });
   }
 }

@@ -7,7 +7,12 @@ import { usePlayerStore } from "@/store/player.store";
 import { cn } from "@/lib/utils";
 import { HeartButton } from "./HeartButton";
 import { useSubscription } from "@/hooks/useSubscription";
+import { notify } from "@/hooks/useToast";
 import { AccessGateBadge } from "@/components/payments/AccessGateBadge";
+import {
+  getOptimisticPlaybackLockMessage,
+  isOptimisticallyStreamLocked,
+} from "@/lib/music-access-client";
 import type { MusicCardData } from "@/lib/api/music";
 import type { Track } from "@/store/player.store";
 
@@ -28,6 +33,11 @@ function toPlayerTrack(t: MusicCardData): Track {
     r2Key: t.r2Key,
     duration: 0,
     slug: t.slug,
+    isExclusive: t.isExclusive,
+    price: t.price,
+    accessModel: t.accessModel,
+    streamAccess: t.streamAccess,
+    creatorPrice: t.creatorPrice,
   };
 }
 
@@ -48,16 +58,17 @@ export function MusicListItem({ track, rank, listTracks, listLabel }: MusicListI
   const isCurrentTrack = currentTrack?.id === track.id;
   const isActivelyPlaying = isCurrentTrack && isPlaying;
 
-  const isStreamGated =
-    track.streamAccess === "subscription" || track.accessModel === "subscription";
-  const streamLocked = isStreamGated && !(subscription?.hasSubscription ?? false);
+  const streamLocked = isOptimisticallyStreamLocked(
+    track,
+    subscription?.hasSubscription ?? false
+  );
 
   const handlePlay = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
 
     if (streamLocked) {
-      window.location.href = "/billing";
+      notify.error(getOptimisticPlaybackLockMessage(track));
       return;
     }
 

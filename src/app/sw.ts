@@ -28,7 +28,9 @@ const customCache: RuntimeCaching[] = [
     matcher: ({ url }) =>
       url.pathname.startsWith("/api/") &&
       !url.pathname.includes("/download") &&
-      !url.pathname.includes("/stream"),
+      !url.pathname.includes("/stream") &&
+      !url.pathname.includes("/waveform") &&
+      !url.pathname.includes("/access"),
     handler: new NetworkFirst({
       cacheName: "api-data",
       plugins: [new ExpirationPlugin({ maxEntries: 50, maxAgeSeconds: 5 * 60 })],

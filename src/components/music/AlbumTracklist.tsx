@@ -18,7 +18,10 @@ interface AlbumTrack {
   duration: number | null;
   trackNumber: number | null;
   enableDownload: boolean;
+  isExclusive?: boolean;
+  price?: number | null;
   accessModel?: string;
+  streamAccess?: string;
   creatorPrice?: number | null;
 }
 
@@ -77,6 +80,11 @@ function TrackRow({
       r2Key: t.r2Key,
       duration: t.duration ?? undefined,
       slug: t.slug,
+      isExclusive: t.isExclusive,
+      price: t.price,
+      accessModel: t.accessModel,
+      streamAccess: t.streamAccess,
+      creatorPrice: t.creatorPrice,
     }));
 
     setContextQueue(playerTracks, albumTitle);
@@ -153,6 +161,8 @@ function TrackRow({
             musicId={track.id}
             title={track.title}
             enabled={track.enableDownload}
+            isExclusive={track.isExclusive}
+            price={track.creatorPrice ?? track.price}
             size="sm"
             variant="ghost"
           />

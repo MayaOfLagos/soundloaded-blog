@@ -8,7 +8,12 @@ import { cn, formatFileSize } from "@/lib/utils";
 import { DownloadButton } from "./DownloadButton";
 import { usePlayerStore } from "@/store/player.store";
 import { useSubscription } from "@/hooks/useSubscription";
+import { notify } from "@/hooks/useToast";
 import { AccessGateBadge } from "@/components/payments/AccessGateBadge";
+import {
+  getOptimisticPlaybackLockMessage,
+  isOptimisticallyStreamLocked,
+} from "@/lib/music-access-client";
 import type { MusicCardData } from "@/lib/api/music";
 
 interface MusicCardProps {
@@ -20,13 +25,14 @@ export function MusicCard({ track, className }: MusicCardProps) {
   const { setTrack } = usePlayerStore();
   const { data: subscription } = useSubscription();
 
-  const isStreamGated =
-    track.streamAccess === "subscription" || track.accessModel === "subscription";
-  const streamLocked = isStreamGated && !(subscription?.hasSubscription ?? false);
+  const streamLocked = isOptimisticallyStreamLocked(
+    track,
+    subscription?.hasSubscription ?? false
+  );
 
   const handlePlay = () => {
     if (streamLocked) {
-      window.location.href = "/billing";
+      notify.error(getOptimisticPlaybackLockMessage(track));
       return;
     }
     setTrack({
@@ -38,6 +44,11 @@ export function MusicCard({ track, className }: MusicCardProps) {
       r2Key: track.r2Key,
       duration: 0,
       slug: track.slug,
+      isExclusive: track.isExclusive,
+      price: track.price,
+      accessModel: track.accessModel,
+      streamAccess: track.streamAccess,
+      creatorPrice: track.creatorPrice,
     });
   };
 
@@ -125,6 +136,8 @@ export function MusicCard({ track, className }: MusicCardProps) {
             musicId={track.id}
             title={track.title}
             enabled={track.enableDownload}
+            isExclusive={track.isExclusive}
+            price={track.creatorPrice ?? track.price}
             className="flex-1"
           />
         </div>

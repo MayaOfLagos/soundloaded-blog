@@ -10,6 +10,11 @@ export interface Track {
   r2Key: string;
   duration?: number;
   slug: string;
+  isExclusive?: boolean;
+  price?: number | null;
+  accessModel?: string;
+  streamAccess?: string;
+  creatorPrice?: number | null;
 }
 
 type RepeatMode = "off" | "all" | "one";

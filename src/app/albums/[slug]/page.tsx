@@ -118,6 +118,11 @@ export default async function AlbumPage({ params }: Props) {
           trackNumber: t.trackNumber,
           downloadCount: t.downloadCount,
           enableDownload: t.enableDownload,
+          isExclusive: t.isExclusive,
+          price: t.price,
+          accessModel: t.accessModel,
+          streamAccess: t.streamAccess,
+          creatorPrice: t.creatorPrice,
         }))}
         totalDuration={totalDuration}
         totalDownloads={totalDownloads}

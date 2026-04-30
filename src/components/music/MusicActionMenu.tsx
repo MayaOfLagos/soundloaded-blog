@@ -34,6 +34,11 @@ function toPlayerTrack(t: MusicCardData): Track {
     r2Key: t.r2Key,
     duration: 0,
     slug: t.slug,
+    isExclusive: t.isExclusive,
+    price: t.price,
+    accessModel: t.accessModel,
+    streamAccess: t.streamAccess,
+    creatorPrice: t.creatorPrice,
   };
 }
 

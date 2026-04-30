@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { redis } from "@/lib/redis";
+import { getRedis } from "@/lib/redis";
 import {
   Prisma,
   RecommendationEntityType,
@@ -67,6 +67,7 @@ export async function POST(request: NextRequest) {
 
       try {
         // SET NX (only if not exists) with 24h TTL
+        const redis = getRedis();
         const isNew = await redis.set(redisKey, "1", { nx: true, ex: 86400 });
 
         if (isNew) {

@@ -1,20 +1,33 @@
 import { NextRequest, NextResponse } from "next/server";
-import { db } from "@/lib/db";
+import { RecommendationSurface } from "@prisma/client";
+import { auth } from "@/lib/auth";
+import {
+  getMusicAccess,
+  musicAccessDeniedResponse,
+  trackMusicAccessDenied,
+} from "@/lib/music-access";
 import { getPresignedStreamUrl, MUSIC_BUCKET } from "@/lib/r2";
 
 // Stream endpoint: redirects to a short-lived signed R2 URL
 // Prefers the processed (transcoded/normalized) version when available
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  const session = await auth();
+  const userId = (session?.user as { id?: string } | undefined)?.id;
 
   try {
-    const music = await db.music.findUnique({
-      where: { id },
-      select: { r2Key: true, processedR2Key: true, processingStatus: true },
-    });
-    if (!music) return NextResponse.json({ error: "Not found" }, { status: 404 });
-    if (!music.r2Key)
-      return NextResponse.json({ error: "No audio file available" }, { status: 404 });
+    const access = await getMusicAccess({ musicId: id, userId, intent: "stream" });
+    if (!access.allowed) {
+      trackMusicAccessDenied({
+        result: access,
+        userId,
+        surface: RecommendationSurface.MUSIC_DETAIL,
+        placement: "stream",
+      });
+      return musicAccessDeniedResponse(access);
+    }
+
+    const music = access.music!;
 
     // Use processed version if available, otherwise fall back to original
     const streamKey =

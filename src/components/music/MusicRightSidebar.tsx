@@ -2,10 +2,16 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { Download, Flame, Music, Play, Pause, TrendingUp, Loader2 } from "lucide-react";
+import { Download, Flame, Music, Play, Pause, TrendingUp, Loader2, Lock } from "lucide-react";
 import { usePlayerStore } from "@/store/player.store";
 import { cn } from "@/lib/utils";
 import { HeartButton } from "./HeartButton";
+import { useSubscription } from "@/hooks/useSubscription";
+import { notify } from "@/hooks/useToast";
+import {
+  getOptimisticPlaybackLockMessage,
+  isOptimisticallyStreamLocked,
+} from "@/lib/music-access-client";
 import type { MusicCardData } from "@/lib/api/music";
 import type { Track } from "@/store/player.store";
 
@@ -19,6 +25,11 @@ function toPlayerTrack(t: MusicCardData): Track {
     r2Key: t.r2Key,
     duration: 0,
     slug: t.slug,
+    isExclusive: t.isExclusive,
+    price: t.price,
+    accessModel: t.accessModel,
+    streamAccess: t.streamAccess,
+    creatorPrice: t.creatorPrice,
   };
 }
 
@@ -51,10 +62,12 @@ function TrackListItem({
     setContextQueue,
     togglePlay,
   } = usePlayerStore();
+  const { data: subscription } = useSubscription();
 
   const isCurrentTrack = currentTrack?.id === track.id;
   const isActivelyPlaying = isCurrentTrack && isPlaying;
   const isLoading = isCurrentTrack && storeBuffering;
+  const streamLocked = isOptimisticallyStreamLocked(track, subscription?.hasSubscription ?? false);
 
   const handlePlay = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -62,6 +75,11 @@ function TrackListItem({
 
     if (isCurrentTrack) {
       togglePlay();
+      return;
+    }
+
+    if (streamLocked) {
+      notify.error(getOptimisticPlaybackLockMessage(track));
       return;
     }
 
@@ -95,6 +113,8 @@ function TrackListItem({
                 <Loader2 className="text-brand h-3.5 w-3.5 animate-spin" />
               ) : isActivelyPlaying ? (
                 <Pause className="text-brand h-3.5 w-3.5" />
+              ) : streamLocked ? (
+                <Lock className="h-3.5 w-3.5 text-amber-500" />
               ) : (
                 <Play className="text-foreground h-3.5 w-3.5 fill-current" />
               )}

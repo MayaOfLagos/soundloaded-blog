@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireAdmin, unauthorizedResponse } from "@/lib/admin-auth";
 import { DEFAULT_PAGE_BODY } from "@/lib/pages";
+import { INDEXES, indexPage, removeFromIndex } from "@/lib/meilisearch";
 import {
   cleanNullable,
   handlePageWriteError,
@@ -76,6 +77,7 @@ export async function PUT(request: NextRequest, { params }: RouteContext) {
     });
 
     revalidatePageCaches(existingPage.slug, page.slug);
+    indexPage(page);
     return NextResponse.json(page);
   } catch (error) {
     return handlePageWriteError(error, "Failed to update page");
@@ -100,12 +102,14 @@ export async function DELETE(_request: NextRequest, { params }: RouteContext) {
       data: { status: "ARCHIVED", showInHeader: false, showInFooter: false },
     });
     revalidatePageCaches(existingPage.slug);
+    removeFromIndex(INDEXES.PAGES, id);
     return NextResponse.json(page);
   }
 
   if (existingPage.status === "ARCHIVED") {
     await db.page.delete({ where: { id } });
     revalidatePageCaches(existingPage.slug);
+    removeFromIndex(INDEXES.PAGES, id);
     return NextResponse.json({ deleted: true });
   }
 
@@ -115,5 +119,6 @@ export async function DELETE(_request: NextRequest, { params }: RouteContext) {
   });
 
   revalidatePageCaches(existingPage.slug);
+  removeFromIndex(INDEXES.PAGES, id);
   return NextResponse.json(page);
 }

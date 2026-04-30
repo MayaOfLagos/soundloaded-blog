@@ -3,13 +3,19 @@
 import { useRef, useCallback, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Music, Play, Pause, Loader2, Clock, TrendingUp, Music2 } from "lucide-react";
+import { Music, Play, Pause, Loader2, Clock, TrendingUp, Music2, Lock } from "lucide-react";
 import { EmptyState } from "@/components/common/EmptyState";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import axios from "axios";
 import { usePlayerStore } from "@/store/player.store";
 import { cn } from "@/lib/utils";
 import { HeartButton } from "@/components/music/HeartButton";
+import { useSubscription } from "@/hooks/useSubscription";
+import { notify } from "@/hooks/useToast";
+import {
+  getOptimisticPlaybackLockMessage,
+  isOptimisticallyStreamLocked,
+} from "@/lib/music-access-client";
 // import type { MusicCardData } from "@/lib/api/music";
 import type { Track } from "@/store/player.store";
 
@@ -21,7 +27,13 @@ interface TracksResponse {
     coverArt: string | null;
     genre: string | null;
     downloadCount: number;
+    streamCount: number;
     enableDownload: boolean;
+    isExclusive: boolean;
+    price: number | null;
+    accessModel: string;
+    streamAccess: string;
+    creatorPrice: number | null;
     fileSize: bigint | null;
     year: number | null;
     r2Key: string;
@@ -52,6 +64,11 @@ function toPlayerTrack(t: TracksResponse["tracks"][number]): Track {
     r2Key: t.r2Key,
     duration: t.duration ?? 0,
     slug: t.slug,
+    isExclusive: t.isExclusive,
+    price: t.price,
+    accessModel: t.accessModel,
+    streamAccess: t.streamAccess,
+    creatorPrice: t.creatorPrice,
   };
 }
 
@@ -65,6 +82,7 @@ export function MusicSortedGrid({ sort }: MusicSortedGridProps) {
     togglePlay,
     setContextQueue,
   } = usePlayerStore();
+  const { data: subscription } = useSubscription();
 
   const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } =
     useInfiniteQuery<TracksResponse>({
@@ -111,6 +129,11 @@ export function MusicSortedGrid({ sort }: MusicSortedGridProps) {
     if (currentTrack?.id === track.id) {
       togglePlay();
     } else {
+      if (isOptimisticallyStreamLocked(track, subscription?.hasSubscription ?? false)) {
+        notify.error(getOptimisticPlaybackLockMessage(track));
+        return;
+      }
+
       const playerTrack = toPlayerTrack(track);
       setTrack(playerTrack);
       const queue = allTracks.slice(index).map(toPlayerTrack);
@@ -160,6 +183,10 @@ export function MusicSortedGrid({ sort }: MusicSortedGridProps) {
           const isCurrentTrack = currentTrack?.id === track.id;
           const isTrackPlaying = isCurrentTrack && isPlaying;
           const isTrackLoading = isCurrentTrack && storeBuffering;
+          const streamLocked = isOptimisticallyStreamLocked(
+            track,
+            subscription?.hasSubscription ?? false
+          );
 
           return (
             <div key={track.id} className="group">
@@ -194,6 +221,8 @@ export function MusicSortedGrid({ sort }: MusicSortedGridProps) {
                       <Loader2 className="h-5 w-5 animate-spin text-black" />
                     ) : isTrackPlaying ? (
                       <Pause className="h-5 w-5 fill-black text-black" />
+                    ) : streamLocked ? (
+                      <Lock className="h-5 w-5 text-black" />
                     ) : (
                       <Play className="ml-0.5 h-5 w-5 fill-black text-black" />
                     )}

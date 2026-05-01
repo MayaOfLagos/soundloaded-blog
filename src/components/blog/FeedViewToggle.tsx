@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { LayoutGrid, List, Loader2, Eye, Heart } from "lucide-react";
 import { motion, LayoutGroup, AnimatePresence, type Transition } from "motion/react";
@@ -251,17 +251,6 @@ function ListCard({ post }: { post: PostCardData }) {
   );
 }
 
-/* ━━━ URL sync helper ━━━ */
-function updatePageInUrl(pageNum: number) {
-  const url = new URL(window.location.href);
-  if (pageNum <= 1) {
-    url.searchParams.delete("page");
-  } else {
-    url.searchParams.set("page", String(pageNum));
-  }
-  window.history.replaceState(null, "", url.toString());
-}
-
 /* ━━━ Main Component ━━━ */
 export function FeedViewToggle({
   posts: initialPosts,
@@ -321,7 +310,7 @@ export function FeedViewToggle({
     staleTime: 60_000,
   });
 
-  // Intersection observer for infinite scroll trigger
+  // Intersection observer — fires 800px before sentry enters viewport
   const sentryRef = useRef<HTMLDivElement>(null);
 
   const handleIntersect = useCallback(
@@ -336,65 +325,12 @@ export function FeedViewToggle({
   useEffect(() => {
     const el = sentryRef.current;
     if (!el) return;
-    const observer = new IntersectionObserver(handleIntersect, { rootMargin: "400px" });
+    const observer = new IntersectionObserver(handleIntersect, { rootMargin: "800px" });
     observer.observe(el);
     return () => observer.disconnect();
   }, [handleIntersect]);
 
-  // Page boundary refs for URL sync
-  const pageRefs = useRef<Map<number, HTMLDivElement>>(new Map());
-  const currentUrlPage = useRef(initialPage);
-
-  const setPageRef = useCallback((pageNum: number, el: HTMLDivElement | null) => {
-    if (el) {
-      pageRefs.current.set(pageNum, el);
-    } else {
-      pageRefs.current.delete(pageNum);
-    }
-  }, []);
-
-  // IntersectionObserver to detect which page is visible and update URL
-  useEffect(() => {
-    const entries = pageRefs.current;
-    if (entries.size === 0) return;
-
-    const observer = new IntersectionObserver(
-      (observerEntries) => {
-        // Find the topmost visible page section
-        let topPage = currentUrlPage.current;
-        let topY = Infinity;
-
-        for (const entry of observerEntries) {
-          if (entry.isIntersecting) {
-            const page = Number(entry.target.getAttribute("data-page"));
-            const rect = entry.boundingClientRect;
-            if (rect.top < topY) {
-              topY = rect.top;
-              topPage = page;
-            }
-          }
-        }
-
-        if (topPage !== currentUrlPage.current) {
-          currentUrlPage.current = topPage;
-          updatePageInUrl(topPage);
-        }
-      },
-      { rootMargin: "0px 0px -60% 0px", threshold: 0 }
-    );
-
-    for (const el of entries.values()) {
-      observer.observe(el);
-    }
-
-    return () => observer.disconnect();
-  });
-
-  // Build pages array with page numbers
-  const pages = data?.pages.map((page, index) => ({
-    pageNum: index === 0 ? initialPage : initialPage + index,
-    posts: page.posts,
-  })) ?? [{ pageNum: initialPage, posts: initialPosts }];
+  const posts = data?.pages.flatMap((p) => p.posts) ?? initialPosts;
 
   return (
     <div>
@@ -430,7 +366,6 @@ export function FeedViewToggle({
         </div>
       </div>
 
-      {/* Posts grouped by page for URL sync */}
       <LayoutGroup id="feed-posts">
         <AnimatePresence mode="popLayout" initial={false}>
           <motion.div
@@ -446,30 +381,13 @@ export function FeedViewToggle({
                 : "grid grid-cols-1 gap-3 sm:grid-cols-2"
             )}
           >
-            {pages.map(({ pageNum, posts }, pageIndex) => (
-              <React.Fragment key={pageNum}>
-                {/* Page boundary marker — spans full grid row */}
-                {pageIndex > 0 && (
-                  <div
-                    data-page={pageNum}
-                    ref={(el) => setPageRef(pageNum, el)}
-                    className={cn(
-                      "pointer-events-none h-0",
-                      view === "grid"
-                        ? "col-span-2 sm:col-span-3 lg:col-span-4"
-                        : "col-span-1 sm:col-span-2"
-                    )}
-                  />
-                )}
-                {posts.map((post) =>
-                  view === "grid" ? (
-                    <SpotifyCard key={post.id} post={post} />
-                  ) : (
-                    <ListCard key={post.id} post={post} />
-                  )
-                )}
-              </React.Fragment>
-            ))}
+            {posts.map((post) =>
+              view === "grid" ? (
+                <SpotifyCard key={post.id} post={post} />
+              ) : (
+                <ListCard key={post.id} post={post} />
+              )
+            )}
           </motion.div>
         </AnimatePresence>
       </LayoutGroup>
@@ -479,7 +397,7 @@ export function FeedViewToggle({
         {isFetchingNextPage && (
           <Loader2 className="text-muted-foreground mx-auto h-6 w-6 animate-spin" />
         )}
-        {!hasNextPage && pages.reduce((n, p) => n + p.posts.length, 0) > postsPerPage && (
+        {!hasNextPage && posts.length > postsPerPage && (
           <p className="text-muted-foreground text-sm">You&apos;re all caught up!</p>
         )}
       </div>

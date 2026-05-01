@@ -5,7 +5,7 @@ import { FeaturedPost } from "@/components/blog/FeaturedPost";
 import { LatestPostsGrid } from "@/components/blog/LatestPostsGrid";
 import { TrendingSidebar } from "@/components/blog/TrendingSidebar";
 import { PopularMusicSidebar } from "@/components/music/PopularMusicSidebar";
-import { PostCardSkeleton } from "@/components/blog/PostCardSkeleton";
+import { FeedViewSkeleton } from "@/components/blog/FeedViewSkeleton";
 import { NewsletterForm } from "@/components/common/NewsletterForm";
 import { getSettings } from "@/lib/settings";
 import { JsonLd } from "@/components/common/JsonLd";
@@ -122,30 +122,24 @@ function PopularMusicBlock() {
 
 function HeroSkeleton() {
   return (
-    <div className="bg-muted ring-border/20 aspect-[16/9] animate-pulse rounded-3xl ring-1 sm:aspect-[21/9]" />
+    <div className="bg-muted ring-border/20 aspect-video animate-pulse rounded-3xl ring-1 sm:aspect-21/9" />
   );
 }
 
 function FeedSkeleton() {
-  return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-      {Array.from({ length: 6 }).map((_, i) => (
-        <PostCardSkeleton key={i} />
-      ))}
-    </div>
-  );
+  return <FeedViewSkeleton count={12} />;
 }
 
 function SidebarBlockSkeleton() {
   return (
-    <div className="bg-card/50 ring-border/20 animate-pulse space-y-3 rounded-2xl p-4 ring-1">
-      <div className="bg-muted h-4 w-28 rounded" />
+    <div className="bg-card/50 ring-border/20 space-y-3 rounded-2xl p-4 ring-1">
+      <div className="bg-muted h-4 w-28 animate-pulse rounded" />
       {Array.from({ length: 4 }).map((_, i) => (
         <div key={i} className="flex gap-3 py-2">
-          <div className="bg-muted h-14 w-14 flex-shrink-0 rounded-xl" />
+          <div className="bg-muted h-14 w-14 shrink-0 animate-pulse rounded-xl" />
           <div className="flex-1 space-y-2">
-            <div className="bg-muted h-3 rounded" />
-            <div className="bg-muted h-3 w-2/3 rounded" />
+            <div className="bg-muted h-3 animate-pulse rounded" />
+            <div className="bg-muted h-3 w-2/3 animate-pulse rounded" />
           </div>
         </div>
       ))}

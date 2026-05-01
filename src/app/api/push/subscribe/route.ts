@@ -13,20 +13,16 @@ const schema = z.object({
 
 export async function POST(req: NextRequest) {
   const session = await auth();
-  if (!session?.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const userId = (session?.user as { id?: string } | undefined)?.id ?? null;
 
   try {
     const body = await req.json();
     const { endpoint, keys } = schema.parse(body);
 
-    const userId = (session.user as { id: string }).id;
-
     await db.pushSubscription.upsert({
       where: { endpoint },
       create: { endpoint, p256dh: keys.p256dh, auth: keys.auth, userId },
-      update: { p256dh: keys.p256dh, auth: keys.auth },
+      update: { p256dh: keys.p256dh, auth: keys.auth, ...(userId ? { userId } : {}) },
     });
 
     return NextResponse.json({ ok: true });

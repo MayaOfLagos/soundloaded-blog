@@ -42,12 +42,16 @@ export function Navbar() {
   return (
     <header className="bg-background/95 supports-[backdrop-filter]:bg-background/80 sticky top-0 z-50 w-full backdrop-blur">
       <div className="mx-auto flex h-14 max-w-7xl items-center gap-4 px-4 sm:px-6">
-        {/* Logo */}
-        <Logo
-          logoLightUrl={settings?.logoLight}
-          logoDarkUrl={settings?.logoDark}
-          siteName={settings?.siteName}
-        />
+        {/* Logo — skeleton while settings load to avoid fallback flash */}
+        {settings === undefined ? (
+          <div className="bg-muted h-8 w-32 animate-pulse rounded-md" />
+        ) : (
+          <Logo
+            logoLightUrl={settings?.logoLight}
+            logoDarkUrl={settings?.logoDark}
+            siteName={settings?.siteName}
+          />
+        )}
 
         {/* Desktop nav */}
         <nav className="ml-6 hidden items-center gap-1 md:flex">

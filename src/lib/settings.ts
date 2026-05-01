@@ -214,7 +214,7 @@ export function buildPublicSettings(
   return {
     siteName: str(raw, "siteName", DEFAULTS.siteName),
     tagline: str(raw, "tagline", DEFAULTS.tagline),
-    siteUrl: str(raw, "siteUrl", DEFAULTS.siteUrl),
+    siteUrl: process.env.NEXT_PUBLIC_SITE_URL || str(raw, "siteUrl", DEFAULTS.siteUrl),
     contactEmail: str(raw, "contactEmail", DEFAULTS.contactEmail),
     copyrightText: str(raw, "copyrightText", DEFAULTS.copyrightText),
     logoLight: resolveImageUrl(raw.logoLight as string | null),

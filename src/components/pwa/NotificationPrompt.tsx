@@ -10,6 +10,7 @@ const DISMISS_KEY = "push-notification-dismissed";
 const SUBSCRIBED_KEY = "push-notification-subscribed";
 const DISMISS_DAYS = 14;
 const SHOW_DELAY = 60_000;
+const SW_READY_TIMEOUT = 15_000;
 
 function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
@@ -32,9 +33,13 @@ function isDismissed(): boolean {
   return false;
 }
 
-function isAlreadySubscribed(): boolean {
-  if (typeof localStorage === "undefined") return false;
-  return localStorage.getItem(SUBSCRIBED_KEY) === "true";
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error("Timed out waiting for service worker")), ms)
+    ),
+  ]);
 }
 
 export function NotificationPrompt() {
@@ -50,7 +55,12 @@ export function NotificationPrompt() {
   useEffect(() => {
     if (typeof window === "undefined" || isExcluded) return;
     if (!("Notification" in window) || !("serviceWorker" in navigator)) return;
-    if (Notification.permission === "granted" && isAlreadySubscribed()) return;
+    // If permission is already granted, never show the prompt again —
+    // even if the subscription handshake got stuck and SUBSCRIBED_KEY was never set.
+    if (Notification.permission === "granted") {
+      localStorage.setItem(SUBSCRIBED_KEY, "true");
+      return;
+    }
     if (Notification.permission === "denied") return;
     if (isDismissed()) return;
     if (!process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY) return;
@@ -69,7 +79,11 @@ export function NotificationPrompt() {
         return;
       }
 
-      const registration = await navigator.serviceWorker.ready;
+      // Mark granted immediately so a page refresh won't show the prompt again
+      // even if the push subscription step below fails or times out.
+      localStorage.setItem(SUBSCRIBED_KEY, "true");
+
+      const registration = await withTimeout(navigator.serviceWorker.ready, SW_READY_TIMEOUT);
       const subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!)
@@ -84,7 +98,6 @@ export function NotificationPrompt() {
 
       if (!res.ok) throw new Error("Failed to save subscription");
 
-      localStorage.setItem(SUBSCRIBED_KEY, "true");
       toast.success("You'll get notified about new music drops!");
     } catch {
       toast.error("Could not enable notifications");
@@ -113,7 +126,7 @@ export function NotificationPrompt() {
         >
           <div className="bg-card ring-border/30 relative overflow-hidden rounded-2xl shadow-2xl ring-1 backdrop-blur-xl">
             {/* Gradient accent bar */}
-            <div className="h-1 w-full bg-gradient-to-r from-amber-500 via-orange-500 to-rose-500" />
+            <div className="h-1 w-full bg-linear-to-r from-amber-500 via-orange-500 to-rose-500" />
 
             <div className="p-4">
               <button
@@ -126,7 +139,7 @@ export function NotificationPrompt() {
               </button>
 
               <div className="flex items-center gap-3 pr-6">
-                <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-amber-500/10">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-500/10">
                   <Bell className="h-5 w-5 text-amber-500" />
                 </div>
                 <div className="min-w-0 flex-1">
@@ -139,7 +152,7 @@ export function NotificationPrompt() {
                   type="button"
                   onClick={handleSubscribe}
                   disabled={loading}
-                  className="flex flex-shrink-0 items-center gap-1.5 rounded-full bg-amber-500 px-4 py-2 text-xs font-bold text-white transition-colors hover:bg-amber-600 disabled:opacity-50"
+                  className="flex shrink-0 items-center gap-1.5 rounded-full bg-amber-500 px-4 py-2 text-xs font-bold text-white transition-colors hover:bg-amber-600 disabled:opacity-50"
                 >
                   {loading ? <Loader2 className="h-3 w-3 animate-spin" /> : "Allow"}
                 </button>

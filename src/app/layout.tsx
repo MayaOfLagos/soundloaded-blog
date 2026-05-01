@@ -18,6 +18,7 @@ import {
 } from "@/components/common/CodeInjection";
 import { InstallPrompt } from "@/components/pwa/InstallPrompt";
 import { NotificationPrompt } from "@/components/pwa/NotificationPrompt";
+import { ServiceWorkerRegistration } from "@/components/pwa/ServiceWorkerRegistration";
 import "./globals.css";
 
 const inter = Inter({
@@ -176,6 +177,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <Suspense>
           <FooterScripts />
         </Suspense>
+        <ServiceWorkerRegistration />
         <InstallPrompt />
         <NotificationPrompt />
         <Analytics />

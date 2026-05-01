@@ -7,15 +7,23 @@ import { useToggleFavorite } from "@/hooks/useUserMutations";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
+import type { ClientCreatorEventContext } from "@/lib/client/creator-events";
 
 interface FavoriteButtonProps {
   postId?: string;
   musicId?: string;
   className?: string;
   size?: "sm" | "default" | "icon";
+  source?: ClientCreatorEventContext;
 }
 
-export function FavoriteButton({ postId, musicId, className, size = "icon" }: FavoriteButtonProps) {
+export function FavoriteButton({
+  postId,
+  musicId,
+  className,
+  size = "icon",
+  source,
+}: FavoriteButtonProps) {
   const { status } = useSession();
   const { data: checkData } = useFavoriteCheck(postId, musicId);
   const toggleFavorite = useToggleFavorite();
@@ -50,6 +58,7 @@ export function FavoriteButton({ postId, musicId, className, size = "icon" }: Fa
           postId,
           musicId,
           favoriteId: checkData?.favoriteId,
+          source,
         })
       }
       disabled={toggleFavorite.isPending}

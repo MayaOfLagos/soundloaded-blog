@@ -2,13 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { addTrackToPlaylistSchema, reorderPlaylistSchema } from "@/lib/validations/user";
+import { readCreatorEventContext, trackMusicActionEvent } from "@/lib/creator-growth-events";
 import {
   Prisma,
   RecommendationEntityType,
   RecommendationEventName,
   RecommendationSurface,
 } from "@prisma/client";
-import { trackInteractionEvent } from "@/lib/recommendation";
 
 interface RouteParams {
   params: Promise<{ id: string }>;
@@ -56,14 +56,15 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       where: { id },
       data: { updatedAt: new Date() },
     });
-    trackInteractionEvent({
+    trackMusicActionEvent({
       eventName: RecommendationEventName.MUSIC_PLAYLIST_ADD,
-      entityType: RecommendationEntityType.MUSIC,
-      entityId: parsed.data.musicId,
+      musicId: parsed.data.musicId,
       userId,
-      surface: RecommendationSurface.LIBRARY_PLAYLIST,
-      referrerEntityType: RecommendationEntityType.PLAYLIST,
-      referrerEntityId: id,
+      context: {
+        ...readCreatorEventContext(body, RecommendationSurface.LIBRARY_PLAYLIST),
+        referrerEntityType: RecommendationEntityType.PLAYLIST,
+        referrerEntityId: id,
+      },
       weightHint: 8,
     });
 

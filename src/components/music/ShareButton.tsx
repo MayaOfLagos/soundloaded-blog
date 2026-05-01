@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { Share2, Copy, MessageCircle } from "lucide-react";
 import { notify } from "@/hooks/useToast";
 import { cn } from "@/lib/utils";
+import { trackShareClick, type ShareTrackingInput } from "@/lib/client/creator-events";
 
 interface ShareButtonProps {
   title: string;
@@ -11,6 +12,7 @@ interface ShareButtonProps {
   url: string;
   size?: number;
   className?: string;
+  tracking?: ShareTrackingInput;
 }
 
 const XIcon = ({ className }: { className?: string }) => (
@@ -19,17 +21,29 @@ const XIcon = ({ className }: { className?: string }) => (
   </svg>
 );
 
-export function ShareButton({ title, artist, url, size = 20, className }: ShareButtonProps) {
+export function ShareButton({
+  title,
+  artist,
+  url,
+  size = 20,
+  className,
+  tracking,
+}: ShareButtonProps) {
   const [showDropdown, setShowDropdown] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const shareText = `Listen to ${title} by ${artist} on Soundloaded\n${url}`;
+  const trackShare = (shareChannel: ShareTrackingInput["shareChannel"]) => {
+    if (!tracking) return;
+    trackShareClick({ ...tracking, shareChannel, href: tracking.href ?? url });
+  };
 
   const handleShare = async () => {
     if (navigator.share) {
       try {
         // Only pass title + url — passing both text and url duplicates the link on some devices
         await navigator.share({ title: `${title} — ${artist}`, url });
+        trackShare("native");
       } catch (err) {
         if (err instanceof DOMException && err.name === "AbortError") return;
         // Native share failed — fall back to dropdown
@@ -46,6 +60,7 @@ export function ShareButton({ title, artist, url, size = 20, className }: ShareB
       "_blank",
       "noopener,noreferrer"
     );
+    trackShare("whatsapp");
     setShowDropdown(false);
   };
 
@@ -55,6 +70,7 @@ export function ShareButton({ title, artist, url, size = 20, className }: ShareB
       "_blank",
       "noopener,noreferrer"
     );
+    trackShare("x");
     setShowDropdown(false);
   };
 
@@ -75,6 +91,7 @@ export function ShareButton({ title, artist, url, size = 20, className }: ShareB
         document.body.removeChild(ta);
       }
       notify.success("Link copied!");
+      trackShare("copy");
     } catch {
       notify.error("Failed to copy link");
     }

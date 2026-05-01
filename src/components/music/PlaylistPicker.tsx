@@ -9,14 +9,16 @@ import { CreatePlaylistModal } from "./CreatePlaylistModal";
 import { Plus, ListMusic, Loader2, Music } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useSession } from "next-auth/react";
+import type { ClientCreatorEventContext } from "@/lib/client/creator-events";
 
 interface PlaylistPickerProps {
   musicId: string;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  source?: ClientCreatorEventContext;
 }
 
-export function PlaylistPicker({ musicId, open, onOpenChange }: PlaylistPickerProps) {
+export function PlaylistPicker({ musicId, open, onOpenChange, source }: PlaylistPickerProps) {
   const { data: session } = useSession();
   const { data, isLoading } = useUserPlaylists();
   const addTrack = useAddTrackToPlaylist();
@@ -32,7 +34,7 @@ export function PlaylistPicker({ musicId, open, onOpenChange }: PlaylistPickerPr
   const handleAdd = (playlistId: string) => {
     setAddingTo(playlistId);
     addTrack.mutate(
-      { playlistId, musicId },
+      { playlistId, musicId, source },
       {
         onSettled: () => setAddingTo(null),
         onSuccess: () => onOpenChange(false),
@@ -42,7 +44,7 @@ export function PlaylistPicker({ musicId, open, onOpenChange }: PlaylistPickerPr
 
   const handleCreated = (playlistId: string) => {
     // Auto-add the track to the newly created playlist
-    addTrack.mutate({ playlistId, musicId }, { onSuccess: () => onOpenChange(false) });
+    addTrack.mutate({ playlistId, musicId, source }, { onSuccess: () => onOpenChange(false) });
   };
 
   return (

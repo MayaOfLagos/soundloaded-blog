@@ -1,13 +1,14 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { notify } from "@/hooks/useToast";
+import type { ClientCreatorEventContext } from "@/lib/client/creator-events";
 
 interface ArtistFollowData {
   following: boolean;
   followerCount: number;
 }
 
-export function useArtistFollow(artistId: string) {
+export function useArtistFollow(artistId: string, source?: ClientCreatorEventContext) {
   const queryClient = useQueryClient();
 
   const { data, isLoading } = useQuery({
@@ -25,11 +26,14 @@ export function useArtistFollow(artistId: string) {
     mutationFn: async (isFollowing: boolean) => {
       if (isFollowing) {
         const { data } = await axios.delete<ArtistFollowData>("/api/artists/follow", {
-          data: { artistId },
+          data: { artistId, ...source },
         });
         return data;
       }
-      const { data } = await axios.post<ArtistFollowData>("/api/artists/follow", { artistId });
+      const { data } = await axios.post<ArtistFollowData>("/api/artists/follow", {
+        artistId,
+        ...source,
+      });
       return data;
     },
     onMutate: async (isFollowing) => {

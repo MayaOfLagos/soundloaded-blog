@@ -292,7 +292,10 @@ function ArtistGridCard({ artist }: { artist: ArtistItem }) {
 
 // ── Follow Button ──
 function FollowButton({ artistId }: { artistId: string }) {
-  const { isFollowing, isPending, toggle } = useArtistFollow(artistId);
+  const { isFollowing, isPending, toggle } = useArtistFollow(artistId, {
+    surface: "FOLLOW_SUGGESTIONS",
+    placement: "artists_grid_card",
+  });
   const [isHovering, setIsHovering] = useState(false);
 
   const showUnfollow = isFollowing && isHovering;

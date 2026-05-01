@@ -1,12 +1,18 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { notify } from "@/hooks/useToast";
+import type { ClientCreatorEventContext } from "@/lib/client/creator-events";
 
 export function useToggleBookmark() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (params: { postId?: string; musicId?: string; bookmarkId?: string }) => {
+    mutationFn: async (params: {
+      postId?: string;
+      musicId?: string;
+      bookmarkId?: string;
+      source?: ClientCreatorEventContext;
+    }) => {
       if (params.bookmarkId) {
         await axios.delete(`/api/user/bookmarks/${params.bookmarkId}`);
         return { action: "removed" as const };
@@ -14,6 +20,7 @@ export function useToggleBookmark() {
       const { data } = await axios.post("/api/user/bookmarks", {
         postId: params.postId,
         musicId: params.musicId,
+        ...params.source,
       });
       return { action: "added" as const, bookmark: data.bookmark };
     },
@@ -34,7 +41,12 @@ export function useToggleFavorite() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (params: { postId?: string; musicId?: string; favoriteId?: string }) => {
+    mutationFn: async (params: {
+      postId?: string;
+      musicId?: string;
+      favoriteId?: string;
+      source?: ClientCreatorEventContext;
+    }) => {
       if (params.favoriteId) {
         await axios.delete(`/api/user/favorites/${params.favoriteId}`);
         return { action: "removed" as const };
@@ -42,6 +54,7 @@ export function useToggleFavorite() {
       const { data } = await axios.post("/api/user/favorites", {
         postId: params.postId,
         musicId: params.musicId,
+        ...params.source,
       });
       return { action: "added" as const, favorite: data.favorite };
     },

@@ -1,13 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import {
-  Prisma,
-  RecommendationEntityType,
-  RecommendationEventName,
-  RecommendationSurface,
-} from "@prisma/client";
+import { Prisma, RecommendationEventName, RecommendationSurface } from "@prisma/client";
 import { db } from "@/lib/db";
-import { trackInteractionEvent } from "@/lib/recommendation";
+import { readCreatorEventContext, trackArtistActionEvent } from "@/lib/creator-growth-events";
 
 /** POST — follow an artist */
 export async function POST(request: NextRequest) {
@@ -17,7 +12,8 @@ export async function POST(request: NextRequest) {
   }
 
   const userId = (session.user as { id: string }).id;
-  const { artistId } = await request.json();
+  const body = await request.json();
+  const { artistId } = body;
 
   if (!artistId || typeof artistId !== "string") {
     return NextResponse.json({ error: "artistId is required" }, { status: 400 });
@@ -25,12 +21,11 @@ export async function POST(request: NextRequest) {
 
   try {
     await db.artistFollow.create({ data: { userId, artistId } });
-    trackInteractionEvent({
+    trackArtistActionEvent({
       eventName: RecommendationEventName.ARTIST_FOLLOW,
-      entityType: RecommendationEntityType.ARTIST,
-      entityId: artistId,
+      artistId,
       userId,
-      surface: RecommendationSurface.ARTIST_DETAIL,
+      context: readCreatorEventContext(body, RecommendationSurface.ARTIST_DETAIL),
       weightHint: 10,
     });
     const count = await db.artistFollow.count({ where: { artistId } });
@@ -52,7 +47,8 @@ export async function DELETE(request: NextRequest) {
   }
 
   const userId = (session.user as { id: string }).id;
-  const { artistId } = await request.json();
+  const body = await request.json();
+  const { artistId } = body;
 
   if (!artistId || typeof artistId !== "string") {
     return NextResponse.json({ error: "artistId is required" }, { status: 400 });
@@ -60,12 +56,11 @@ export async function DELETE(request: NextRequest) {
 
   const deleted = await db.artistFollow.deleteMany({ where: { userId, artistId } });
   if (deleted.count > 0) {
-    trackInteractionEvent({
+    trackArtistActionEvent({
       eventName: RecommendationEventName.ARTIST_UNFOLLOW,
-      entityType: RecommendationEntityType.ARTIST,
-      entityId: artistId,
+      artistId,
       userId,
-      surface: RecommendationSurface.ARTIST_DETAIL,
+      context: readCreatorEventContext(body, RecommendationSurface.ARTIST_DETAIL),
       weightHint: -4,
     });
   }

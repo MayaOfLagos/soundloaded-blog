@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { createPortal } from "react-dom";
 import { motion } from "motion/react";
 import { MoreHorizontal, ListPlus, ListEnd, ListMusic, Share2, Download, User } from "lucide-react";
 import useMeasure from "react-use-measure";
 import { usePlayerStore } from "@/store/player.store";
 import { notify } from "@/hooks/useToast";
+import { trackShareClick, type ClientCreatorEventContext } from "@/lib/client/creator-events";
 import { cn } from "@/lib/utils";
 import { PlaylistPicker } from "./PlaylistPicker";
 import type { MusicCardData } from "@/lib/api/music";
@@ -17,6 +18,7 @@ interface MusicActionMenuProps {
   track: MusicCardData;
   size?: number;
   className?: string;
+  source?: ClientCreatorEventContext;
 }
 
 interface MenuItem {
@@ -57,7 +59,7 @@ const easeOutQuint: [number, number, number, number] = [0.23, 1, 0.32, 1];
  * Exact uselayouts smooth-dropdown pattern, rendered via portal
  * so it escapes parent overflow containers (ScrollShelf, card art).
  */
-export function MusicActionMenu({ track, size = 20, className }: MusicActionMenuProps) {
+export function MusicActionMenu({ track, size = 20, className, source }: MusicActionMenuProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [portalReady, setPortalReady] = useState(false);
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
@@ -68,6 +70,15 @@ export function MusicActionMenu({ track, size = 20, className }: MusicActionMenu
   const [contentRef, contentBounds] = useMeasure();
   const addToQueue = usePlayerStore((s) => s.addToQueue);
   const playNextInQueue = usePlayerStore((s) => s.playNextInQueue);
+  const eventSource = useMemo(
+    () => ({
+      surface: "EXPLORE_LATEST",
+      placement: "music_action_menu",
+      candidateSource: "music_card",
+      ...source,
+    }),
+    [source]
+  );
 
   const handleToggle = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -129,25 +140,47 @@ export function MusicActionMenu({ track, size = 20, className }: MusicActionMenu
         case "artist":
           window.location.href = `/artists?q=${encodeURIComponent(track.artistName)}`;
           break;
-        case "share":
+        case "share": {
+          const shareUrl = `${window.location.origin}/music/${track.slug}`;
           if (navigator.share) {
             navigator
               .share({
                 title: track.title,
                 text: `Listen to ${track.title} by ${track.artistName}`,
-                url: `${window.location.origin}/music/${track.slug}`,
+                url: shareUrl,
               })
+              .then(() =>
+                trackShareClick({
+                  ...eventSource,
+                  entityType: "MUSIC",
+                  entityId: track.id,
+                  placement: "music_action_menu_share",
+                  shareChannel: "native",
+                  href: shareUrl,
+                })
+              )
               .catch((err) => {
                 if (err instanceof DOMException && err.name === "AbortError") return;
                 notify.error("Failed to share");
               });
           } else {
             navigator.clipboard
-              .writeText(`${window.location.origin}/music/${track.slug}`)
-              .then(() => notify.success("Link copied!"))
+              .writeText(shareUrl)
+              .then(() => {
+                notify.success("Link copied!");
+                trackShareClick({
+                  ...eventSource,
+                  entityType: "MUSIC",
+                  entityId: track.id,
+                  placement: "music_action_menu_share",
+                  shareChannel: "copy",
+                  href: shareUrl,
+                });
+              })
               .catch(() => notify.error("Failed to copy link"));
           }
           break;
+        }
         case "download":
           if (track.enableDownload) {
             window.location.href = `/music/${track.slug}?download=true`;
@@ -158,7 +191,7 @@ export function MusicActionMenu({ track, size = 20, className }: MusicActionMenu
       }
       setIsOpen(false);
     },
-    [track, addToQueue, playNextInQueue]
+    [track, addToQueue, playNextInQueue, eventSource]
   );
 
   const visibleItems = allMenuItems.filter(
@@ -307,6 +340,7 @@ export function MusicActionMenu({ track, size = 20, className }: MusicActionMenu
         musicId={track.id}
         open={showPlaylistPicker}
         onOpenChange={setShowPlaylistPicker}
+        source={{ ...eventSource, placement: "music_action_menu_playlist" }}
       />
     </>
   );

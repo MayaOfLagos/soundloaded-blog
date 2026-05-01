@@ -7,15 +7,23 @@ import { useToggleBookmark } from "@/hooks/useUserMutations";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import Link from "next/link";
+import type { ClientCreatorEventContext } from "@/lib/client/creator-events";
 
 interface BookmarkButtonProps {
   postId?: string;
   musicId?: string;
   className?: string;
   size?: "sm" | "default" | "icon";
+  source?: ClientCreatorEventContext;
 }
 
-export function BookmarkButton({ postId, musicId, className, size = "icon" }: BookmarkButtonProps) {
+export function BookmarkButton({
+  postId,
+  musicId,
+  className,
+  size = "icon",
+  source,
+}: BookmarkButtonProps) {
   const { status } = useSession();
   const { data: checkData } = useBookmarkCheck(postId, musicId);
   const toggleBookmark = useToggleBookmark();
@@ -50,6 +58,7 @@ export function BookmarkButton({ postId, musicId, className, size = "icon" }: Bo
           postId,
           musicId,
           bookmarkId: checkData?.bookmarkId,
+          source,
         })
       }
       disabled={toggleBookmark.isPending}

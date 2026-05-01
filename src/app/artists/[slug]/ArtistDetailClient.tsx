@@ -31,6 +31,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogPortal, DialogTitle } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useArtistFollow } from "@/hooks/useArtistFollow";
+import { trackShareClick, type ClientCreatorEventContext } from "@/lib/client/creator-events";
 import { cn, formatDuration } from "@/lib/utils";
 import type { MusicCardData, AlbumCardData, ArtistCardData } from "@/lib/api/music";
 
@@ -191,12 +192,28 @@ export function ArtistDetailClient({
     if (navigator.share) {
       try {
         await navigator.share({ title: artist.name, url });
+        trackShareClick({
+          entityType: "ARTIST",
+          entityId: artist.id,
+          surface: "ARTIST_DETAIL",
+          placement: "artist_detail_header",
+          shareChannel: "native",
+          href: url,
+        });
         return;
       } catch {
         // User cancelled or share failed — fall through to copy
       }
     }
     await copyToClipboard(url);
+    trackShareClick({
+      entityType: "ARTIST",
+      entityId: artist.id,
+      surface: "ARTIST_DETAIL",
+      placement: "artist_detail_header",
+      shareChannel: "copy",
+      href: url,
+    });
   };
 
   const activeSocials = socialConfig.filter((s) => artist[s.key]);
@@ -271,7 +288,10 @@ export function ArtistDetailClient({
 
         {/* Action row */}
         <div className="mt-4 flex flex-wrap items-center gap-2">
-          <FollowButton artistId={artist.id} />
+          <FollowButton
+            artistId={artist.id}
+            source={{ surface: "ARTIST_DETAIL", placement: "artist_detail_header" }}
+          />
 
           <button
             type="button"
@@ -437,8 +457,14 @@ function ProfilePicViewer({ photo, name }: { photo: string | null; name: string 
 
 /* ─── Follow Button ─── */
 
-function FollowButton({ artistId }: { artistId: string }) {
-  const { isFollowing, followerCount, isPending, toggle } = useArtistFollow(artistId);
+function FollowButton({
+  artistId,
+  source,
+}: {
+  artistId: string;
+  source?: ClientCreatorEventContext;
+}) {
+  const { isFollowing, followerCount, isPending, toggle } = useArtistFollow(artistId, source);
 
   return (
     <motion.button

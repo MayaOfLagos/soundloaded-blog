@@ -148,6 +148,7 @@ export function NowPlayingDrawer({ open, onOpenChange, onSeek }: NowPlayingDrawe
                 musicId={currentTrack.id}
                 size={24}
                 className="mt-0.5 shrink-0 text-white/60 hover:text-white [&_.heart-icon]:text-white/60 [&_.heart-icon.fill-red-500]:text-red-500"
+                source={{ surface: "MUSIC_DETAIL", placement: "now_playing_drawer_heart" }}
               />
             </div>
 
@@ -245,6 +246,12 @@ export function NowPlayingDrawer({ open, onOpenChange, onSeek }: NowPlayingDrawe
                 }
                 size={20}
                 className="text-white/40 hover:text-white/70"
+                tracking={{
+                  entityType: "MUSIC",
+                  entityId: currentTrack.id,
+                  surface: "MUSIC_DETAIL",
+                  placement: "now_playing_drawer_share",
+                }}
               />
             </div>
           </div>

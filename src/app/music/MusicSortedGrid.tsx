@@ -231,7 +231,16 @@ export function MusicSortedGrid({ sort }: MusicSortedGridProps) {
 
                 {/* Heart */}
                 <div className="absolute top-2 right-2 sm:opacity-0 sm:transition-opacity sm:group-hover:opacity-100">
-                  <HeartButton musicId={track.id} size={16} />
+                  <HeartButton
+                    musicId={track.id}
+                    size={16}
+                    source={{
+                      surface: sort === "latest" ? "EXPLORE_LATEST" : "EXPLORE_TRENDING",
+                      placement: "music_sorted_grid_heart",
+                      position: index,
+                      candidateSource: sort === "latest" ? "music_latest" : "music_trending",
+                    }}
+                  />
                 </div>
 
                 {/* Rank badge for trending */}

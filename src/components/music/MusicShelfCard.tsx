@@ -16,6 +16,7 @@ import {
 } from "@/lib/music-access-client";
 import type { MusicCardData } from "@/lib/api/music";
 import type { Track } from "@/store/player.store";
+import type { ClientCreatorEventContext } from "@/lib/client/creator-events";
 
 interface MusicShelfCardProps {
   track: MusicCardData;
@@ -24,6 +25,7 @@ interface MusicShelfCardProps {
   /** Label for the context queue (e.g. "New Releases") */
   shelfLabel?: string;
   className?: string;
+  source?: ClientCreatorEventContext;
 }
 
 function toPlayerTrack(t: MusicCardData): Track {
@@ -54,7 +56,13 @@ function EqualizerBars() {
   );
 }
 
-export function MusicShelfCard({ track, shelfTracks, shelfLabel, className }: MusicShelfCardProps) {
+export function MusicShelfCard({
+  track,
+  shelfTracks,
+  shelfLabel,
+  className,
+  source,
+}: MusicShelfCardProps) {
   const { currentTrack, isPlaying, isBuffering, setTrack, setContextQueue, togglePlay } =
     usePlayerStore();
   const { data: subscription } = useSubscription();
@@ -65,6 +73,12 @@ export function MusicShelfCard({ track, shelfTracks, shelfLabel, className }: Mu
 
   const hasSubscription = subscription?.hasSubscription ?? false;
   const streamLocked = isOptimisticallyStreamLocked(track, hasSubscription);
+  const eventSource = {
+    surface: "EXPLORE_LATEST",
+    placement: "music_shelf_card",
+    candidateSource: shelfLabel ?? "music_shelf",
+    ...source,
+  };
 
   const handlePlay = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -143,7 +157,11 @@ export function MusicShelfCard({ track, shelfTracks, shelfLabel, className }: Mu
         >
           {/* Heart / Love button */}
           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-black/40 backdrop-blur-sm">
-            <HeartButton musicId={track.id} size={18} />
+            <HeartButton
+              musicId={track.id}
+              size={18}
+              source={{ ...eventSource, placement: "music_shelf_card_heart" }}
+            />
           </div>
 
           {/* Play / Pause button (larger, center) */}
@@ -166,7 +184,7 @@ export function MusicShelfCard({ track, shelfTracks, shelfLabel, className }: Mu
 
           {/* Options / More button */}
           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-black/40 backdrop-blur-sm">
-            <MusicActionMenu track={track} size={18} />
+            <MusicActionMenu track={track} size={18} source={eventSource} />
           </div>
         </div>
       </div>

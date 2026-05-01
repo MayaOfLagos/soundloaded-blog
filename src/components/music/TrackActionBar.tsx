@@ -24,6 +24,7 @@ import { useSubscription } from "@/hooks/useSubscription";
 import { ShareButton } from "./ShareButton";
 import { PaystackButton } from "@/components/payments/PaystackButton";
 import { notify } from "@/hooks/useToast";
+import { trackShareClick } from "@/lib/client/creator-events";
 import { cn } from "@/lib/utils";
 
 interface TrackActionBarProps {
@@ -166,7 +167,10 @@ function DiscreteAction({
 
 export function TrackActionBar({ track, siteUrl, enableDownloads }: TrackActionBarProps) {
   const { currentTrack, isPlaying, setTrack, togglePlay } = usePlayerStore();
-  const { isFavorited, toggleFavorite } = useMusicFavorite(track.id);
+  const { isFavorited, toggleFavorite } = useMusicFavorite(track.id, {
+    surface: "MUSIC_DETAIL",
+    placement: "track_action_bar",
+  });
   const { data: subscription } = useSubscription();
   const { data: streamAccessStatus } = useMusicAccess(track.id, "stream");
   const { data: downloadAccessStatus } = useMusicAccess(track.id, "download");
@@ -434,6 +438,13 @@ export function TrackActionBar({ track, siteUrl, enableDownloads }: TrackActionB
         url={`${siteUrl}/music/${track.slug}`}
         size={18}
         className="outline-background shadow-md outline outline-2"
+        tracking={{
+          entityType: "MUSIC",
+          entityId: track.id,
+          surface: "MUSIC_DETAIL",
+          placement: "track_action_bar",
+          href: `${siteUrl}/music/${track.slug}`,
+        }}
       />
 
       {/* More options — inline smooth-dropdown */}
@@ -465,6 +476,21 @@ function MoreOptionsDropdown({
   const containerRef = useRef<HTMLDivElement>(null);
   const [contentRef, contentBounds] = useMeasure();
   const addToQueue = usePlayerStore((s) => s.addToQueue);
+  const shareUrl = `${siteUrl}/music/${track.slug}`;
+
+  const trackMoreShare = useCallback(
+    (shareChannel: "native" | "copy") => {
+      trackShareClick({
+        entityType: "MUSIC",
+        entityId: track.id,
+        surface: "MUSIC_DETAIL",
+        placement: "track_more_menu",
+        shareChannel,
+        href: shareUrl,
+      });
+    },
+    [track.id, shareUrl]
+  );
 
   // Click outside to close
   useEffect(() => {
@@ -499,14 +525,18 @@ function MoreOptionsDropdown({
         case "share":
           if (navigator.share) {
             navigator
-              .share({ title: track.title, url: `${siteUrl}/music/${track.slug}` })
+              .share({ title: track.title, url: shareUrl })
+              .then(() => trackMoreShare("native"))
               .catch((err) => {
                 if (err instanceof DOMException && err.name === "AbortError") return;
               });
           } else {
             navigator.clipboard
-              .writeText(`${siteUrl}/music/${track.slug}`)
-              .then(() => notify.success("Link copied!"))
+              .writeText(shareUrl)
+              .then(() => {
+                notify.success("Link copied!");
+                trackMoreShare("copy");
+              })
               .catch(() => notify.error("Failed to copy link"));
           }
           break;
@@ -520,7 +550,7 @@ function MoreOptionsDropdown({
       }
       setIsOpen(false);
     },
-    [track, siteUrl, addToQueue]
+    [track, shareUrl, addToQueue, trackMoreShare]
   );
 
   const visibleItems = moreMenuItems.filter(

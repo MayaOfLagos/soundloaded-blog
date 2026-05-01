@@ -5,6 +5,7 @@ import {
   RecommendationSurface,
 } from "@prisma/client";
 import { auth } from "@/lib/auth";
+import { getCreatorEntityContext, mergeCreatorEventMetadata } from "@/lib/creator-growth-events";
 import { writeInteractionEvent } from "@/lib/recommendation";
 
 export async function POST(request: NextRequest) {
@@ -27,6 +28,7 @@ export async function POST(request: NextRequest) {
     surface === RecommendationSurface.SEARCH_RESULTS
       ? RecommendationEventName.SEARCH_RESULT_CLICK
       : RecommendationEventName.RECOMMENDATION_CLICK;
+  const entityContext = await getCreatorEntityContext(entityType, entityId);
 
   await writeInteractionEvent({
     eventName,
@@ -41,10 +43,13 @@ export async function POST(request: NextRequest) {
     queryText: readString(body.queryText)?.slice(0, 200).toLowerCase(),
     referrerEntityType: parseEnum(RecommendationEntityType, body.referrerEntityType),
     referrerEntityId: readString(body.referrerEntityId),
-    metadata: {
+    artistId: entityContext.artistId,
+    albumId: entityContext.albumId,
+    genre: entityContext.genre,
+    metadata: mergeCreatorEventMetadata(entityContext.metadata, {
       source: "client_click",
       href: readString(body.href),
-    },
+    }),
   });
 
   return NextResponse.json({ ok: true });

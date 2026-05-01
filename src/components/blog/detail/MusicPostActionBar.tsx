@@ -6,6 +6,7 @@ import { Play, Download, Heart, Share2, ExternalLink } from "lucide-react";
 import { motion, AnimatePresence } from "motion/react";
 import { useMusicFavorite } from "@/hooks/useMusicFavorite";
 import { notify } from "@/hooks/useToast";
+import { trackShareClick } from "@/lib/client/creator-events";
 import { cn } from "@/lib/utils";
 
 interface MusicPostActionBarProps {
@@ -130,7 +131,10 @@ function DiscreteAction({
 
 export function MusicPostActionBar({ track, siteUrl, enableDownloads }: MusicPostActionBarProps) {
   const router = useRouter();
-  const { isFavorited, toggleFavorite } = useMusicFavorite(track.id);
+  const { isFavorited, toggleFavorite } = useMusicFavorite(track.id, {
+    surface: "POST_DETAIL",
+    placement: "music_post_action_bar",
+  });
   const [activeAction, setActiveAction] = useState<string>("play");
   const [downloadState, setDownloadState] = useState<"idle" | "loading" | "done">("idle");
 
@@ -180,13 +184,33 @@ export function MusicPostActionBar({ track, siteUrl, enableDownloads }: MusicPos
     if (navigator.share) {
       navigator
         .share({ title: `${track.title} — ${track.artistName}`, url: shareUrl })
+        .then(() =>
+          trackShareClick({
+            entityType: "MUSIC",
+            entityId: track.id,
+            surface: "POST_DETAIL",
+            placement: "music_post_action_bar",
+            shareChannel: "native",
+            href: shareUrl,
+          })
+        )
         .catch((err) => {
           if (err instanceof DOMException && err.name === "AbortError") return;
         });
     } else {
       navigator.clipboard
         .writeText(shareUrl)
-        .then(() => notify.success("Link copied!"))
+        .then(() => {
+          notify.success("Link copied!");
+          trackShareClick({
+            entityType: "MUSIC",
+            entityId: track.id,
+            surface: "POST_DETAIL",
+            placement: "music_post_action_bar",
+            shareChannel: "copy",
+            href: shareUrl,
+          });
+        })
         .catch(() => notify.error("Failed to copy link"));
     }
   };

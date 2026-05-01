@@ -58,10 +58,7 @@ export function MusicListItem({ track, rank, listTracks, listLabel }: MusicListI
   const isCurrentTrack = currentTrack?.id === track.id;
   const isActivelyPlaying = isCurrentTrack && isPlaying;
 
-  const streamLocked = isOptimisticallyStreamLocked(
-    track,
-    subscription?.hasSubscription ?? false
-  );
+  const streamLocked = isOptimisticallyStreamLocked(track, subscription?.hasSubscription ?? false);
 
   const handlePlay = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -174,6 +171,12 @@ export function MusicListItem({ track, rank, listTracks, listLabel }: MusicListI
         musicId={track.id}
         size={16}
         className="flex-shrink-0 opacity-0 transition-opacity group-hover/item:opacity-100"
+        source={{
+          surface: "EXPLORE_TOP",
+          placement: "music_list_item_heart",
+          position: rank - 1,
+          candidateSource: listLabel ?? "music_list",
+        }}
       />
     </div>
   );

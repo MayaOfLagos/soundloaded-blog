@@ -3,6 +3,11 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { favoriteSchema } from "@/lib/validations/user";
 import {
+  readCreatorEventContext,
+  sourceContextToInteractionFields,
+  trackMusicActionEvent,
+} from "@/lib/creator-growth-events";
+import {
   Prisma,
   RecommendationEntityType,
   RecommendationEventName,
@@ -87,20 +92,26 @@ export async function POST(request: NextRequest) {
         musicId: parsed.data.musicId,
       },
     });
-    trackInteractionEvent({
-      eventName: parsed.data.postId
-        ? RecommendationEventName.POST_FAVORITE_ADD
-        : RecommendationEventName.MUSIC_FAVORITE_ADD,
-      entityType: parsed.data.postId
-        ? RecommendationEntityType.POST
-        : RecommendationEntityType.MUSIC,
-      entityId: parsed.data.postId ?? parsed.data.musicId,
-      userId,
-      surface: parsed.data.postId
-        ? RecommendationSurface.POST_DETAIL
-        : RecommendationSurface.MUSIC_DETAIL,
-      weightHint: parsed.data.postId ? 6 : 7,
-    });
+
+    if (parsed.data.musicId) {
+      trackMusicActionEvent({
+        eventName: RecommendationEventName.MUSIC_FAVORITE_ADD,
+        musicId: parsed.data.musicId,
+        userId,
+        context: readCreatorEventContext(body, RecommendationSurface.MUSIC_DETAIL),
+        weightHint: 7,
+      });
+    } else if (parsed.data.postId) {
+      const context = readCreatorEventContext(body, RecommendationSurface.POST_DETAIL);
+      trackInteractionEvent({
+        eventName: RecommendationEventName.POST_FAVORITE_ADD,
+        entityType: RecommendationEntityType.POST,
+        entityId: parsed.data.postId,
+        userId,
+        ...sourceContextToInteractionFields(context),
+        weightHint: 6,
+      });
+    }
 
     return NextResponse.json({ favorite }, { status: 201 });
   } catch (error) {

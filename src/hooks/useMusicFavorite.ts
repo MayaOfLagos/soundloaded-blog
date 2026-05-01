@@ -2,13 +2,14 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { useSession } from "next-auth/react";
 import { notify } from "@/hooks/useToast";
+import type { ClientCreatorEventContext } from "@/lib/client/creator-events";
 
 interface FavoriteCheckResponse {
   favorited: boolean;
   favoriteId?: string;
 }
 
-export function useMusicFavorite(musicId: string) {
+export function useMusicFavorite(musicId: string, source?: ClientCreatorEventContext) {
   const queryClient = useQueryClient();
   const { data: session } = useSession();
   const isAuthenticated = !!session?.user;
@@ -36,7 +37,7 @@ export function useMusicFavorite(musicId: string) {
         await axios.delete(`/api/user/favorites/${snapshot.favoriteId}`);
         return { favorited: false } as FavoriteCheckResponse;
       }
-      const { data: res } = await axios.post("/api/user/favorites", { musicId });
+      const { data: res } = await axios.post("/api/user/favorites", { musicId, ...source });
       return {
         favorited: true,
         favoriteId: res.favorite.id as string,

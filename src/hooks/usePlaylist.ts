@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { useSession } from "next-auth/react";
 import { notify } from "@/hooks/useToast";
+import type { ClientCreatorEventContext } from "@/lib/client/creator-events";
 
 interface PlaylistSummary {
   id: string;
@@ -166,8 +167,19 @@ export function useAddTrackToPlaylist() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ playlistId, musicId }: { playlistId: string; musicId: string }) => {
-      const { data } = await axios.post(`/api/user/playlists/${playlistId}/tracks`, { musicId });
+    mutationFn: async ({
+      playlistId,
+      musicId,
+      source,
+    }: {
+      playlistId: string;
+      musicId: string;
+      source?: ClientCreatorEventContext;
+    }) => {
+      const { data } = await axios.post(`/api/user/playlists/${playlistId}/tracks`, {
+        musicId,
+        ...source,
+      });
       return data;
     },
     onSuccess: (_data, variables) => {

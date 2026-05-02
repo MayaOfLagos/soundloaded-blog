@@ -17,7 +17,17 @@ const EXCLUDE_PATHS = ["/admin", "/payload-admin", "/login", "/register", "/land
 
 export function ConditionalNavigation({ children }: ConditionalNavigationProps) {
   const pathname = usePathname();
-  const isExcluded = EXCLUDE_PATHS.some((p) => pathname === p || pathname.startsWith(p + "/"));
+
+  // When on "/" without the sl_entered cookie the middleware serves the landing gate.
+  // This check must be synchronous (not useEffect) to avoid a flash of the wrong layout
+  // during client-side navigation — the root layout is frozen after the initial server render.
+  const isOnLandingGate =
+    pathname === "/" &&
+    typeof document !== "undefined" &&
+    !document.cookie.split(";").some((c) => c.trim().startsWith("sl_entered="));
+
+  const isExcluded =
+    EXCLUDE_PATHS.some((p) => pathname === p || pathname.startsWith(p + "/")) || isOnLandingGate;
 
   if (isExcluded) {
     return <>{children}</>;

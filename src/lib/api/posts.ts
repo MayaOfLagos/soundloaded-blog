@@ -1,3 +1,4 @@
+import { unstable_cache } from "next/cache";
 import { db } from "@/lib/db";
 import type { PostCardData } from "@/components/blog/PostCard";
 import { getPostUrl } from "@/lib/urls";
@@ -106,113 +107,131 @@ function toRankableRelatedPost(post: RelatedPostCandidate): RankableRelatedPostC
   };
 }
 
-export async function getFeaturedPost(permalinkStructure?: string): Promise<PostCardData | null> {
-  try {
-    const post = await db.post.findFirst({
-      where: { status: "PUBLISHED", isUserGenerated: false, music: null },
-      orderBy: { publishedAt: "desc" },
-      select: SELECT,
-    });
-    return post ? mapPost(post, permalinkStructure) : null;
-  } catch {
-    return null;
-  }
-}
-
-export async function getFeaturedPosts({
-  limit = 5,
-  permalinkStructure,
-}: { limit?: number; permalinkStructure?: string } = {}): Promise<PostCardData[]> {
-  try {
-    // Fetch more than needed so we can shuffle and pick
-    const posts = await db.post.findMany({
-      where: { status: "PUBLISHED", isUserGenerated: false, music: { isNot: null } },
-      orderBy: { publishedAt: "desc" },
-      take: limit * 4,
-      select: SELECT,
-    });
-    // Shuffle (Fisher-Yates)
-    for (let i = posts.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [posts[i], posts[j]] = [posts[j], posts[i]];
+export const getFeaturedPost = unstable_cache(
+  async (permalinkStructure?: string): Promise<PostCardData | null> => {
+    try {
+      const post = await db.post.findFirst({
+        where: { status: "PUBLISHED", isUserGenerated: false, music: null },
+        orderBy: { publishedAt: "desc" },
+        select: SELECT,
+      });
+      return post ? mapPost(post, permalinkStructure) : null;
+    } catch {
+      return null;
     }
-    return posts.slice(0, limit).map((p) => mapPost(p, permalinkStructure));
-  } catch {
-    return [];
-  }
-}
+  },
+  ["featured-post"],
+  { revalidate: 300, tags: ["posts"] }
+);
 
-export async function getFeaturedPostsByType({
-  type,
-  limit = 3,
-  permalinkStructure,
-}: {
-  type: string;
-  limit?: number;
-  permalinkStructure?: string;
-}): Promise<PostCardData[]> {
-  try {
-    const posts = await db.post.findMany({
-      where: { status: "PUBLISHED", isUserGenerated: false, music: null, type: type as never },
-      orderBy: { publishedAt: "desc" },
-      take: limit,
-      select: SELECT,
-    });
-    return posts.map((p) => mapPost(p, permalinkStructure));
-  } catch {
-    return [];
-  }
-}
+export const getFeaturedPosts = unstable_cache(
+  async ({
+    limit = 5,
+    permalinkStructure,
+  }: { limit?: number; permalinkStructure?: string } = {}): Promise<PostCardData[]> => {
+    try {
+      const posts = await db.post.findMany({
+        where: { status: "PUBLISHED", isUserGenerated: false, music: { isNot: null } },
+        orderBy: { publishedAt: "desc" },
+        take: limit * 4,
+        select: SELECT,
+      });
+      for (let i = posts.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [posts[i], posts[j]] = [posts[j], posts[i]];
+      }
+      return posts.slice(0, limit).map((p) => mapPost(p, permalinkStructure));
+    } catch {
+      return [];
+    }
+  },
+  ["featured-posts"],
+  { revalidate: 300, tags: ["posts"] }
+);
 
-export async function getLatestPosts({
-  limit = 12,
-  page = 1,
-  categorySlug,
-  type,
-  permalinkStructure,
-}: {
-  limit?: number;
-  page?: number;
-  categorySlug?: string;
-  type?: string;
-  permalinkStructure?: string;
-} = {}): Promise<PostCardData[]> {
-  try {
-    const posts = await db.post.findMany({
-      where: {
-        status: "PUBLISHED",
-        isUserGenerated: false,
-        music: null,
-        ...(categorySlug ? { category: { slug: categorySlug } } : {}),
-        ...(type ? { type: type as never } : {}),
-      },
-      orderBy: { publishedAt: "desc" },
-      take: limit,
-      skip: (page - 1) * limit,
-      select: SELECT,
-    });
-    return posts.map((p) => mapPost(p, permalinkStructure));
-  } catch {
-    return [];
-  }
-}
+export const getFeaturedPostsByType = unstable_cache(
+  async ({
+    type,
+    limit = 3,
+    permalinkStructure,
+  }: {
+    type: string;
+    limit?: number;
+    permalinkStructure?: string;
+  }): Promise<PostCardData[]> => {
+    try {
+      const posts = await db.post.findMany({
+        where: { status: "PUBLISHED", isUserGenerated: false, music: null, type: type as never },
+        orderBy: { publishedAt: "desc" },
+        take: limit,
+        select: SELECT,
+      });
+      return posts.map((p) => mapPost(p, permalinkStructure));
+    } catch {
+      return [];
+    }
+  },
+  ["featured-posts-by-type"],
+  { revalidate: 300, tags: ["posts"] }
+);
 
-export async function getTrendingPosts({
-  limit = 5,
-  permalinkStructure,
-}: { limit?: number; permalinkStructure?: string } = {}): Promise<PostCardData[]> {
-  try {
-    const posts = await db.post.findMany({
-      where: { status: "PUBLISHED", isUserGenerated: false, music: null },
-      orderBy: { views: "desc" },
-      take: limit,
-      select: SELECT,
-    });
-    return posts.map((p) => mapPost(p, permalinkStructure));
-  } catch {
-    return [];
-  }
-}
+export const getLatestPosts = unstable_cache(
+  async ({
+    limit = 12,
+    page = 1,
+    categorySlug,
+    type,
+    permalinkStructure,
+  }: {
+    limit?: number;
+    page?: number;
+    categorySlug?: string;
+    type?: string;
+    permalinkStructure?: string;
+  } = {}): Promise<PostCardData[]> => {
+    try {
+      const posts = await db.post.findMany({
+        where: {
+          status: "PUBLISHED",
+          isUserGenerated: false,
+          music: null,
+          ...(categorySlug ? { category: { slug: categorySlug } } : {}),
+          ...(type ? { type: type as never } : {}),
+        },
+        orderBy: { publishedAt: "desc" },
+        take: limit,
+        skip: (page - 1) * limit,
+        select: SELECT,
+      });
+      return posts.map((p) => mapPost(p, permalinkStructure));
+    } catch {
+      return [];
+    }
+  },
+  ["latest-posts"],
+  { revalidate: 60, tags: ["posts"] }
+);
+
+export const getTrendingPosts = unstable_cache(
+  async ({
+    limit = 5,
+    permalinkStructure,
+  }: { limit?: number; permalinkStructure?: string } = {}): Promise<PostCardData[]> => {
+    try {
+      const posts = await db.post.findMany({
+        where: { status: "PUBLISHED", isUserGenerated: false, music: null },
+        orderBy: { views: "desc" },
+        take: limit,
+        select: SELECT,
+      });
+      return posts.map((p) => mapPost(p, permalinkStructure));
+    } catch {
+      return [];
+    }
+  },
+  ["trending-posts"],
+  { revalidate: 300, tags: ["posts"] }
+);
 
 const POST_DETAIL_INCLUDE = {
   author: { select: { name: true, image: true, email: true } },

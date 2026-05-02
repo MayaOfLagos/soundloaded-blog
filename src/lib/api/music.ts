@@ -1,3 +1,4 @@
+import { unstable_cache } from "next/cache";
 import { db } from "@/lib/db";
 import {
   createRecommendationCacheKey,
@@ -122,124 +123,132 @@ function toRankableMusicTrack(track: MusicRecommendationCandidate) {
   };
 }
 
-export async function getPopularMusic({ limit = 5 }: { limit?: number } = {}): Promise<
-  MusicCardData[]
-> {
-  try {
-    const tracks = await db.music.findMany({
-      orderBy: { downloadCount: "desc" },
-      take: limit,
-      include: {
-        artist: { select: { name: true, slug: true } },
-        album: { select: { title: true } },
-      },
-    });
-    return tracks.map((t) => ({
-      id: t.id,
-      slug: t.slug,
-      title: t.title,
-      artistName: t.artist.name,
-      artistSlug: t.artist.slug,
-      albumTitle: t.album?.title,
-      coverArt: t.coverArt,
-      genre: t.genre,
-      downloadCount: t.downloadCount,
-      streamCount: t.streamCount,
-      enableDownload: t.enableDownload,
-      fileSize: t.fileSize,
-      releaseYear: t.year,
-      r2Key: t.r2Key,
-      isExclusive: t.isExclusive,
-      price: t.price ?? null,
-      accessModel: t.accessModel ?? "free",
-      streamAccess: t.streamAccess ?? "free",
-      creatorPrice: t.creatorPrice ?? null,
-    }));
-  } catch {
-    return [];
-  }
-}
+export const getPopularMusic = unstable_cache(
+  async ({ limit = 5 }: { limit?: number } = {}): Promise<MusicCardData[]> => {
+    try {
+      const tracks = await db.music.findMany({
+        orderBy: { downloadCount: "desc" },
+        take: limit,
+        include: {
+          artist: { select: { name: true, slug: true } },
+          album: { select: { title: true } },
+        },
+      });
+      return tracks.map((t) => ({
+        id: t.id,
+        slug: t.slug,
+        title: t.title,
+        artistName: t.artist.name,
+        artistSlug: t.artist.slug,
+        albumTitle: t.album?.title,
+        coverArt: t.coverArt,
+        genre: t.genre,
+        downloadCount: t.downloadCount,
+        streamCount: t.streamCount,
+        enableDownload: t.enableDownload,
+        fileSize: t.fileSize,
+        releaseYear: t.year,
+        r2Key: t.r2Key,
+        isExclusive: t.isExclusive,
+        price: t.price ?? null,
+        accessModel: t.accessModel ?? "free",
+        streamAccess: t.streamAccess ?? "free",
+        creatorPrice: t.creatorPrice ?? null,
+      }));
+    } catch {
+      return [];
+    }
+  },
+  ["popular-music"],
+  { revalidate: 300, tags: ["music"] }
+);
 
-export async function getMostStreamedMusic({ limit = 20 }: { limit?: number } = {}): Promise<
-  MusicCardData[]
-> {
-  try {
-    const tracks = await db.music.findMany({
-      where: { streamCount: { gt: 0 } },
-      orderBy: { streamCount: "desc" },
-      take: limit,
-      include: {
-        artist: { select: { name: true, slug: true } },
-        album: { select: { title: true } },
-      },
-    });
-    return tracks.map((t) => ({
-      id: t.id,
-      slug: t.slug,
-      title: t.title,
-      artistName: t.artist.name,
-      artistSlug: t.artist.slug,
-      albumTitle: t.album?.title,
-      coverArt: t.coverArt,
-      genre: t.genre,
-      downloadCount: t.downloadCount,
-      streamCount: t.streamCount,
-      enableDownload: t.enableDownload,
-      fileSize: t.fileSize,
-      releaseYear: t.year,
-      r2Key: t.r2Key,
-      isExclusive: t.isExclusive,
-      price: t.price ?? null,
-      accessModel: t.accessModel ?? "free",
-      streamAccess: t.streamAccess ?? "free",
-      creatorPrice: t.creatorPrice ?? null,
-    }));
-  } catch {
-    return [];
-  }
-}
+export const getMostStreamedMusic = unstable_cache(
+  async ({ limit = 20 }: { limit?: number } = {}): Promise<MusicCardData[]> => {
+    try {
+      const tracks = await db.music.findMany({
+        where: { streamCount: { gt: 0 } },
+        orderBy: { streamCount: "desc" },
+        take: limit,
+        include: {
+          artist: { select: { name: true, slug: true } },
+          album: { select: { title: true } },
+        },
+      });
+      return tracks.map((t) => ({
+        id: t.id,
+        slug: t.slug,
+        title: t.title,
+        artistName: t.artist.name,
+        artistSlug: t.artist.slug,
+        albumTitle: t.album?.title,
+        coverArt: t.coverArt,
+        genre: t.genre,
+        downloadCount: t.downloadCount,
+        streamCount: t.streamCount,
+        enableDownload: t.enableDownload,
+        fileSize: t.fileSize,
+        releaseYear: t.year,
+        r2Key: t.r2Key,
+        isExclusive: t.isExclusive,
+        price: t.price ?? null,
+        accessModel: t.accessModel ?? "free",
+        streamAccess: t.streamAccess ?? "free",
+        creatorPrice: t.creatorPrice ?? null,
+      }));
+    } catch {
+      return [];
+    }
+  },
+  ["most-streamed-music"],
+  { revalidate: 300, tags: ["music"] }
+);
 
-export async function getLatestMusic({
-  limit = 12,
-  page = 1,
-  genre,
-}: { limit?: number; page?: number; genre?: string } = {}): Promise<MusicCardData[]> {
-  try {
-    const tracks = await db.music.findMany({
-      where: { ...(genre ? { genre } : {}) },
-      orderBy: { createdAt: "desc" },
-      take: limit,
-      skip: (page - 1) * limit,
-      include: {
-        artist: { select: { name: true, slug: true } },
-        album: { select: { title: true } },
-      },
-    });
-    return tracks.map((t) => ({
-      id: t.id,
-      slug: t.slug,
-      title: t.title,
-      artistName: t.artist.name,
-      artistSlug: t.artist.slug,
-      albumTitle: t.album?.title,
-      coverArt: t.coverArt,
-      genre: t.genre,
-      downloadCount: t.downloadCount,
-      streamCount: t.streamCount,
-      enableDownload: t.enableDownload,
-      fileSize: t.fileSize,
-      releaseYear: t.year,
-      r2Key: t.r2Key,
-      isExclusive: t.isExclusive,
-      price: t.price ?? null,
-      accessModel: t.accessModel ?? "free",
-      streamAccess: t.streamAccess ?? "free",
-      creatorPrice: t.creatorPrice ?? null,
-    }));
-  } catch {
-    return [];
-  }
-}
+export const getLatestMusic = unstable_cache(
+  async ({
+    limit = 12,
+    page = 1,
+    genre,
+  }: { limit?: number; page?: number; genre?: string } = {}): Promise<MusicCardData[]> => {
+    try {
+      const tracks = await db.music.findMany({
+        where: { ...(genre ? { genre } : {}) },
+        orderBy: { createdAt: "desc" },
+        take: limit,
+        skip: (page - 1) * limit,
+        include: {
+          artist: { select: { name: true, slug: true } },
+          album: { select: { title: true } },
+        },
+      });
+      return tracks.map((t) => ({
+        id: t.id,
+        slug: t.slug,
+        title: t.title,
+        artistName: t.artist.name,
+        artistSlug: t.artist.slug,
+        albumTitle: t.album?.title,
+        coverArt: t.coverArt,
+        genre: t.genre,
+        downloadCount: t.downloadCount,
+        streamCount: t.streamCount,
+        enableDownload: t.enableDownload,
+        fileSize: t.fileSize,
+        releaseYear: t.year,
+        r2Key: t.r2Key,
+        isExclusive: t.isExclusive,
+        price: t.price ?? null,
+        accessModel: t.accessModel ?? "free",
+        streamAccess: t.streamAccess ?? "free",
+        creatorPrice: t.creatorPrice ?? null,
+      }));
+    } catch {
+      return [];
+    }
+  },
+  ["latest-music"],
+  { revalidate: 60, tags: ["music"] }
+);
 
 export async function getMusicBySlug(slug: string) {
   try {
@@ -256,29 +265,31 @@ export async function getMusicBySlug(slug: string) {
   }
 }
 
-export async function getLatestArtists({ limit = 12 }: { limit?: number } = {}): Promise<
-  ArtistCardData[]
-> {
-  try {
-    const artists = await db.artist.findMany({
-      take: limit,
-      orderBy: { createdAt: "desc" },
-      include: { _count: { select: { music: true, artistFollows: true } } },
-    });
-    return artists.map((a) => ({
-      id: a.id,
-      slug: a.slug,
-      name: a.name,
-      photo: a.photo,
-      genre: a.genre,
-      verified: a.verified,
-      songCount: a._count.music,
-      followerCount: a._count.artistFollows,
-    }));
-  } catch {
-    return [];
-  }
-}
+export const getLatestArtists = unstable_cache(
+  async ({ limit = 12 }: { limit?: number } = {}): Promise<ArtistCardData[]> => {
+    try {
+      const artists = await db.artist.findMany({
+        take: limit,
+        orderBy: { createdAt: "desc" },
+        include: { _count: { select: { music: true, artistFollows: true } } },
+      });
+      return artists.map((a) => ({
+        id: a.id,
+        slug: a.slug,
+        name: a.name,
+        photo: a.photo,
+        genre: a.genre,
+        verified: a.verified,
+        songCount: a._count.music,
+        followerCount: a._count.artistFollows,
+      }));
+    } catch {
+      return [];
+    }
+  },
+  ["latest-artists"],
+  { revalidate: 300, tags: ["music"] }
+);
 
 /**
  * Artists with profile photos, used for the landing-page orbit.

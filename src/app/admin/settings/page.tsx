@@ -88,6 +88,7 @@ const settingsSchema = z.object({
   pwaOrientation: z.string().default("any"),
   pwaIcons: z.array(z.record(z.string())).default([]),
   pwaSplashScreens: z.array(z.record(z.string())).default([]),
+  pwaScreenshots: z.array(z.record(z.string())).default([]),
   // Notifications
   discordWebhookUrl: z.string().url().or(z.literal("")).default(""),
   notifyOnNewComment: z.boolean().default(true),

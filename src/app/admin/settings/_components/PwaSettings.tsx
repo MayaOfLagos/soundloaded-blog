@@ -182,6 +182,87 @@ export function PwaSettings({ form }: Props) {
         previewHeight={260}
       />
 
+      <Separator />
+      <h3 className="text-foreground text-sm font-semibold">Install Screenshots</h3>
+      <p className="text-muted-foreground text-xs">
+        Shown in the install dialog gallery. Upload real screenshots of your site — mobile (390×844)
+        and desktop (1280×720).
+      </p>
+
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+        <ImageUploadField
+          label="Mobile Screenshot"
+          value={
+            (form.watch("pwaScreenshots") as Array<{ src: string; form_factor: string }>)?.find(
+              (s) => s.form_factor === "narrow"
+            )?.src ?? null
+          }
+          onChange={(v) => {
+            const current = (
+              form.getValues("pwaScreenshots") as Array<Record<string, string>>
+            ).filter((s) => s.form_factor !== "narrow");
+            form.setValue(
+              "pwaScreenshots",
+              v
+                ? [
+                    ...current,
+                    {
+                      src: v,
+                      sizes: "390x844",
+                      type: "image/jpeg",
+                      form_factor: "narrow",
+                      label: "Home screen",
+                    },
+                  ]
+                : current,
+              { shouldDirty: true }
+            );
+          }}
+          type="screenshot"
+          hint="390×844px — shown for mobile install prompts"
+          acceptedFileTypes={["image/jpeg", "image/png", "image/webp"]}
+          maxFileSize="5MB"
+          previewWidth={80}
+          previewHeight={160}
+        />
+
+        <ImageUploadField
+          label="Desktop Screenshot"
+          value={
+            (form.watch("pwaScreenshots") as Array<{ src: string; form_factor: string }>)?.find(
+              (s) => s.form_factor === "wide"
+            )?.src ?? null
+          }
+          onChange={(v) => {
+            const current = (
+              form.getValues("pwaScreenshots") as Array<Record<string, string>>
+            ).filter((s) => s.form_factor !== "wide");
+            form.setValue(
+              "pwaScreenshots",
+              v
+                ? [
+                    ...current,
+                    {
+                      src: v,
+                      sizes: "1280x720",
+                      type: "image/jpeg",
+                      form_factor: "wide",
+                      label: "Desktop home",
+                    },
+                  ]
+                : current,
+              { shouldDirty: true }
+            );
+          }}
+          type="screenshot"
+          hint="1280×720px — shown for desktop install prompts"
+          acceptedFileTypes={["image/jpeg", "image/png", "image/webp"]}
+          maxFileSize="5MB"
+          previewWidth={160}
+          previewHeight={90}
+        />
+      </div>
+
       <div className="bg-muted/50 rounded-lg border p-4">
         <p className="text-muted-foreground flex items-center gap-2 text-xs">
           <Smartphone className="h-3.5 w-3.5 shrink-0" />

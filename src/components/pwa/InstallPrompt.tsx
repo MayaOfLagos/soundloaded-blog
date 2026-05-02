@@ -53,13 +53,5 @@ export function InstallPrompt() {
 
   if (isExcluded) return null;
 
-  return (
-    <pwa-install
-      ref={ref}
-      manifest-url="/api/manifest"
-      name="Soundloaded"
-      description="The music platform for upcoming Naija artists"
-      icon="/icons/icon-192x192.png"
-    />
-  );
+  return <pwa-install ref={ref} manifest-url="/api/manifest" />;
 }

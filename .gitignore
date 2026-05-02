@@ -68,6 +68,7 @@ scripts/
 
 # IDE
 .vscode/
+.windsurf
 
 # Local backups (safety copies, never commit)
 **/_*-bak/

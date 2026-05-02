@@ -18,6 +18,14 @@ export async function GET() {
       { src: "/icons/icon-512x512.png", sizes: "512x512", type: "image/png" },
     ];
 
+    // If a favicon is configured but no dedicated PWA icons, promote it as a 512x512 icon
+    const faviconFallback =
+      s.favicon && s.pwaIcons.length === 0
+        ? [{ src: s.favicon, sizes: "512x512", type: "image/png", purpose: "any maskable" }]
+        : null;
+
+    const icons = s.pwaIcons.length > 0 ? s.pwaIcons : (faviconFallback ?? defaultIcons);
+
     const manifest = {
       name: s.pwaAppName,
       short_name: s.pwaShortName,
@@ -30,23 +38,8 @@ export async function GET() {
       lang: "en-NG",
       dir: "ltr",
       categories: ["music", "entertainment", "news"],
-      icons: s.pwaIcons.length > 0 ? s.pwaIcons : defaultIcons,
-      screenshots: [
-        {
-          src: "/screenshots/mobile-home.jpg",
-          sizes: "390x844",
-          type: "image/jpeg",
-          form_factor: "narrow",
-          label: "Home screen",
-        },
-        {
-          src: "/screenshots/desktop-home.jpg",
-          sizes: "1280x720",
-          type: "image/jpeg",
-          form_factor: "wide",
-          label: "Desktop home",
-        },
-      ],
+      icons,
+      ...(s.pwaScreenshots.length > 0 && { screenshots: s.pwaScreenshots }),
       shortcuts: [
         {
           name: "Latest Music",

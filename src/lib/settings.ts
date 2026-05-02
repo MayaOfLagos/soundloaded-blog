@@ -38,6 +38,13 @@ export interface PublicSettings {
   pwaOrientation: string;
   pwaIcons: Array<{ src: string; sizes: string; type: string; purpose: string }>;
   pwaSplashScreens: Array<{ src: string; sizes: string }>;
+  pwaScreenshots: Array<{
+    src: string;
+    sizes: string;
+    type: string;
+    form_factor: "narrow" | "wide";
+    label: string;
+  }>;
   // Content / Reading
   postsPerPage: number;
   feedItemCount: number;
@@ -129,6 +136,7 @@ const DEFAULTS: PublicSettings = {
   pwaOrientation: "any",
   pwaIcons: [],
   pwaSplashScreens: [],
+  pwaScreenshots: [],
   postsPerPage: 20,
   feedItemCount: 20,
   feedContentMode: "excerpt",
@@ -244,6 +252,7 @@ export function buildPublicSettings(
     pwaOrientation: str(raw, "pwaOrientation", DEFAULTS.pwaOrientation),
     pwaIcons: parseJsonArray(raw.pwaIcons),
     pwaSplashScreens: parseJsonArray(raw.pwaSplashScreens),
+    pwaScreenshots: parseJsonArray(raw.pwaScreenshots),
     postsPerPage: num(raw, "postsPerPage", DEFAULTS.postsPerPage),
     feedItemCount: num(raw, "feedItemCount", DEFAULTS.feedItemCount),
     feedContentMode: str(raw, "feedContentMode", DEFAULTS.feedContentMode),

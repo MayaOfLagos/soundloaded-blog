@@ -105,7 +105,7 @@ export default async function ArtistPage({ params }: Props) {
           downloadCount: t.downloadCount,
           streamCount: t.streamCount,
           enableDownload: t.enableDownload,
-          fileSize: t.fileSize,
+          fileSize: Number(t.fileSize),
           releaseYear: t.year,
           r2Key: t.r2Key,
           accessModel: t.accessModel,

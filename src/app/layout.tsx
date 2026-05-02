@@ -1,10 +1,9 @@
 import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import { ThemeProvider } from "next-themes";
-import { Toaster } from "react-hot-toast";
-import { Analytics } from "@vercel/analytics/react";
-import { SpeedInsights } from "@vercel/speed-insights/next";
 import { headers } from "next/headers";
+import { AppTelemetry } from "@/components/common/AppTelemetry";
+import { AppToaster } from "@/components/common/AppToaster";
 import { QueryProvider } from "@/components/common/QueryProvider";
 import { ConditionalNavigation } from "@/components/layout/ConditionalNavigation";
 import { getSettings } from "@/lib/settings";
@@ -141,31 +140,18 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         />
         <Suspense>
           <BrandColorStyle />
-          <HeadScripts />
           <CustomCss />
         </Suspense>
       </head>
       <body className={`${inter.variable} font-sans antialiased`}>
+        <Suspense>
+          <HeadScripts />
+        </Suspense>
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem disableTransitionOnChange>
           <QueryProvider>
             {isAdminPortal ? children : <ConditionalNavigation>{children}</ConditionalNavigation>}
           </QueryProvider>
-          <Toaster
-            position="bottom-center"
-            gutter={8}
-            containerStyle={{ bottom: 88 }}
-            toastOptions={{
-              duration: 3000,
-              style: {
-                background: "#1a1a1a",
-                color: "#ededed",
-                border: "1px solid #262626",
-                borderRadius: "8px",
-                fontSize: "14px",
-                fontFamily: "var(--font-inter)",
-              },
-            }}
-          />
+          <AppToaster />
         </ThemeProvider>
         <Suspense>
           <FooterScripts />
@@ -173,8 +159,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <ServiceWorkerRegistration />
         <InstallPrompt />
         <NotificationPrompt />
-        <Analytics />
-        <SpeedInsights />
+        <AppTelemetry />
         {process.env.NEXT_PUBLIC_UMAMI_URL && process.env.NEXT_PUBLIC_UMAMI_WEBSITE_ID && (
           <Script
             src={`${process.env.NEXT_PUBLIC_UMAMI_URL}/script.js`}

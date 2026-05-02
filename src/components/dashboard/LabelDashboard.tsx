@@ -2,13 +2,16 @@ import {
   CreatorAnalyticsSummary,
   CreatorActionQueue,
   CreatorHero,
+  CreatorInsightPanel,
   CreatorProfileReadiness,
+  CreatorPromotionKit,
   CreatorRosterPreview,
   CreatorStatsGrid,
   CreatorTrackList,
 } from "@/components/dashboard/CreatorCommandCenter";
 import { getCreatorAnalyticsReport } from "@/lib/creator-analytics";
 import { getLabelCommandCenter } from "@/lib/creator-command-center";
+import { getSettings } from "@/lib/settings";
 
 type LabelProfile = {
   id: string;
@@ -29,12 +32,13 @@ type LabelProfile = {
 };
 
 export async function LabelDashboard({ label }: { label: LabelProfile; userId?: string }) {
-  const [commandCenter, analytics] = await Promise.all([
+  const [commandCenter, analytics, settings] = await Promise.all([
     getLabelCommandCenter(label),
     getCreatorAnalyticsReport({
       scope: { type: "label", id: label.id, name: label.name },
       days: 30,
     }),
+    getSettings(),
   ]);
 
   return (
@@ -55,6 +59,22 @@ export async function LabelDashboard({ label }: { label: LabelProfile; userId?: 
       <CreatorStatsGrid stats={commandCenter.stats} />
 
       <CreatorAnalyticsSummary analytics={analytics} />
+
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.25fr_0.75fr]">
+        <CreatorPromotionKit
+          tracks={commandCenter.topTracks}
+          analytics={analytics}
+          siteUrl={settings.siteUrl}
+          emptyHref="/dashboard/releases"
+          emptyLabel="Add roster releases to unlock promotion links and share artwork"
+        />
+        <CreatorInsightPanel
+          analytics={analytics}
+          health={commandCenter.health}
+          profileScore={commandCenter.profileScore}
+          scopeType="label"
+        />
+      </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.2fr_0.8fr]">
         <CreatorActionQueue actions={commandCenter.actions} />

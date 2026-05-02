@@ -1,15 +1,16 @@
 import { getSettings } from "@/lib/settings";
+import { CodeInjectionClient } from "@/components/common/CodeInjectionClient";
 
 export async function HeadScripts() {
   const settings = await getSettings();
   if (!settings.headerScripts) return null;
-  return <div dangerouslySetInnerHTML={{ __html: settings.headerScripts }} />;
+  return <CodeInjectionClient html={settings.headerScripts} target="head" marker="head" />;
 }
 
 export async function FooterScripts() {
   const settings = await getSettings();
   if (!settings.footerScripts) return null;
-  return <div dangerouslySetInnerHTML={{ __html: settings.footerScripts }} />;
+  return <CodeInjectionClient html={settings.footerScripts} target="body" marker="footer" />;
 }
 
 export async function CustomCss() {

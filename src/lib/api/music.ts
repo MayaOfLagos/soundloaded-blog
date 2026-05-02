@@ -22,7 +22,7 @@ export interface MusicCardData {
   downloadCount: number;
   streamCount: number;
   enableDownload: boolean;
-  fileSize?: bigint | null;
+  fileSize?: number | null;
   releaseYear?: number | null;
   r2Key: string;
   // Monetization
@@ -67,7 +67,7 @@ type MusicCardCandidate = {
   downloadCount: number;
   streamCount: number;
   enableDownload: boolean;
-  fileSize: bigint;
+  fileSize: bigint | number | null;
   year: number | null;
   r2Key: string;
   createdAt: Date;
@@ -90,6 +90,11 @@ type MusicRecommendationCandidate = MusicCardCandidate & {
   playlistTracks?: { playlistId: string }[];
 };
 
+function normalizeFileSize(fileSize: bigint | number | null | undefined) {
+  if (typeof fileSize === "bigint") return Number(fileSize);
+  return fileSize ?? null;
+}
+
 function mapMusicCard(track: MusicCardCandidate): MusicCardData {
   return {
     id: track.id,
@@ -103,7 +108,7 @@ function mapMusicCard(track: MusicCardCandidate): MusicCardData {
     downloadCount: track.downloadCount,
     streamCount: track.streamCount,
     enableDownload: track.enableDownload,
-    fileSize: track.fileSize,
+    fileSize: normalizeFileSize(track.fileSize),
     releaseYear: track.year,
     r2Key: track.r2Key,
     isExclusive: track.isExclusive,
@@ -134,27 +139,7 @@ export const getPopularMusic = unstable_cache(
           album: { select: { title: true } },
         },
       });
-      return tracks.map((t) => ({
-        id: t.id,
-        slug: t.slug,
-        title: t.title,
-        artistName: t.artist.name,
-        artistSlug: t.artist.slug,
-        albumTitle: t.album?.title,
-        coverArt: t.coverArt,
-        genre: t.genre,
-        downloadCount: t.downloadCount,
-        streamCount: t.streamCount,
-        enableDownload: t.enableDownload,
-        fileSize: t.fileSize,
-        releaseYear: t.year,
-        r2Key: t.r2Key,
-        isExclusive: t.isExclusive,
-        price: t.price ?? null,
-        accessModel: t.accessModel ?? "free",
-        streamAccess: t.streamAccess ?? "free",
-        creatorPrice: t.creatorPrice ?? null,
-      }));
+      return tracks.map(mapMusicCard);
     } catch {
       return [];
     }
@@ -175,27 +160,7 @@ export const getMostStreamedMusic = unstable_cache(
           album: { select: { title: true } },
         },
       });
-      return tracks.map((t) => ({
-        id: t.id,
-        slug: t.slug,
-        title: t.title,
-        artistName: t.artist.name,
-        artistSlug: t.artist.slug,
-        albumTitle: t.album?.title,
-        coverArt: t.coverArt,
-        genre: t.genre,
-        downloadCount: t.downloadCount,
-        streamCount: t.streamCount,
-        enableDownload: t.enableDownload,
-        fileSize: t.fileSize,
-        releaseYear: t.year,
-        r2Key: t.r2Key,
-        isExclusive: t.isExclusive,
-        price: t.price ?? null,
-        accessModel: t.accessModel ?? "free",
-        streamAccess: t.streamAccess ?? "free",
-        creatorPrice: t.creatorPrice ?? null,
-      }));
+      return tracks.map(mapMusicCard);
     } catch {
       return [];
     }
@@ -221,27 +186,7 @@ export const getLatestMusic = unstable_cache(
           album: { select: { title: true } },
         },
       });
-      return tracks.map((t) => ({
-        id: t.id,
-        slug: t.slug,
-        title: t.title,
-        artistName: t.artist.name,
-        artistSlug: t.artist.slug,
-        albumTitle: t.album?.title,
-        coverArt: t.coverArt,
-        genre: t.genre,
-        downloadCount: t.downloadCount,
-        streamCount: t.streamCount,
-        enableDownload: t.enableDownload,
-        fileSize: t.fileSize,
-        releaseYear: t.year,
-        r2Key: t.r2Key,
-        isExclusive: t.isExclusive,
-        price: t.price ?? null,
-        accessModel: t.accessModel ?? "free",
-        streamAccess: t.streamAccess ?? "free",
-        creatorPrice: t.creatorPrice ?? null,
-      }));
+      return tracks.map(mapMusicCard);
     } catch {
       return [];
     }

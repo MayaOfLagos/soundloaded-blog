@@ -2,12 +2,15 @@ import {
   CreatorAnalyticsSummary,
   CreatorActionQueue,
   CreatorHero,
+  CreatorInsightPanel,
   CreatorProfileReadiness,
+  CreatorPromotionKit,
   CreatorStatsGrid,
   CreatorTrackList,
 } from "@/components/dashboard/CreatorCommandCenter";
 import { getCreatorAnalyticsReport } from "@/lib/creator-analytics";
 import { getArtistCommandCenter } from "@/lib/creator-command-center";
+import { getSettings } from "@/lib/settings";
 
 type ArtistProfile = {
   id: string;
@@ -33,12 +36,13 @@ type ArtistProfile = {
 };
 
 export async function ArtistDashboard({ artist }: { artist: ArtistProfile; userId?: string }) {
-  const [commandCenter, analytics] = await Promise.all([
+  const [commandCenter, analytics, settings] = await Promise.all([
     getArtistCommandCenter(artist),
     getCreatorAnalyticsReport({
       scope: { type: "artist", id: artist.id, name: artist.name },
       days: 30,
     }),
+    getSettings(),
   ]);
 
   return (
@@ -59,6 +63,26 @@ export async function ArtistDashboard({ artist }: { artist: ArtistProfile; userI
       <CreatorStatsGrid stats={commandCenter.stats} />
 
       <CreatorAnalyticsSummary analytics={analytics} />
+
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1.25fr_0.75fr]">
+        <CreatorPromotionKit
+          tracks={
+            commandCenter.topTracks.length > 0
+              ? commandCenter.topTracks
+              : commandCenter.recentTracks
+          }
+          analytics={analytics}
+          siteUrl={settings.siteUrl}
+          emptyHref="/dashboard/music"
+          emptyLabel="Upload a release to unlock promotion links and share artwork"
+        />
+        <CreatorInsightPanel
+          analytics={analytics}
+          health={commandCenter.health}
+          profileScore={commandCenter.profileScore}
+          scopeType="artist"
+        />
+      </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1.2fr_0.8fr]">
         <CreatorActionQueue actions={commandCenter.actions} />

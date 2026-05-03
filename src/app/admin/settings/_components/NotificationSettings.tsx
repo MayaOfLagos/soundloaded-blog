@@ -6,7 +6,7 @@ import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/comp
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
-import { Bell, Send, Users } from "lucide-react";
+import { Bell, Send, Users, Share2 } from "lucide-react";
 import toast from "react-hot-toast";
 import type { SettingsFormValues } from "../page";
 
@@ -15,6 +15,8 @@ interface Props {
 }
 
 export function NotificationSettings({ form }: Props) {
+  const autoShareTelegram = form.watch("autoShareTelegram");
+
   return (
     <div className="space-y-6">
       <div>
@@ -71,6 +73,11 @@ export function NotificationSettings({ form }: Props) {
             description: "Get notified when a new music track is uploaded",
           },
           {
+            name: "notifyOnPublish" as const,
+            label: "Post published → Discord",
+            description: "Send a Discord embed when a post is published",
+          },
+          {
             name: "emailNotificationsAdmin" as const,
             label: "Email notifications to admin",
             description: "Send email notifications for important events",
@@ -94,6 +101,101 @@ export function NotificationSettings({ form }: Props) {
           />
         ))}
       </div>
+
+      <Separator />
+      <h3 className="text-foreground text-sm font-semibold">
+        <Share2 className="mr-1.5 inline h-3.5 w-3.5" />
+        Auto-Share on Publish
+      </h3>
+      <p className="text-muted-foreground text-xs">
+        Automatically share new posts to social channels when published.
+      </p>
+
+      <div className="space-y-4">
+        <FormField
+          control={form.control}
+          name="autoShareTwitter"
+          render={({ field }) => (
+            <FormItem className="flex items-center justify-between rounded-lg border p-4">
+              <div className="space-y-0.5">
+                <FormLabel className="text-foreground text-sm font-medium">
+                  Auto-share to X / Twitter
+                </FormLabel>
+                <p className="text-muted-foreground text-xs">
+                  Requires <code className="bg-muted rounded px-1">TWITTER_BEARER_TOKEN</code> env
+                  var set on the server
+                </p>
+              </div>
+              <FormControl>
+                <Switch checked={field.value as boolean} onCheckedChange={field.onChange} />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="autoShareTelegram"
+          render={({ field }) => (
+            <FormItem className="flex items-center justify-between rounded-lg border p-4">
+              <div className="space-y-0.5">
+                <FormLabel className="text-foreground text-sm font-medium">
+                  Auto-share to Telegram
+                </FormLabel>
+                <p className="text-muted-foreground text-xs">
+                  Sends a message to your Telegram channel when a post is published
+                </p>
+              </div>
+              <FormControl>
+                <Switch checked={field.value as boolean} onCheckedChange={field.onChange} />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+
+        {autoShareTelegram && (
+          <div className="ml-4 space-y-4 border-l pl-4">
+            <FormField
+              control={form.control}
+              name="telegramBotToken"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Telegram Bot Token</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="123456:ABCdef..."
+                      className="font-mono text-sm"
+                      type="password"
+                      {...field}
+                    />
+                  </FormControl>
+                  <p className="text-muted-foreground text-xs">
+                    Get this from @BotFather on Telegram
+                  </p>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="telegramChatId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Telegram Chat ID</FormLabel>
+                  <FormControl>
+                    <Input placeholder="-1001234567890" className="font-mono text-sm" {...field} />
+                  </FormControl>
+                  <p className="text-muted-foreground text-xs">
+                    Channel ID (starts with -100) or user chat ID
+                  </p>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+        )}
+      </div>
+
       <Separator />
       <PushNotificationSender />
     </div>

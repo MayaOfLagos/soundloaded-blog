@@ -47,12 +47,19 @@ const settingsSchema = z
     ]),
     pwaIcons: z.array(z.record(z.string())).default([]),
     pwaSplashScreens: z.array(z.record(z.string())).default([]),
+    pwaScreenshots: z.array(z.record(z.string())).default([]),
     // Notifications
     discordWebhookUrl: z.string().url().or(z.literal("")),
     notifyOnNewComment: z.boolean(),
     notifyOnNewSubscriber: z.boolean(),
     notifyOnNewMusicUpload: z.boolean(),
+    notifyOnPublish: z.boolean(),
     emailNotificationsAdmin: z.boolean(),
+    // Social Auto-Sharing
+    autoShareTwitter: z.boolean(),
+    autoShareTelegram: z.boolean(),
+    telegramBotToken: z.string().max(200),
+    telegramChatId: z.string().max(100),
     // Content / Reading
     postsPerPage: z.number().int().min(1).max(100),
     feedItemCount: z.number().int().min(1).max(100),
@@ -137,6 +144,8 @@ const settingsSchema = z
     enableAlbums: z.boolean(),
     enableArtists: z.boolean(),
     enableSearch: z.boolean(),
+    // Feature Toggles — Landing Gate
+    enableLandingGate: z.boolean(),
     // Player Experience
     enableNowPlayingDrawer: z.boolean(),
     // Billing & Monetization

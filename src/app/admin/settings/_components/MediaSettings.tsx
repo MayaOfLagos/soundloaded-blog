@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
+import { ImageUploadField } from "./ImageUploadField";
 import type { SettingsFormValues } from "../page";
 
 interface Props {
@@ -152,30 +153,44 @@ export function MediaSettings({ form }: Props) {
       />
 
       {form.watch("enableWatermark") && (
-        <FormField
-          control={form.control}
-          name="watermarkPosition"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Watermark Position</FormLabel>
-              <Select onValueChange={field.onChange} value={field.value}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  <SelectItem value="center">Center</SelectItem>
-                  <SelectItem value="top-left">Top Left</SelectItem>
-                  <SelectItem value="top-right">Top Right</SelectItem>
-                  <SelectItem value="bottom-left">Bottom Left</SelectItem>
-                  <SelectItem value="bottom-right">Bottom Right</SelectItem>
-                </SelectContent>
-              </Select>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        <div className="space-y-4">
+          <ImageUploadField
+            label="Watermark Image"
+            value={form.watch("watermarkImage") ?? null}
+            onChange={(v) => form.setValue("watermarkImage", v, { shouldDirty: true })}
+            type="logo"
+            hint="PNG with transparency recommended. Overlaid on uploaded images."
+            acceptedFileTypes={["image/png", "image/webp"]}
+            maxFileSize="500KB"
+            previewWidth={128}
+            previewHeight={64}
+          />
+
+          <FormField
+            control={form.control}
+            name="watermarkPosition"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Watermark Position</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="center">Center</SelectItem>
+                    <SelectItem value="top-left">Top Left</SelectItem>
+                    <SelectItem value="top-right">Top Right</SelectItem>
+                    <SelectItem value="bottom-left">Bottom Left</SelectItem>
+                    <SelectItem value="bottom-right">Bottom Right</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
       )}
     </div>
   );

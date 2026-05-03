@@ -357,7 +357,8 @@ async function sendCommentNotification({
   siteUrl: string;
 }) {
   try {
-    const { resend, FROM_EMAIL } = await import("@/lib/resend");
+    const { resend, getTransactionalFrom } = await import("@/lib/resend");
+    const FROM_EMAIL = await getTransactionalFrom();
     const subject = isPending
       ? `[Moderation] New comment awaiting review`
       : `New comment on your post`;

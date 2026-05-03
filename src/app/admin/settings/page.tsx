@@ -94,7 +94,13 @@ const settingsSchema = z.object({
   notifyOnNewComment: z.boolean().default(true),
   notifyOnNewSubscriber: z.boolean().default(true),
   notifyOnNewMusicUpload: z.boolean().default(false),
+  notifyOnPublish: z.boolean().default(false),
   emailNotificationsAdmin: z.boolean().default(true),
+  // Social Auto-Sharing
+  autoShareTwitter: z.boolean().default(false),
+  autoShareTelegram: z.boolean().default(false),
+  telegramBotToken: z.string().max(200).default(""),
+  telegramChatId: z.string().max(100).default(""),
   // Content / Reading
   postsPerPage: z.number().int().min(1).max(100).default(20),
   feedItemCount: z.number().int().min(1).max(100).default(20),
@@ -171,6 +177,8 @@ const settingsSchema = z.object({
   enableAlbums: z.boolean().default(true),
   enableArtists: z.boolean().default(true),
   enableSearch: z.boolean().default(true),
+  // Feature Toggles — Landing Gate
+  enableLandingGate: z.boolean().default(true),
   // Player Experience
   enableNowPlayingDrawer: z.boolean().default(true),
   // Billing & Monetization

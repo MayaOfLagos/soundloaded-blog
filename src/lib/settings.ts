@@ -45,6 +45,10 @@ export interface PublicSettings {
     form_factor: "narrow" | "wide";
     label: string;
   }>;
+  // Notifications / Social Auto-Sharing
+  notifyOnPublish: boolean;
+  autoShareTwitter: boolean;
+  autoShareTelegram: boolean;
   // Content / Reading
   postsPerPage: number;
   feedItemCount: number;
@@ -71,6 +75,7 @@ export interface PublicSettings {
   // Maintenance
   maintenanceMode: boolean;
   maintenanceMessage: string;
+  maintenanceAllowedIPs: string;
   // Security (public subset)
   allowRegistration: boolean;
   enableTurnstile: boolean;
@@ -137,6 +142,9 @@ const DEFAULTS: PublicSettings = {
   pwaIcons: [],
   pwaSplashScreens: [],
   pwaScreenshots: [],
+  notifyOnPublish: false,
+  autoShareTwitter: false,
+  autoShareTelegram: false,
   postsPerPage: 20,
   feedItemCount: 20,
   feedContentMode: "excerpt",
@@ -158,6 +166,7 @@ const DEFAULTS: PublicSettings = {
   language: "en",
   maintenanceMode: false,
   maintenanceMessage: "We're upgrading. Be right back!",
+  maintenanceAllowedIPs: "",
   allowRegistration: true,
   enableTurnstile: true,
   headerScripts: "",
@@ -253,6 +262,9 @@ export function buildPublicSettings(
     pwaIcons: parseJsonArray(raw.pwaIcons),
     pwaSplashScreens: parseJsonArray(raw.pwaSplashScreens),
     pwaScreenshots: parseJsonArray(raw.pwaScreenshots),
+    notifyOnPublish: bool(raw, "notifyOnPublish", DEFAULTS.notifyOnPublish),
+    autoShareTwitter: bool(raw, "autoShareTwitter", DEFAULTS.autoShareTwitter),
+    autoShareTelegram: bool(raw, "autoShareTelegram", DEFAULTS.autoShareTelegram),
     postsPerPage: num(raw, "postsPerPage", DEFAULTS.postsPerPage),
     feedItemCount: num(raw, "feedItemCount", DEFAULTS.feedItemCount),
     feedContentMode: str(raw, "feedContentMode", DEFAULTS.feedContentMode),
@@ -274,6 +286,7 @@ export function buildPublicSettings(
     language: str(raw, "language", DEFAULTS.language),
     maintenanceMode: bool(raw, "maintenanceMode", DEFAULTS.maintenanceMode),
     maintenanceMessage: str(raw, "maintenanceMessage", DEFAULTS.maintenanceMessage),
+    maintenanceAllowedIPs: str(raw, "maintenanceAllowedIPs", DEFAULTS.maintenanceAllowedIPs),
     allowRegistration: bool(raw, "allowRegistration", DEFAULTS.allowRegistration),
     enableTurnstile: bool(raw, "enableTurnstile", DEFAULTS.enableTurnstile),
     headerScripts: str(raw, "headerScripts", DEFAULTS.headerScripts),

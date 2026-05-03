@@ -151,6 +151,36 @@ export function FeaturesSettings({ form }: Props) {
         </div>
       )}
 
+      {/* Landing Gate */}
+      <div className="pt-4">
+        <h2 className="text-foreground text-base font-bold">Landing Gate</h2>
+        <p className="text-muted-foreground mt-0.5 text-sm">
+          Control whether visitors see the premium landing page before entering the site
+        </p>
+      </div>
+      <Separator />
+
+      <FormField
+        control={form.control}
+        name="enableLandingGate"
+        render={({ field }) => (
+          <FormItem className="flex items-center justify-between rounded-lg border p-4">
+            <div className="space-y-0.5">
+              <FormLabel className="text-foreground text-sm font-medium">
+                Enable Landing Gate
+              </FormLabel>
+              <p className="text-muted-foreground text-xs">
+                Show the premium landing page to first-time visitors before they enter the site.
+                Disable to let everyone go straight to the blog.
+              </p>
+            </div>
+            <FormControl>
+              <Switch checked={field.value} onCheckedChange={field.onChange} />
+            </FormControl>
+          </FormItem>
+        )}
+      />
+
       {/* Player Experience */}
       <div className="pt-4">
         <h2 className="text-foreground text-base font-bold">Player Experience</h2>

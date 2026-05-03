@@ -270,9 +270,19 @@ export async function middleware(req: NextRequest) {
         headers: { "x-internal": "1" },
       });
       if (res.ok) {
-        const settings = (await res.json()) as { maintenanceMode?: boolean };
+        const settings = (await res.json()) as {
+          maintenanceMode?: boolean;
+          maintenanceAllowedIPs?: string;
+        };
         if (settings.maintenanceMode) {
-          return NextResponse.rewrite(new URL("/maintenance", req.url));
+          // Allow through if the visitor's IP is in the admin allowlist
+          const allowedIPs = (settings.maintenanceAllowedIPs ?? "")
+            .split(",")
+            .map((s) => s.trim())
+            .filter(Boolean);
+          if (allowedIPs.length === 0 || !allowedIPs.includes(ip)) {
+            return NextResponse.rewrite(new URL("/maintenance", req.url));
+          }
         }
       }
     } catch {

@@ -91,6 +91,17 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // Use the site-configured default status when the caller didn't supply one
+    let resolvedStatus = data.status;
+    if (!body.status) {
+      const siteDefaults = await db.siteSettings.findUnique({
+        where: { id: "default" },
+        select: { defaultPostStatus: true },
+      });
+      resolvedStatus =
+        (siteDefaults?.defaultPostStatus as typeof data.status | null | undefined) ?? "DRAFT";
+    }
+
     const post = await db.post.create({
       data: {
         title: data.title,
@@ -98,11 +109,11 @@ export async function POST(req: NextRequest) {
         excerpt: data.excerpt,
         body: data.body ?? {},
         coverImage: data.coverImage,
-        status: data.status,
+        status: resolvedStatus,
         type: data.type,
         publishedAt: data.publishedAt
           ? new Date(data.publishedAt)
-          : data.status === "PUBLISHED"
+          : resolvedStatus === "PUBLISHED"
             ? new Date()
             : null,
         categoryId: data.categoryId ?? null,

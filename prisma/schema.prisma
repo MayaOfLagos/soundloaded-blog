@@ -571,6 +571,7 @@ model SiteSettings {
   pwaOrientation     String @default("any")
   pwaIcons           Json   @default("[]")
   pwaSplashScreens   Json   @default("[]")
+  pwaScreenshots     Json   @default("[]")
 
   // Notifications
   discordWebhookUrl      String  @default("")
@@ -674,6 +675,9 @@ model SiteSettings {
   enableAlbums  Boolean @default(true)
   enableArtists Boolean @default(true)
   enableSearch  Boolean @default(true)
+
+  // Feature Toggles — Landing Gate
+  enableLandingGate Boolean @default(true)
 
   // Feature Toggles — Player Experience
   enableNowPlayingDrawer Boolean @default(true)

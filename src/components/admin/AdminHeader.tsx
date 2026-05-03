@@ -7,8 +7,13 @@ import { AdminMobileSidebar } from "./AdminMobileSidebar";
 import type { AdminLogo } from "./AdminSidebar";
 import { useAdminSidebar } from "./AdminSidebarContext";
 import { AdminSearch } from "./AdminSearch";
-import { AdminUserDropdown } from "./AdminUserDropdown";
 import { useState } from "react";
+import dynamic from "next/dynamic";
+
+const AdminUserDropdown = dynamic(
+  () => import("./AdminUserDropdown").then((m) => m.AdminUserDropdown),
+  { ssr: false }
+);
 
 const PAGE_TITLES: Record<string, string> = {
   "/admin": "Dashboard",

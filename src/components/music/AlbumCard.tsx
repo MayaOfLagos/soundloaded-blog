@@ -1,6 +1,8 @@
+"use client";
+
 import Link from "next/link";
-import Image from "next/image";
 import { Disc, Download } from "lucide-react";
+import { CoverImage } from "@/components/common/CoverImage";
 import { Badge } from "@/components/ui/badge";
 import type { AlbumCardData } from "@/lib/api/music";
 
@@ -17,7 +19,7 @@ export function AlbumCard({ album }: AlbumCardProps) {
         className="bg-muted relative block aspect-square overflow-hidden"
       >
         {album.coverArt ? (
-          <Image
+          <CoverImage
             src={album.coverArt}
             alt={album.title}
             fill
@@ -25,7 +27,7 @@ export function AlbumCard({ album }: AlbumCardProps) {
             sizes="(max-width: 640px) 50vw, 33vw"
           />
         ) : (
-          <div className="from-brand/10 to-muted flex h-full items-center justify-center bg-gradient-to-br">
+          <div className="from-brand/10 to-muted flex h-full items-center justify-center bg-linear-to-br">
             <Disc className="text-muted-foreground/40 h-12 w-12" />
           </div>
         )}

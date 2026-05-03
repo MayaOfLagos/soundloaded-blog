@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { Play, ListMusic, Lock, Globe } from "lucide-react";
+import { CoverImage } from "@/components/common/CoverImage";
 import { cn } from "@/lib/utils";
 import type { PlaylistSummary } from "@/hooks/usePlaylist";
 
@@ -36,7 +36,7 @@ export function PlaylistCard({
       {/* Cover art */}
       <div className="bg-muted relative aspect-square overflow-hidden rounded-md">
         {playlist.coverImage ? (
-          <Image
+          <CoverImage
             src={playlist.coverImage}
             alt={playlist.title}
             fill
@@ -47,12 +47,12 @@ export function PlaylistCard({
           <div className="grid h-full w-full grid-cols-2 grid-rows-2">
             {covers.map((src, i) => (
               <div key={i} className="relative overflow-hidden">
-                <Image src={src!} alt="" fill className="object-cover" sizes="100px" />
+                <CoverImage src={src!} alt="" fill className="object-cover" sizes="100px" />
               </div>
             ))}
           </div>
         ) : covers.length > 0 ? (
-          <Image
+          <CoverImage
             src={covers[0]!}
             alt={playlist.title}
             fill
@@ -60,7 +60,7 @@ export function PlaylistCard({
             sizes="(max-width: 640px) 150px, (max-width: 1024px) 180px, 200px"
           />
         ) : (
-          <div className="from-brand/10 to-muted flex h-full w-full items-center justify-center bg-gradient-to-br">
+          <div className="from-brand/10 to-muted flex h-full w-full items-center justify-center bg-linear-to-br">
             <ListMusic className="text-muted-foreground/40 h-10 w-10" />
           </div>
         )}

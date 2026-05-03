@@ -19,6 +19,7 @@ export interface PublicSettings {
   bingSiteVerification: string;
   googleAnalyticsId: string;
   seoKeywords: string;
+  postFallbackOgImage: string | null;
   // Social
   instagram: string;
   twitter: string;
@@ -124,6 +125,7 @@ const DEFAULTS: PublicSettings = {
   bingSiteVerification: "",
   googleAnalyticsId: "",
   seoKeywords: "Nigeria music, Afrobeats, free music download, music news, African music",
+  postFallbackOgImage: null,
   instagram: "soundloadedng",
   twitter: "soundloadedng",
   facebook: "soundloadedng",
@@ -244,6 +246,7 @@ export function buildPublicSettings(
     bingSiteVerification: str(raw, "bingSiteVerification", ""),
     googleAnalyticsId: str(raw, "googleAnalyticsId", ""),
     seoKeywords: str(raw, "seoKeywords", DEFAULTS.seoKeywords),
+    postFallbackOgImage: resolveImageUrl(raw.postFallbackOgImage as string | null),
     instagram: str(raw, "instagram", DEFAULTS.instagram),
     twitter: str(raw, "twitter", DEFAULTS.twitter),
     facebook: str(raw, "facebook", DEFAULTS.facebook),

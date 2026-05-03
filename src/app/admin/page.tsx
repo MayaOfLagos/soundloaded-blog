@@ -20,6 +20,7 @@ import {
   UserCheck,
   Users,
   Wrench,
+  Link2,
 } from "lucide-react";
 import { StatWidget } from "@/components/admin/StatWidget";
 import { getAdminOpsSnapshot, type OpsSeverity } from "@/lib/admin-ops";
@@ -55,6 +56,7 @@ async function getDashboardStats() {
     confirmedSubscribers,
     pendingReports,
     activeStories,
+    totalFanlinks,
     recentPosts,
   ] = await Promise.all([
     // Posts
@@ -80,6 +82,8 @@ async function getDashboardStats() {
     db.report.count({ where: { status: "PENDING" } }),
     // Stories (last 24h)
     db.story.count({ where: { createdAt: { gte: twentyFourHoursAgo } } }),
+    // Fanlinks
+    db.fanlink.count({ where: { status: "PUBLISHED" } }),
     // Recent activity
     db.post.findMany({
       take: 8,
@@ -108,6 +112,7 @@ async function getDashboardStats() {
     confirmedSubscribers,
     pendingReports,
     activeStories,
+    totalFanlinks,
     recentPosts,
   };
 }
@@ -231,6 +236,14 @@ export default async function AdminDashboardPage() {
           href="/admin/stories"
           iconClassName="bg-pink-500/10 text-pink-500 dark:bg-pink-500/20"
         />
+        <StatWidget
+          title="Fanlinks"
+          value={stats.totalFanlinks}
+          icon={Link2}
+          subtitle="Published"
+          href="/admin/fanlinks"
+          iconClassName="bg-cyan-500/10 text-cyan-500 dark:bg-cyan-500/20"
+        />
       </div>
 
       {/* Operations Command Center */}
@@ -313,7 +326,9 @@ export default async function AdminDashboardPage() {
               <div className="space-y-2">
                 {ops.recentFailedAudioJobs.length === 0 &&
                 ops.recentPendingApplications.length === 0 ? (
-                  <p className="text-muted-foreground text-sm">No failed jobs or creator requests.</p>
+                  <p className="text-muted-foreground text-sm">
+                    No failed jobs or creator requests.
+                  </p>
                 ) : (
                   <>
                     {ops.recentFailedAudioJobs.slice(0, 2).map((job) => (

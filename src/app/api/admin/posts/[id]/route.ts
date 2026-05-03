@@ -5,6 +5,7 @@ import { indexPost, removeFromIndex, INDEXES } from "@/lib/meilisearch";
 import { autoSharePost } from "@/lib/social-share";
 import { getPostUrl } from "@/lib/urls";
 import { requireAdmin, unauthorizedResponse } from "@/lib/admin-auth";
+import { submitToIndexNow } from "@/lib/indexnow";
 
 const updateSchema = z.object({
   title: z.string().min(1).optional(),
@@ -119,7 +120,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
     indexPost(post);
 
-    // Auto-share when transitioning to PUBLISHED
+    // Auto-share and index when transitioning to PUBLISHED
     const wasPublished = existingPost.status === "PUBLISHED";
     if (post.status === "PUBLISHED" && !wasPublished) {
       const settings = await db.siteSettings.findUnique({
@@ -128,6 +129,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       });
       const url = getPostUrl(post, settings?.permalinkStructure ?? "/%postname%");
       autoSharePost({ title: post.title, url, excerpt: post.excerpt, type: post.type });
+      submitToIndexNow([url]).catch(() => {});
     }
 
     return NextResponse.json(post);

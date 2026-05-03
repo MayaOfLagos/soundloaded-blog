@@ -1,6 +1,8 @@
+"use client";
+
 import Link from "next/link";
-import Image from "next/image";
 import { Mic2 } from "lucide-react";
+import { CoverImage } from "@/components/common/CoverImage";
 import { Badge } from "@/components/ui/badge";
 import type { ArtistCardData } from "@/lib/api/music";
 
@@ -17,9 +19,15 @@ export function ArtistCard({ artist }: ArtistCardProps) {
       {/* Photo */}
       <div className="bg-muted ring-border group-hover:ring-brand/50 relative mb-3 h-20 w-20 overflow-hidden rounded-full ring-2 transition-all">
         {artist.photo ? (
-          <Image src={artist.photo} alt={artist.name} fill className="object-cover" sizes="80px" />
+          <CoverImage
+            src={artist.photo}
+            alt={artist.name}
+            fill
+            className="object-cover"
+            sizes="80px"
+          />
         ) : (
-          <div className="from-brand/10 to-muted flex h-full w-full items-center justify-center bg-gradient-to-br">
+          <div className="from-brand/10 to-muted flex h-full w-full items-center justify-center bg-linear-to-br">
             <Mic2 className="text-muted-foreground/50 h-8 w-8" />
           </div>
         )}

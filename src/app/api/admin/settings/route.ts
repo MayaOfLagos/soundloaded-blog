@@ -22,6 +22,8 @@ const settingsSchema = z
     bingSiteVerification: z.string().max(100),
     googleAnalyticsId: z.string().max(50),
     seoKeywords: z.string().max(500),
+    indexNowKey: z.string().max(100),
+    postFallbackOgImage: z.string().nullable(),
     // Social
     instagram: z.string().max(50),
     twitter: z.string().max(50),

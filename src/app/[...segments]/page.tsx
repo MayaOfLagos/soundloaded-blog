@@ -111,6 +111,20 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       break;
   }
 
+  // Fallback OG image when the post has no cover art
+  if (images.length === 0) {
+    const fallback =
+      settings.postFallbackOgImage ??
+      settings.defaultOgImage ??
+      (() => {
+        const p = new URLSearchParams({ title: post.title });
+        if (post.type) p.set("category", post.type);
+        if (post.author?.name) p.set("author", post.author.name);
+        return `${settings.siteUrl}/api/og?${p.toString()}`;
+      })();
+    images = [{ url: fallback }];
+  }
+
   return {
     title,
     description,

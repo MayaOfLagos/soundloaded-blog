@@ -5,6 +5,7 @@ import { indexPost } from "@/lib/meilisearch";
 import { autoSharePost } from "@/lib/social-share";
 import { getPostUrl } from "@/lib/urls";
 import { requireAdmin, unauthorizedResponse } from "@/lib/admin-auth";
+import { submitToIndexNow } from "@/lib/indexnow";
 
 const createSchema = z.object({
   title: z.string().min(1),
@@ -136,6 +137,7 @@ export async function POST(req: NextRequest) {
       });
       const url = getPostUrl(post, settings?.permalinkStructure ?? "/%postname%");
       autoSharePost({ title: post.title, url, excerpt: post.excerpt, type: post.type });
+      submitToIndexNow([url]).catch(() => {});
     }
 
     return NextResponse.json(post, { status: 201 });

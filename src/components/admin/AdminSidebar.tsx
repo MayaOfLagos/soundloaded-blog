@@ -31,6 +31,7 @@ import {
   Sparkles,
   CreditCard,
   Search,
+  Link2,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -62,6 +63,7 @@ const mainNav = [
   { title: "Albums", href: "/admin/albums", icon: Disc3 },
   { title: "Labels", href: "/admin/labels", icon: Building2 },
   { title: "Playlists", href: "/admin/playlists", icon: ListMusic },
+  { title: "Fanlinks", href: "/admin/fanlinks", icon: Link2 },
 ];
 
 const manageNav = [

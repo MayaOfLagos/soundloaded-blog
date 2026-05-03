@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { motion } from "motion/react";
 import useMeasure from "react-use-measure";
 import { useSession, signOut } from "next-auth/react";
@@ -20,7 +20,7 @@ const easeOutQuint: [number, number, number, number] = [0.23, 1, 0.32, 1];
 
 export function AdminUserDropdown() {
   const { data: session } = useSession();
-  const { theme, setTheme } = useTheme();
+  const { resolvedTheme, setTheme } = useTheme();
   const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [activeItem, setActiveItem] = useState("profile");
@@ -30,62 +30,63 @@ export function AdminUserDropdown() {
 
   const user = session?.user;
 
-  const menuItems: MenuItem[] = [
-    {
-      id: "profile",
-      label: "Profile",
-      icon: User,
-      onClick: () => {
-        router.push("/admin/settings");
-        setIsOpen(false);
+  const menuItems = useMemo<MenuItem[]>(
+    () => [
+      {
+        id: "profile",
+        label: "Profile",
+        icon: User,
+        onClick: () => {
+          router.push("/admin/settings");
+          setIsOpen(false);
+        },
       },
-    },
-    {
-      id: "analytics",
-      label: "Analytics",
-      icon: BarChart3,
-      onClick: () => {
-        router.push("/admin/analytics");
-        setIsOpen(false);
+      {
+        id: "analytics",
+        label: "Analytics",
+        icon: BarChart3,
+        onClick: () => {
+          router.push("/admin/analytics");
+          setIsOpen(false);
+        },
       },
-    },
-    {
-      id: "settings",
-      label: "Settings",
-      icon: Settings,
-      onClick: () => {
-        router.push("/admin/settings");
-        setIsOpen(false);
+      {
+        id: "settings",
+        label: "Settings",
+        icon: Settings,
+        onClick: () => {
+          router.push("/admin/settings");
+          setIsOpen(false);
+        },
       },
-    },
-    { id: "divider1", label: "", icon: null },
-    {
-      id: "theme",
-      label: theme === "dark" ? "Light Mode" : "Dark Mode",
-      icon: theme === "dark" ? Sun : Moon,
-      onClick: () => {
-        setTheme(theme === "dark" ? "light" : "dark");
+      { id: "divider1", label: "", icon: null },
+      {
+        id: "theme",
+        label: resolvedTheme === "dark" ? "Light Mode" : "Dark Mode",
+        icon: resolvedTheme === "dark" ? Sun : Moon,
+        onClick: () => setTheme(resolvedTheme === "dark" ? "light" : "dark"),
       },
-    },
-    {
-      id: "help",
-      label: "Get Help",
-      icon: HelpCircle,
-      onClick: () => {
-        window.open("/", "_blank");
-        setIsOpen(false);
+      {
+        id: "help",
+        label: "Get Help",
+        icon: HelpCircle,
+        onClick: () => {
+          window.open("/", "_blank");
+          setIsOpen(false);
+        },
       },
-    },
-    { id: "divider2", label: "", icon: null },
-    {
-      id: "logout",
-      label: "Sign Out",
-      icon: LogOut,
-      onClick: () => {
-        signOut({ callbackUrl: "/login" });
+      { id: "divider2", label: "", icon: null },
+      {
+        id: "logout",
+        label: "Sign Out",
+        icon: LogOut,
+        onClick: () => {
+          signOut({ callbackUrl: "/login" });
+        },
       },
-    },
-  ];
+    ],
+    [resolvedTheme, router, setTheme]
+  );
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {

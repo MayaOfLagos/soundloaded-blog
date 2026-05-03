@@ -5,6 +5,8 @@ import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/comp
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
+import { Button } from "@/components/ui/button";
+import { ImageUploadField } from "./ImageUploadField";
 import type { SettingsFormValues } from "../page";
 
 interface Props {
@@ -107,6 +109,23 @@ export function SeoSettings({ form }: Props) {
         />
       </div>
 
+      <Separator />
+      <h3 className="text-foreground text-sm font-semibold">Social Sharing</h3>
+
+      <ImageUploadField
+        label="Post Fallback OG Image"
+        value={form.watch("postFallbackOgImage") ?? null}
+        onChange={(v) => form.setValue("postFallbackOgImage", v, { shouldDirty: true })}
+        type="og-image"
+        hint="1200×630px recommended."
+        maxFileSize="5MB"
+        previewWidth={300}
+        previewHeight={157}
+      />
+
+      <Separator />
+      <h3 className="text-foreground text-sm font-semibold">Analytics</h3>
+
       <FormField
         control={form.control}
         name="googleAnalyticsId"
@@ -116,9 +135,41 @@ export function SeoSettings({ form }: Props) {
             <FormControl>
               <Input placeholder="G-XXXXXXXXXX" className="font-mono text-sm" {...field} />
             </FormControl>
-            <p className="text-muted-foreground text-xs">
-              Public tracking ID (safe to store here). The full GA script loads on the frontend.
-            </p>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+
+      <Separator />
+      <h3 className="text-foreground text-sm font-semibold">IndexNow — Real-Time Indexing</h3>
+      <p className="text-muted-foreground -mt-2 text-xs">
+        Instantly notify Bing, Yandex, and other IndexNow-compatible search engines when you publish
+        or update content.
+      </p>
+
+      <FormField
+        control={form.control}
+        name="indexNowKey"
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>IndexNow API Key</FormLabel>
+            <div className="flex gap-2">
+              <FormControl>
+                <Input
+                  placeholder="Generate or paste your key"
+                  className="font-mono text-sm"
+                  {...field}
+                />
+              </FormControl>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => field.onChange(crypto.randomUUID().replace(/-/g, ""))}
+              >
+                Generate
+              </Button>
+            </div>
             <FormMessage />
           </FormItem>
         )}

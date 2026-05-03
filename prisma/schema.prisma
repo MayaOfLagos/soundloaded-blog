@@ -61,6 +61,7 @@ model User {
   playlists                 Playlist[]
   creatorApplications       CreatorApplication[]
   reviewedApplications      CreatorApplication[]       @relation("ApplicationReviewer")
+  fanlinks                  Fanlink[]
 }
 
 enum UserRole {
@@ -231,6 +232,7 @@ model Music {
   bookmarks      Bookmark[]
   favorites      Favorite[]
   playlistTracks PlaylistTrack[]
+  fanlinks       Fanlink[]
 
   @@index([slug])
   @@index([artistId])
@@ -268,6 +270,7 @@ model Artist {
   music         Music[]
   albums        Album[]
   artistFollows ArtistFollow[]
+  fanlinks      Fanlink[]
 
   @@index([slug])
   @@index([ownerId])
@@ -546,10 +549,12 @@ model SiteSettings {
   // SEO & Meta
   metaTitleTemplate      String @default("%s | Soundloaded Blog")
   metaDescription        String @default("Nigeria's premier music blog — latest music news, free music downloads, gist, artist profiles, and more.")
-  googleSiteVerification String @default("")
-  bingSiteVerification   String @default("")
-  googleAnalyticsId      String @default("")
-  seoKeywords            String @default("Nigeria music, Afrobeats, free music download, music news, African music")
+  googleSiteVerification String  @default("")
+  bingSiteVerification   String  @default("")
+  googleAnalyticsId      String  @default("")
+  seoKeywords            String  @default("Nigeria music, Afrobeats, free music download, music news, African music")
+  indexNowKey            String  @default("")
+  postFallbackOgImage    String? // R2 key — fallback OG image for posts with no cover image
 
   // Social Links
   instagram  String @default("soundloadedng")
@@ -687,6 +692,9 @@ model SiteSettings {
   enableCreatorMonetization Boolean @default(false) // allow creators to set access model
   freeDownloadQuota         Int     @default(5)     // monthly free downloads on Free plan
   paystackPublicKey         String  @default("")    // publishable key for frontend
+
+  // Feature Toggles — Fanlinks
+  enableFanlinks Boolean @default(true)
 }
 
 // ── Media Library ────────────────────────────────────────────────────
@@ -1274,6 +1282,168 @@ model PlaylistTrack {
   @@unique([playlistId, musicId])
   @@index([playlistId, position])
   @@index([musicId, addedAt])
+}
+
+// ── Fanlinks ──────────────────────────────────────────────────────────
+enum FanlinkType {
+  SINGLE
+  ALBUM
+  EP
+  MIXTAPE
+}
+
+enum FanlinkStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+  SUSPENDED
+}
+
+model Fanlink {
+  id          String        @id @default(cuid())
+  slug        String        @unique
+  title       String
+  artistName  String
+  type        FanlinkType   @default(SINGLE)
+  releaseDate DateTime?
+  description String?       @db.Text
+  genre       String?
+  coverArt    String?       // R2 key or URL
+  bgColor     String?       // hex extracted from cover art
+  accentColor String?       // hex brand color
+  buttonStyle String        @default("filled")  // filled | outline | pill
+  pageTheme   String        @default("dark")    // dark | light | auto
+
+  // Optional linked track on Soundloaded
+  musicId     String?
+  music       Music?        @relation(fields: [musicId], references: [id], onDelete: SetNull)
+
+  // Creator ownership
+  artistId    String
+  artist      Artist        @relation(fields: [artistId], references: [id])
+  createdById String
+  createdBy   User          @relation(fields: [createdById], references: [id])
+
+  // Platform links — ordered array: [{ platform, url, label?, isEnabled, sortOrder }]
+  platformLinks Json        @default("[]")
+
+  // Fan engagement
+  emailCaptureEnabled Boolean @default(false)
+  emailCapturePrompt  String  @default("Enter your email to unlock")
+  showSocialIcons     Boolean @default(true)
+
+  // Monetization
+  tipEnabled  Boolean @default(false)
+  tipLabel    String  @default("Support this artist")
+  tipAmounts  Json    @default("[200,500,1000]")
+  merchUrl    String?
+  merchLabel  String?
+
+  // Advanced tracking (Phase 2)
+  metaPixelId String?
+  gaId        String?
+  ogImage     String?
+
+  // Pre-save mode
+  preSaveEnabled     Boolean @default(false)
+  preSaveSpotifyUrl  String?
+  preSaveAppleUrl    String?
+  preSaveDeezerUrl   String?
+  preSaveMessage     String  @default("Save this track before it drops!")
+
+  // Fan-gate (social unlock)
+  fanGateEnabled     Boolean @default(false)
+  fanGateAction      String  @default("follow")  // follow | share | both
+  fanGateSpotifyUrl  String?
+  fanGateTwitterText String?
+
+  // A/B variants
+  abEnabled    Boolean @default(false)
+  abSplit      Int     @default(50)  // % sent to variant B (0-100)
+
+  // Status
+  status FanlinkStatus @default(DRAFT)
+
+  // Denormalized counters (updated on click event)
+  totalClicks    Int @default(0)
+  uniqueVisitors Int @default(0)
+
+  // Admin-only
+  adminNotes String? @db.Text
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  clicks   FanlinkClick[]
+  emails   FanlinkEmail[]
+  tips     FanlinkTip[]
+  variants FanlinkVariant[]
+
+  @@index([slug])
+  @@index([artistId])
+  @@index([createdById])
+  @@index([status, createdAt])
+}
+
+model FanlinkVariant {
+  id          String   @id @default(cuid())
+  fanlinkId   String
+  fanlink     Fanlink  @relation(fields: [fanlinkId], references: [id], onDelete: Cascade)
+  label       String   @default("B")   // A or B label
+  title       String?
+  description String?  @db.Text
+  coverArt    String?
+  accentColor String?
+  platformLinks Json   @default("[]")
+  clicks      Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([fanlinkId])
+}
+
+model FanlinkClick {
+  id        String   @id @default(cuid())
+  fanlinkId String
+  fanlink   Fanlink  @relation(fields: [fanlinkId], references: [id], onDelete: Cascade)
+  platform  String?  // which button was clicked (null = page view)
+  ip        String?
+  country   String?
+  city      String?
+  device    String?  // mobile | desktop | tablet
+  browser   String?
+  referrer  String?
+  sessionId String?
+  createdAt DateTime @default(now())
+
+  @@index([fanlinkId, createdAt])
+  @@index([fanlinkId, platform])
+  @@index([createdAt])
+}
+
+model FanlinkEmail {
+  id        String   @id @default(cuid())
+  fanlinkId String
+  fanlink   Fanlink  @relation(fields: [fanlinkId], references: [id], onDelete: Cascade)
+  email     String
+  createdAt DateTime @default(now())
+
+  @@unique([fanlinkId, email])
+  @@index([fanlinkId])
+}
+
+model FanlinkTip {
+  id         String   @id @default(cuid())
+  fanlinkId  String
+  fanlink    Fanlink  @relation(fields: [fanlinkId], references: [id], onDelete: Cascade)
+  amount     Int      // kobo
+  txRef      String   @unique
+  status     String   @default("pending") // pending | success | failed
+  payerEmail String?
+  createdAt  DateTime @default(now())
+
+  @@index([fanlinkId])
+  @@index([txRef])
 }
 
 // ── Audio Processing Jobs ─────────────────────────────────────────────

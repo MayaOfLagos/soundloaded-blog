@@ -19,6 +19,7 @@ import {
   Users,
   Building2,
   Sparkles,
+  Link2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
@@ -32,6 +33,7 @@ const BASE_NAV = [
 const ARTIST_NAV = [
   { label: "My Music", href: "/dashboard/music", icon: Music },
   { label: "My Albums", href: "/dashboard/albums", icon: Disc3 },
+  { label: "Fanlinks", href: "/dashboard/fanlinks", icon: Link2 },
   { label: "Artist Profile", href: "/dashboard/artist-profile", icon: Mic2 },
 ];
 

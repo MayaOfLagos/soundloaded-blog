@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Image from "next/image";
+import { cn } from "@/lib/utils";
 
 interface PostImageProps {
   src: string | null | undefined;
@@ -32,32 +33,32 @@ export function PostImage({
   author,
 }: PostImageProps) {
   const [errored, setErrored] = useState(false);
+  const [loaded, setLoaded] = useState(false);
 
-  const showFallback = !src || errored;
+  const imgSrc = !src || errored ? buildFallbackUrl(alt, category, author) : src;
+  const unopt = !src || errored;
 
-  if (showFallback) {
-    return (
+  return (
+    <>
       <Image
-        src={buildFallbackUrl(alt, category, author)}
+        src={imgSrc}
         alt={alt}
         fill={fill}
         sizes={sizes}
         priority={priority}
-        className={className}
-        unoptimized
+        unoptimized={unopt}
+        className={cn(
+          className,
+          "transition-opacity duration-300",
+          loaded ? "opacity-100" : "opacity-0"
+        )}
+        onLoad={() => setLoaded(true)}
+        onError={() => {
+          setErrored(true);
+          setLoaded(false);
+        }}
       />
-    );
-  }
-
-  return (
-    <Image
-      src={src}
-      alt={alt}
-      fill={fill}
-      sizes={sizes}
-      priority={priority}
-      className={className}
-      onError={() => setErrored(true)}
-    />
+      {!loaded && <span className="absolute inset-0 animate-pulse bg-zinc-800" aria-hidden />}
+    </>
   );
 }

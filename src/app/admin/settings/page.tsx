@@ -69,6 +69,8 @@ const settingsSchema = z.object({
   bingSiteVerification: z.string().max(100).default(""),
   googleAnalyticsId: z.string().max(50).default(""),
   seoKeywords: z.string().max(500).default(""),
+  indexNowKey: z.string().max(100).default(""),
+  postFallbackOgImage: z.string().nullable().default(null),
   // Social
   instagram: z.string().max(50).default(""),
   twitter: z.string().max(50).default(""),

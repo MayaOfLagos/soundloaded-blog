@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { Play, Music, Lock } from "lucide-react";
+import { CoverImage } from "@/components/common/CoverImage";
 import { Badge } from "@/components/ui/badge";
 import { cn, formatFileSize } from "@/lib/utils";
 import { DownloadButton } from "./DownloadButton";
@@ -25,10 +25,7 @@ export function MusicCard({ track, className }: MusicCardProps) {
   const { setTrack } = usePlayerStore();
   const { data: subscription } = useSubscription();
 
-  const streamLocked = isOptimisticallyStreamLocked(
-    track,
-    subscription?.hasSubscription ?? false
-  );
+  const streamLocked = isOptimisticallyStreamLocked(track, subscription?.hasSubscription ?? false);
 
   const handlePlay = () => {
     if (streamLocked) {
@@ -65,7 +62,7 @@ export function MusicCard({ track, className }: MusicCardProps) {
         className="bg-muted relative block aspect-square overflow-hidden"
       >
         {track.coverArt ? (
-          <Image
+          <CoverImage
             src={track.coverArt}
             alt={track.title}
             fill
@@ -73,7 +70,7 @@ export function MusicCard({ track, className }: MusicCardProps) {
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
           />
         ) : (
-          <div className="from-brand/10 to-muted flex h-full items-center justify-center bg-gradient-to-br">
+          <div className="from-brand/10 to-muted flex h-full items-center justify-center bg-linear-to-br">
             <Music className="text-muted-foreground/50 h-12 w-12" />
           </div>
         )}

@@ -39,7 +39,7 @@ const PLATFORMS = [
 type PlatformLink = {
   platform: string;
   url: string;
-  label: string;
+  label?: string;
   isEnabled: boolean;
   sortOrder: number;
 };

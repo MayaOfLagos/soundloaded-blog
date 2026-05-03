@@ -102,7 +102,11 @@ export default async function AdminFanlinkDetailPage({ params }: Props) {
     totalClicks: fanlink.totalClicks,
     uniqueVisitors: fanlink.uniqueVisitors,
     artist: fanlink.artist,
-    createdBy: fanlink.createdBy,
+    createdBy: {
+      id: fanlink.createdBy.id,
+      name: fanlink.createdBy.name ?? "",
+      email: fanlink.createdBy.email ?? "",
+    },
     counts: fanlink._count,
     createdAt: fanlink.createdAt.toISOString(),
     updatedAt: fanlink.updatedAt.toISOString(),

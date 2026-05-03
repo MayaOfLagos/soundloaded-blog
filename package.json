@@ -27,7 +27,8 @@
     "generate:icons": "tsx scripts/generate-icons.ts",
     "worker:audio": "tsx worker/audio-processor.ts",
     "worker:audio:docker": "docker compose -f docker/docker-compose.yml --profile worker up audio-worker",
-    "prepare": "husky"
+    "prepare": "husky",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1028.0",

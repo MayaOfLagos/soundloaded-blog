@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { UseFormReturn } from "react-hook-form";
 import { FormField, FormItem, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
@@ -12,6 +13,9 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
+import { Button } from "@/components/ui/button";
+import { Send, Loader2 } from "lucide-react";
+import toast from "react-hot-toast";
 import type { SettingsFormValues } from "../page";
 
 interface Props {
@@ -19,6 +23,26 @@ interface Props {
 }
 
 export function EmailSettings({ form }: Props) {
+  const [sendingDigest, setSendingDigest] = useState(false);
+
+  async function handleSendDigest() {
+    setSendingDigest(true);
+    try {
+      const res = await fetch("/api/admin/newsletter/send-digest", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Failed");
+      if (data.sent === 0) {
+        toast(data.message ?? "Nothing to send");
+      } else {
+        toast.success(`Digest sent to ${data.sent} subscriber${data.sent !== 1 ? "s" : ""}`);
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to send digest");
+    } finally {
+      setSendingDigest(false);
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -106,41 +130,65 @@ export function EmailSettings({ form }: Props) {
         />
 
         {form.watch("emailDigestEnabled") && (
-          <FormField
-            control={form.control}
-            name="emailDigestDay"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Digest Day</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {[
-                      "monday",
-                      "tuesday",
-                      "wednesday",
-                      "thursday",
-                      "friday",
-                      "saturday",
-                      "sunday",
-                    ].map((day) => (
-                      <SelectItem key={day} value={day}>
-                        {day.charAt(0).toUpperCase() + day.slice(1)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-muted-foreground text-xs">
-                  Day of the week to send the digest email
-                </p>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          <div className="space-y-4">
+            <FormField
+              control={form.control}
+              name="emailDigestDay"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Digest Day</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {[
+                        "monday",
+                        "tuesday",
+                        "wednesday",
+                        "thursday",
+                        "friday",
+                        "saturday",
+                        "sunday",
+                      ].map((day) => (
+                        <SelectItem key={day} value={day}>
+                          {day.charAt(0).toUpperCase() + day.slice(1)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-muted-foreground text-xs">
+                    Day of the week to send the digest email
+                  </p>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <div className="rounded-lg border p-4">
+              <p className="text-foreground mb-1 text-sm font-medium">Send Digest Now</p>
+              <p className="text-muted-foreground mb-3 text-xs">
+                Immediately send a digest of the last 7 days of posts to all confirmed subscribers
+              </p>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={sendingDigest}
+                onClick={handleSendDigest}
+                className="gap-2"
+              >
+                {sendingDigest ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Send className="h-3.5 w-3.5" />
+                )}
+                {sendingDigest ? "Sending…" : "Send Digest Now"}
+              </Button>
+            </div>
+          </div>
         )}
       </div>
     </div>

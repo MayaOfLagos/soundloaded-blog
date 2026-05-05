@@ -64,6 +64,7 @@ const mainNav = [
   { title: "Labels", href: "/admin/labels", icon: Building2 },
   { title: "Playlists", href: "/admin/playlists", icon: ListMusic },
   { title: "Fanlinks", href: "/admin/fanlinks", icon: Link2 },
+  { title: "Genres", href: "/admin/music/genres", icon: Tags },
 ];
 
 const manageNav = [

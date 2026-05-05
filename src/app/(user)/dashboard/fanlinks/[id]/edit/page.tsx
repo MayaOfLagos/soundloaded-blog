@@ -90,6 +90,23 @@ export default async function EditFanlinkPage({ params }: Props) {
     status: fanlink.status as "DRAFT" | "PUBLISHED",
   };
 
+  const variant = await db.fanlinkVariant.findFirst({
+    where: { fanlinkId: id },
+    orderBy: { createdAt: "asc" },
+  });
+
+  const variantData = variant
+    ? {
+        id: variant.id,
+        label: variant.label,
+        title: variant.title ?? "",
+        description: variant.description ?? "",
+        coverArt: variant.coverArt ?? "",
+        accentColor: variant.accentColor ?? "#e11d48",
+        platformLinks: (variant.platformLinks as PlatformLink[]) ?? [],
+      }
+    : null;
+
   return (
     <div className="mx-auto max-w-[1440px] px-4 sm:px-6">
       <div className="grid grid-cols-1 gap-6 py-5 xl:grid-cols-[220px_1fr]">
@@ -103,6 +120,7 @@ export default async function EditFanlinkPage({ params }: Props) {
           </div>
           <FanlinkForm
             initialData={initialData}
+            initialVariant={variantData}
             artistName={fanlink.artist?.name ?? fanlink.artistName}
             mode="edit"
           />

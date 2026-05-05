@@ -76,8 +76,19 @@ type FormData = {
   status: "DRAFT" | "PUBLISHED";
 };
 
+type VariantData = {
+  id: string;
+  label: string;
+  title: string;
+  description: string;
+  coverArt: string;
+  accentColor: string;
+  platformLinks: PlatformLink[];
+};
+
 type Props = {
   initialData?: Partial<FormData> & { id?: string };
+  initialVariant?: VariantData | null;
   artistName: string;
   mode?: "create" | "edit";
 };
@@ -116,6 +127,16 @@ const DEFAULT_FORM: FormData = {
   status: "DRAFT",
 };
 
+const DEFAULT_VARIANT: VariantData = {
+  id: "",
+  label: "B",
+  title: "",
+  description: "",
+  coverArt: "",
+  accentColor: "#e11d48",
+  platformLinks: [],
+};
+
 function slugify(str: string): string {
   return str
     .toLowerCase()
@@ -125,7 +146,7 @@ function slugify(str: string): string {
     .slice(0, 60);
 }
 
-export function FanlinkForm({ initialData, artistName, mode = "create" }: Props) {
+export function FanlinkForm({ initialData, initialVariant, artistName, mode = "create" }: Props) {
   const router = useRouter();
   const [step, setStep] = useState(0);
   const [form, setForm] = useState<FormData>({
@@ -133,6 +154,8 @@ export function FanlinkForm({ initialData, artistName, mode = "create" }: Props)
     artistName,
     ...initialData,
   });
+  const [variant, setVariant] = useState<VariantData>(initialVariant ?? DEFAULT_VARIANT);
+  const [variantDirty, setVariantDirty] = useState(false);
   const [slugAvailable, setSlugAvailable] = useState<boolean | null>(null);
   const [slugChecking, setSlugChecking] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -227,6 +250,38 @@ export function FanlinkForm({ initialData, artistName, mode = "create" }: Props)
         setError(data.error ?? "Something went wrong");
         toast.error(data.error ?? "Something went wrong");
         return;
+      }
+      // Save variant B if in edit mode with A/B enabled
+      if (mode === "edit" && initialData?.id && form.abEnabled && variantDirty) {
+        if (variant.id) {
+          // Update existing variant
+          await fetch(`/api/fanlinks/${initialData.id}/variants`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              variantId: variant.id,
+              title: variant.title || null,
+              description: variant.description || null,
+              coverArt: variant.coverArt || null,
+              accentColor: variant.accentColor,
+              platformLinks: variant.platformLinks,
+            }),
+          });
+        } else {
+          // Create new variant (first time configuring B)
+          await fetch(`/api/fanlinks/${initialData.id}/variants`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              label: "B",
+              title: variant.title || null,
+              description: variant.description || null,
+              coverArt: variant.coverArt || null,
+              accentColor: variant.accentColor,
+              platformLinks: variant.platformLinks,
+            }),
+          });
+        }
       }
       toast.success(publish ? "Fanlink published!" : "Fanlink saved!");
       router.push("/dashboard/fanlinks");
@@ -678,9 +733,146 @@ export function FanlinkForm({ initialData, artistName, mode = "create" }: Props)
                       {100 - form.abSplit}% → Variant A (original) &nbsp;·&nbsp; {form.abSplit}% →
                       Variant B
                     </p>
-                    <p className="text-muted-foreground text-xs">
-                      Configure Variant B content in the edit page after saving.
-                    </p>
+
+                    {/* Variant B Editor (Edit Mode Only) */}
+                    {mode === "edit" && (
+                      <div className="border-border/40 mt-4 space-y-4 border-t pt-4">
+                        <p className="text-foreground text-sm font-semibold">Variant B Content</p>
+
+                        <div className="space-y-1.5">
+                          <Label htmlFor="variantTitle">Variant Title (optional)</Label>
+                          <Input
+                            id="variantTitle"
+                            value={variant.title}
+                            onChange={(e) => {
+                              setVariant((v) => ({ ...v, title: e.target.value }));
+                              setVariantDirty(true);
+                            }}
+                            placeholder="Leave empty to use main title"
+                          />
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <Label htmlFor="variantDescription">Variant Description (optional)</Label>
+                          <Textarea
+                            id="variantDescription"
+                            value={variant.description}
+                            onChange={(e) => {
+                              setVariant((v) => ({ ...v, description: e.target.value }));
+                              setVariantDirty(true);
+                            }}
+                            placeholder="Leave empty to use main description"
+                            rows={2}
+                          />
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <Label>Variant Cover Art</Label>
+                          <CoverArtUpload
+                            value={variant.coverArt}
+                            onChange={(url) => {
+                              setVariant((v) => ({ ...v, coverArt: url }));
+                              setVariantDirty(true);
+                            }}
+                            placeholder="Leave empty to use main cover art"
+                          />
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <Label htmlFor="variantAccent">Accent Color</Label>
+                          <div className="flex items-center gap-3">
+                            <input
+                              id="variantAccent"
+                              type="color"
+                              value={variant.accentColor}
+                              onChange={(e) => {
+                                setVariant((v) => ({ ...v, accentColor: e.target.value }));
+                                setVariantDirty(true);
+                              }}
+                              className="border-border/40 h-10 w-16 rounded border bg-transparent"
+                            />
+                            <Input
+                              value={variant.accentColor}
+                              onChange={(e) => {
+                                setVariant((v) => ({ ...v, accentColor: e.target.value }));
+                                setVariantDirty(true);
+                              }}
+                              className="flex-1 font-mono text-sm"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label>Variant Platform Links</Label>
+                          <p className="text-muted-foreground text-xs">
+                            Leave empty to use main platform links. Add different URLs to test
+                            conversions.
+                          </p>
+                          <div className="space-y-2">
+                            {PLATFORMS.map((p) => {
+                              const existing = variant.platformLinks.find(
+                                (l) => l.platform === p.key
+                              );
+                              return (
+                                <div key={p.key} className="flex items-center gap-2">
+                                  <input
+                                    type="checkbox"
+                                    checked={!!existing?.isEnabled}
+                                    onChange={(e) => {
+                                      const enabled = e.target.checked;
+                                      setVariant((v) => {
+                                        const links = v.platformLinks.filter(
+                                          (l) => l.platform !== p.key
+                                        );
+                                        if (enabled) {
+                                          links.push({
+                                            platform: p.key,
+                                            url: existing?.url || "",
+                                            label: p.label,
+                                            isEnabled: true,
+                                            sortOrder: v.platformLinks.length,
+                                          });
+                                        }
+                                        return { ...v, platformLinks: links };
+                                      });
+                                      setVariantDirty(true);
+                                    }}
+                                    className="h-4 w-4"
+                                  />
+                                  <span className="text-muted-foreground w-28 text-xs">
+                                    {p.label}
+                                  </span>
+                                  <Input
+                                    value={existing?.url || ""}
+                                    onChange={(e) => {
+                                      const url = e.target.value;
+                                      setVariant((v) => {
+                                        const links = v.platformLinks.filter(
+                                          (l) => l.platform !== p.key
+                                        );
+                                        links.push({
+                                          platform: p.key,
+                                          url,
+                                          label: p.label,
+                                          isEnabled: true,
+                                          sortOrder:
+                                            v.platformLinks.find((l) => l.platform === p.key)
+                                              ?.sortOrder || v.platformLinks.length,
+                                        });
+                                        return { ...v, platformLinks: links };
+                                      });
+                                      setVariantDirty(true);
+                                    }}
+                                    placeholder={`${p.label} URL`}
+                                    className="flex-1 text-sm"
+                                  />
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

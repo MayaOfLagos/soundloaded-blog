@@ -36,22 +36,6 @@ export default async function GenresPage() {
         </div>
       </div>
 
-      <div className="border-border bg-muted/40 space-y-1 rounded-xl border px-4 py-3 text-sm">
-        <p className="text-foreground font-semibold">How to use</p>
-        <ul className="text-muted-foreground list-inside list-disc space-y-0.5 text-xs">
-          <li>
-            Click <strong>✏️</strong> to rename a genre — updates all tracks with that genre
-            instantly.
-          </li>
-          <li>
-            Check multiple rows then click <strong>Merge</strong> to consolidate duplicates.
-          </li>
-          <li>
-            Click <strong>🗑️</strong> to unset the genre on all tracks — tracks are not deleted.
-          </li>
-        </ul>
-      </div>
-
       <GenreManager initialGenres={genres} />
     </div>
   );

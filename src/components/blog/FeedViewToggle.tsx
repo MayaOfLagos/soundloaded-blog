@@ -38,6 +38,7 @@ interface FeedViewToggleProps {
   initialPage?: number;
   postsPerPage?: number;
   totalPages?: number;
+  fallbackSrc?: string | null;
 }
 
 interface PageResponse {
@@ -132,7 +133,7 @@ function CardLoveButton({ postId, className }: { postId: string; className?: str
 }
 
 /* ━━━ Grid Card ━━━ */
-function SpotifyCard({ post }: { post: PostCardData }) {
+function SpotifyCard({ post, fallbackSrc }: { post: PostCardData; fallbackSrc?: string | null }) {
   const href = post.href || `/${post.slug}`;
 
   return (
@@ -152,6 +153,7 @@ function SpotifyCard({ post }: { post: PostCardData }) {
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
             category={post.category?.name}
             author={post.author?.name}
+            fallbackSrc={fallbackSrc}
           />
           {/* Hover overlay */}
           <div className="absolute inset-0 bg-black/0 transition-colors duration-300 group-hover:bg-black/10" />
@@ -194,7 +196,7 @@ function SpotifyCard({ post }: { post: PostCardData }) {
 }
 
 /* ━━━ List Card ━━━ */
-function ListCard({ post }: { post: PostCardData }) {
+function ListCard({ post, fallbackSrc }: { post: PostCardData; fallbackSrc?: string | null }) {
   const href = post.href || `/${post.slug}`;
 
   return (
@@ -214,6 +216,7 @@ function ListCard({ post }: { post: PostCardData }) {
             sizes="128px"
             category={post.category?.name}
             author={post.author?.name}
+            fallbackSrc={fallbackSrc}
           />
           <div className="absolute inset-0 bg-black/0 transition-colors duration-300 group-hover:bg-black/10" />
 
@@ -259,6 +262,7 @@ export function FeedViewToggle({
   initialPage = 1,
   postsPerPage = 20,
   totalPages = 1,
+  fallbackSrc,
 }: FeedViewToggleProps) {
   const [view, setView] = useState<ViewMode>(() => {
     try {
@@ -383,9 +387,9 @@ export function FeedViewToggle({
           >
             {posts.map((post) =>
               view === "grid" ? (
-                <SpotifyCard key={post.id} post={post} />
+                <SpotifyCard key={post.id} post={post} fallbackSrc={fallbackSrc} />
               ) : (
-                <ListCard key={post.id} post={post} />
+                <ListCard key={post.id} post={post} fallbackSrc={fallbackSrc} />
               )
             )}
           </motion.div>

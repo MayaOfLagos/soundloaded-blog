@@ -28,8 +28,9 @@ export function Logo({
             <Image
               src={logoLightUrl}
               alt={siteName}
-              width={140}
-              height={36}
+              width={0}
+              height={0}
+              priority
               className="h-8 w-auto object-contain dark:hidden"
               unoptimized
             />
@@ -39,8 +40,9 @@ export function Logo({
             <Image
               src={logoDarkUrl}
               alt={siteName}
-              width={140}
-              height={36}
+              width={0}
+              height={0}
+              priority
               className="hidden h-8 w-auto object-contain dark:block"
               unoptimized
             />
@@ -50,8 +52,9 @@ export function Logo({
             <Image
               src={logoLightUrl}
               alt={siteName}
-              width={140}
-              height={36}
+              width={0}
+              height={0}
+              priority
               className="hidden h-8 w-auto object-contain dark:block"
               unoptimized
             />
@@ -60,8 +63,9 @@ export function Logo({
             <Image
               src={logoDarkUrl}
               alt={siteName}
-              width={140}
-              height={36}
+              width={0}
+              height={0}
+              priority
               className="h-8 w-auto object-contain dark:hidden"
               unoptimized
             />

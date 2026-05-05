@@ -42,7 +42,7 @@ export function Navbar() {
   return (
     <header className="bg-background/95 supports-[backdrop-filter]:bg-background/80 sticky top-0 z-50 w-full backdrop-blur">
       <div className="mx-auto flex h-14 max-w-7xl items-center gap-4 px-4 sm:px-6">
-        {/* Logo — skeleton while settings load to avoid fallback flash */}
+        {/* Logo */}
         {settings === undefined ? (
           <div className="bg-muted h-8 w-32 animate-pulse rounded-md" />
         ) : (

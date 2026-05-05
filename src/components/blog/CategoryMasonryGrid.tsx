@@ -44,7 +44,11 @@ export async function CategoryMasonryGrid({
     <div className="columns-1 gap-4 sm:columns-2 lg:columns-3">
       {gridPosts.map((post, i) => (
         <div key={post.id} className="mb-4 break-inside-avoid">
-          <PostCard post={post} hideExcerpt={i % 3 === 1} />
+          <PostCard
+            post={post}
+            hideExcerpt={i % 3 === 1}
+            fallbackSrc={settings.postFallbackOgImage ?? settings.defaultOgImage}
+          />
         </div>
       ))}
     </div>

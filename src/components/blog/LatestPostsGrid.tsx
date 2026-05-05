@@ -41,6 +41,12 @@ export async function LatestPostsGrid({ page = 1 }: LatestPostsGridProps) {
   }
 
   return (
-    <FeedViewToggle posts={posts} initialPage={page} postsPerPage={limit} totalPages={totalPages} />
+    <FeedViewToggle
+      posts={posts}
+      initialPage={page}
+      postsPerPage={limit}
+      totalPages={totalPages}
+      fallbackSrc={settings.postFallbackOgImage ?? settings.defaultOgImage}
+    />
   );
 }

@@ -13,6 +13,8 @@ interface PostImageProps {
   className?: string;
   category?: string;
   author?: string;
+  /** Admin-configured fallback used instead of /api/og when src is missing */
+  fallbackSrc?: string | null;
 }
 
 function buildFallbackUrl(title: string, category?: string, author?: string) {
@@ -31,11 +33,13 @@ export function PostImage({
   className,
   category,
   author,
+  fallbackSrc,
 }: PostImageProps) {
   const [errored, setErrored] = useState(false);
   const [loaded, setLoaded] = useState(false);
 
-  const imgSrc = !src || errored ? buildFallbackUrl(alt, category, author) : src;
+  const resolvedFallback = fallbackSrc ?? buildFallbackUrl(alt, category, author);
+  const imgSrc = !src || errored ? resolvedFallback : src;
   const unopt = !src || errored;
 
   return (

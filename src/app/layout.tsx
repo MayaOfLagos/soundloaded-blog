@@ -92,14 +92,12 @@ export const viewport: Viewport = {
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const settings = await getSettings();
 
-  // When the admin portal is requested, middleware injects this header via rewrite.
-  // Skip public navigation entirely — the page is self-contained and cleans up after itself.
   const h = await headers();
   const isAdminPortal =
     !!process.env.ADMIN_PORTAL_SECRET &&
     h.get("x-admin-gateway-origin") === process.env.ADMIN_PORTAL_SECRET;
   return (
-    <html lang={settings.language || "en"} suppressHydrationWarning>
+    <html lang={settings.language || "en"} suppressHydrationWarning data-scroll-behavior="smooth">
       <head>
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />

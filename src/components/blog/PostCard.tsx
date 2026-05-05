@@ -24,9 +24,16 @@ interface PostCardProps {
   variant?: "default" | "featured" | "compact";
   hideExcerpt?: boolean;
   className?: string;
+  fallbackSrc?: string | null;
 }
 
-export function PostCard({ post, variant = "default", hideExcerpt, className }: PostCardProps) {
+export function PostCard({
+  post,
+  variant = "default",
+  hideExcerpt,
+  className,
+  fallbackSrc,
+}: PostCardProps) {
   const href = post.href || `/${post.slug}`;
 
   /* ━━━ COMPACT — sidebar / list items ━━━ */
@@ -42,6 +49,7 @@ export function PostCard({ post, variant = "default", hideExcerpt, className }: 
             sizes="80px"
             category={post.category?.name}
             author={post.author?.name}
+            fallbackSrc={fallbackSrc}
           />
         </div>
         <div className="min-w-0 flex-1">
@@ -77,6 +85,7 @@ export function PostCard({ post, variant = "default", hideExcerpt, className }: 
             priority
             category={post.category?.name}
             author={post.author?.name}
+            fallbackSrc={fallbackSrc}
           />
 
           {/* Multi-stop gradient overlay */}
@@ -157,6 +166,7 @@ export function PostCard({ post, variant = "default", hideExcerpt, className }: 
           sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
           category={post.category?.name}
           author={post.author?.name}
+          fallbackSrc={fallbackSrc}
         />
         {post.category && (
           <div className="absolute top-2.5 left-2.5">

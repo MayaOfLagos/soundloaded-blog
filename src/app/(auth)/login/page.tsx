@@ -1,4 +1,4 @@
-import { LoginForm } from "@/components/login-form";
+import { UserLoginForm } from "@/components/user-login-form";
 
 type SearchParams = Promise<{
   callbackUrl?: string | string[];
@@ -27,15 +27,15 @@ export default async function LoginPage({ searchParams }: { searchParams: Search
   const registered = getFirstParam(params.registered) === "1";
   const reason = getFirstParam(params.reason);
   const authError = getFirstParam(params.error);
+  const googleEnabled = !!(process.env.AUTH_GOOGLE_ID && process.env.AUTH_GOOGLE_SECRET);
 
   return (
-    <div className="max-w-5xl min-w-0" style={{ width: "min(calc(100vw - 2rem), 64rem)" }}>
-      <LoginForm
-        callbackUrl={callbackUrl}
-        registered={registered}
-        reason={reason}
-        authError={authError}
-      />
-    </div>
+    <UserLoginForm
+      callbackUrl={callbackUrl}
+      registered={registered}
+      reason={reason}
+      authError={authError}
+      googleEnabled={googleEnabled}
+    />
   );
 }

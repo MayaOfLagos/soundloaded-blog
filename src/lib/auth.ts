@@ -1,5 +1,6 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
+import Google from "next-auth/providers/google";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { db } from "./db";
@@ -87,6 +88,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     error: "/login",
   },
   providers: [
+    ...(process.env.AUTH_GOOGLE_ID && process.env.AUTH_GOOGLE_SECRET ? [Google] : []),
     Credentials({
       name: "credentials",
       credentials: {
@@ -148,13 +150,27 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     }),
   ],
   callbacks: {
-    async jwt({ token, user, trigger }) {
+    async jwt({ token, user, trigger, account }) {
       if (user) {
         token.id = user.id;
-        token.role = (user as { role?: string }).role;
-        token.artistProfileId =
-          (user as { artistProfileId?: string | null }).artistProfileId ?? null;
-        token.labelProfileId = (user as { labelProfileId?: string | null }).labelProfileId ?? null;
+
+        if (account?.provider === "google") {
+          // OAuth sign-in: fetch role and creator profiles from DB
+          const [dbUser, artistProfile, labelProfile] = await Promise.all([
+            db.user.findUnique({ where: { id: user.id as string }, select: { role: true } }),
+            db.artist.findUnique({ where: { ownerId: user.id as string }, select: { id: true } }),
+            db.label.findUnique({ where: { ownerId: user.id as string }, select: { id: true } }),
+          ]);
+          token.role = dbUser?.role ?? "USER";
+          token.artistProfileId = artistProfile?.id ?? null;
+          token.labelProfileId = labelProfile?.id ?? null;
+        } else {
+          token.role = (user as { role?: string }).role;
+          token.artistProfileId =
+            (user as { artistProfileId?: string | null }).artistProfileId ?? null;
+          token.labelProfileId =
+            (user as { labelProfileId?: string | null }).labelProfileId ?? null;
+        }
       }
       // Re-fetch profiles on session update (e.g. after application approval)
       if (trigger === "update" && token.id) {

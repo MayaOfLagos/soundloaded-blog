@@ -774,8 +774,10 @@ export function FanlinkForm({ initialData, initialVariant, artistName, mode = "c
                               setVariant((v) => ({ ...v, coverArt: url }));
                               setVariantDirty(true);
                             }}
-                            placeholder="Leave empty to use main cover art"
                           />
+                          <p className="text-muted-foreground text-[11px]">
+                            Leave empty to use main cover art
+                          </p>
                         </div>
 
                         <div className="space-y-1.5">

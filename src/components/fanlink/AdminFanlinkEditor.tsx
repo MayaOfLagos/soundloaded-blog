@@ -15,6 +15,7 @@ type ClicksByGroup = {
   platform?: string | null;
   device?: string | null;
   country?: string | null;
+  variant?: string | null;
   _count: { id: number };
 }[];
 
@@ -53,6 +54,7 @@ type FanlinkAdmin = {
   fanGateAction: "follow" | "share" | "both";
   fanGateSpotifyUrl: string;
   fanGateTwitterText: string;
+  abEnabled: boolean;
   status: "DRAFT" | "PUBLISHED" | "ARCHIVED" | "SUSPENDED";
   adminNotes: string;
   totalClicks: number;
@@ -69,6 +71,7 @@ type Props = {
   clicksByPlatform: ClicksByGroup;
   clicksByDevice: ClicksByGroup;
   clicksByCountry: ClicksByGroup;
+  clicksByVariant: ClicksByGroup;
 };
 
 const TABS = ["Edit", "Analytics"] as const;
@@ -78,6 +81,7 @@ export function AdminFanlinkEditor({
   clicksByPlatform,
   clicksByDevice,
   clicksByCountry,
+  clicksByVariant,
 }: Props) {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<(typeof TABS)[number]>("Edit");
@@ -217,10 +221,12 @@ export function AdminFanlinkEditor({
               title: fanlink.title,
               totalClicks: fanlink.totalClicks,
               uniqueVisitors: fanlink.uniqueVisitors,
+              abEnabled: fanlink.abEnabled,
             }}
             clicksByPlatform={clicksByPlatform}
             clicksByDevice={clicksByDevice}
             clicksByCountry={clicksByCountry}
+            clicksByVariant={clicksByVariant}
             emailCount={fanlink.counts.emails}
           />
         </div>

@@ -40,27 +40,33 @@ export default async function AdminFanlinkDetailPage({ params }: Props) {
 
   if (!fanlink) notFound();
 
-  const [clicksByPlatform, clicksByDevice, clicksByCountry, emailCount] = await Promise.all([
-    db.fanlinkClick.groupBy({
-      by: ["platform"],
-      where: { fanlinkId: id },
-      _count: { id: true },
-      orderBy: { _count: { id: "desc" } },
-    }),
-    db.fanlinkClick.groupBy({
-      by: ["device"],
-      where: { fanlinkId: id },
-      _count: { id: true },
-    }),
-    db.fanlinkClick.groupBy({
-      by: ["country"],
-      where: { fanlinkId: id, country: { not: null } },
-      _count: { id: true },
-      orderBy: { _count: { id: "desc" } },
-      take: 10,
-    }),
-    db.fanlinkEmail.count({ where: { fanlinkId: id } }),
-  ]);
+  const [clicksByPlatform, clicksByDevice, clicksByCountry, clicksByVariant, emailCount] =
+    await Promise.all([
+      db.fanlinkClick.groupBy({
+        by: ["platform"],
+        where: { fanlinkId: id },
+        _count: { id: true },
+        orderBy: { _count: { id: "desc" } },
+      }),
+      db.fanlinkClick.groupBy({
+        by: ["device"],
+        where: { fanlinkId: id },
+        _count: { id: true },
+      }),
+      db.fanlinkClick.groupBy({
+        by: ["country"],
+        where: { fanlinkId: id, country: { not: null } },
+        _count: { id: true },
+        orderBy: { _count: { id: "desc" } },
+        take: 10,
+      }),
+      db.fanlinkClick.groupBy({
+        by: ["variant"],
+        where: { fanlinkId: id, variant: { not: null } },
+        _count: { id: true },
+      }),
+      db.fanlinkEmail.count({ where: { fanlinkId: id } }),
+    ]);
 
   const serialized = {
     id: fanlink.id,
@@ -97,6 +103,7 @@ export default async function AdminFanlinkDetailPage({ params }: Props) {
     fanGateAction: (fanlink.fanGateAction ?? "follow") as "follow" | "share" | "both",
     fanGateSpotifyUrl: fanlink.fanGateSpotifyUrl ?? "",
     fanGateTwitterText: fanlink.fanGateTwitterText ?? "",
+    abEnabled: fanlink.abEnabled,
     status: fanlink.status as "DRAFT" | "PUBLISHED" | "ARCHIVED" | "SUSPENDED",
     adminNotes: fanlink.adminNotes ?? "",
     totalClicks: fanlink.totalClicks,
@@ -170,6 +177,7 @@ export default async function AdminFanlinkDetailPage({ params }: Props) {
         clicksByPlatform={clicksByPlatform}
         clicksByDevice={clicksByDevice}
         clicksByCountry={clicksByCountry}
+        clicksByVariant={clicksByVariant}
       />
     </div>
   );

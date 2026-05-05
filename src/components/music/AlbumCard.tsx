@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { Disc, Download } from "lucide-react";
+import { Download } from "lucide-react";
 import { CoverImage } from "@/components/common/CoverImage";
+import { FallbackCover } from "@/components/common/FallbackCover";
 import { Badge } from "@/components/ui/badge";
 import type { AlbumCardData } from "@/lib/api/music";
 
@@ -27,9 +28,7 @@ export function AlbumCard({ album }: AlbumCardProps) {
             sizes="(max-width: 640px) 50vw, 33vw"
           />
         ) : (
-          <div className="from-brand/10 to-muted flex h-full items-center justify-center bg-linear-to-br">
-            <Disc className="text-muted-foreground/40 h-12 w-12" />
-          </div>
+          <FallbackCover size="lg" />
         )}
       </Link>
 

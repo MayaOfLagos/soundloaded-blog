@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { X, Music } from "lucide-react";
+import { FallbackCover } from "@/components/common/FallbackCover";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { usePlayerStore } from "@/store/player.store";
 import { cn } from "@/lib/utils";
@@ -34,9 +35,7 @@ function QueueRow({
         {track.coverArt ? (
           <Image src={track.coverArt} alt="" fill className="object-cover" sizes="40px" />
         ) : (
-          <div className="from-brand/10 to-muted flex h-full w-full items-center justify-center bg-gradient-to-br">
-            <Music className="text-muted-foreground/40 h-4 w-4" />
-          </div>
+          <FallbackCover size="xs" />
         )}
       </button>
       <div className="min-w-0 flex-1" onClick={onPlay}>

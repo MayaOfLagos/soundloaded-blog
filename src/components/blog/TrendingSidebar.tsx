@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { TrendingUp } from "lucide-react";
+import { FallbackCover } from "@/components/common/FallbackCover";
 import { getTrendingPosts } from "@/lib/api/posts";
 import { getSettings } from "@/lib/settings";
 import { formatRelativeDate } from "@/lib/utils";
@@ -50,9 +51,7 @@ export async function TrendingSidebar() {
                     sizes="56px"
                   />
                 ) : (
-                  <div className="from-brand/20 to-muted flex h-full items-center justify-center bg-gradient-to-br">
-                    <span className="text-sm">🎵</span>
-                  </div>
+                  <FallbackCover size="xs" />
                 )}
               </div>
 

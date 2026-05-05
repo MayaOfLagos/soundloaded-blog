@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
-import { Download, Music, Play } from "lucide-react";
+import { Download, Play } from "lucide-react";
+import { FallbackCover } from "@/components/common/FallbackCover";
 import { getPopularMusic } from "@/lib/api/music";
 
 export async function PopularMusicSidebar() {
@@ -52,9 +53,7 @@ export async function PopularMusicSidebar() {
                     sizes="44px"
                   />
                 ) : (
-                  <div className="from-brand/20 to-muted flex h-full w-full items-center justify-center bg-gradient-to-br">
-                    <Music className="text-muted-foreground h-4 w-4" />
-                  </div>
+                  <FallbackCover size="xs" />
                 )}
                 {/* Play overlay on hover */}
                 <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">

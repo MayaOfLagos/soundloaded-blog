@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Music, Download } from "lucide-react";
+import { FallbackCover } from "@/components/common/FallbackCover";
 import { getMoreFromArtist } from "@/lib/api/posts";
 import { formatDuration } from "@/lib/utils";
 
@@ -45,9 +46,7 @@ export async function MoreFromArtist({
                   sizes="40px"
                 />
               ) : (
-                <div className="from-brand/20 to-muted flex h-full w-full items-center justify-center bg-gradient-to-br">
-                  <Music className="text-muted-foreground h-4 w-4" />
-                </div>
+                <FallbackCover size="xs" />
               )}
             </div>
 

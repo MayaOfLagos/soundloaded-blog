@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { Play, Music, Headphones, Lock } from "lucide-react";
+import { Play, Headphones, Lock } from "lucide-react";
+import { FallbackCover } from "@/components/common/FallbackCover";
 import { usePlayerStore } from "@/store/player.store";
 import { cn } from "@/lib/utils";
 import { HeartButton } from "./HeartButton";
@@ -124,9 +125,7 @@ export function MusicListItem({ track, rank, listTracks, listLabel }: MusicListI
             sizes="40px"
           />
         ) : (
-          <div className="from-brand/10 to-muted flex h-full w-full items-center justify-center bg-gradient-to-br">
-            <Music className="text-muted-foreground/40 h-4 w-4" />
-          </div>
+          <FallbackCover size="xs" />
         )}
       </Link>
 

@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { Play, ListMusic, Lock, Globe } from "lucide-react";
+import { Play, Lock, Globe } from "lucide-react";
 import { CoverImage } from "@/components/common/CoverImage";
+import { FallbackCover } from "@/components/common/FallbackCover";
 import { cn } from "@/lib/utils";
 import type { PlaylistSummary } from "@/hooks/usePlaylist";
 
@@ -60,9 +61,7 @@ export function PlaylistCard({
             sizes="(max-width: 640px) 150px, (max-width: 1024px) 180px, 200px"
           />
         ) : (
-          <div className="from-brand/10 to-muted flex h-full w-full items-center justify-center bg-linear-to-br">
-            <ListMusic className="text-muted-foreground/40 h-10 w-10" />
-          </div>
+          <FallbackCover size="md" />
         )}
 
         {/* Privacy badge */}

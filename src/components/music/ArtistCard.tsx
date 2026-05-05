@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { Mic2 } from "lucide-react";
 import { CoverImage } from "@/components/common/CoverImage";
+import { FallbackCover } from "@/components/common/FallbackCover";
 import { Badge } from "@/components/ui/badge";
 import type { ArtistCardData } from "@/lib/api/music";
 
@@ -27,9 +27,7 @@ export function ArtistCard({ artist }: ArtistCardProps) {
             sizes="80px"
           />
         ) : (
-          <div className="from-brand/10 to-muted flex h-full w-full items-center justify-center bg-linear-to-br">
-            <Mic2 className="text-muted-foreground/50 h-8 w-8" />
-          </div>
+          <FallbackCover size="md" />
         )}
       </div>
 

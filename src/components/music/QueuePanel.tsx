@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { motion, AnimatePresence } from "motion/react";
 import { X, Music, GripVertical, ListMusic, Clock3, Play } from "lucide-react";
+import { FallbackCover } from "@/components/common/FallbackCover";
 import { usePlayerStore } from "@/store/player.store";
 import { cn } from "@/lib/utils";
 import type { Track } from "@/store/player.store";
@@ -39,9 +40,7 @@ function QueueTrackRow({
         {track.coverArt ? (
           <Image src={track.coverArt} alt="" fill className="object-cover" sizes="40px" />
         ) : (
-          <div className="from-brand/10 to-muted flex h-full w-full items-center justify-center bg-gradient-to-br">
-            <Music className="text-muted-foreground/40 h-4 w-4" />
-          </div>
+          <FallbackCover size="xs" />
         )}
         {/* Hover play/pause overlay + active equalizer */}
         <div

@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { Play, Pause, Music, Loader2, Lock } from "lucide-react";
+import { Play, Pause, Loader2, Lock } from "lucide-react";
+import { FallbackCover } from "@/components/common/FallbackCover";
 import { usePlayerStore } from "@/store/player.store";
 import { cn } from "@/lib/utils";
 import { HeartButton } from "./HeartButton";
@@ -118,9 +119,7 @@ export function MusicShelfCard({
               sizes="(max-width: 640px) 150px, (max-width: 1024px) 180px, 200px"
             />
           ) : (
-            <div className="from-brand/10 to-muted flex h-full items-center justify-center bg-gradient-to-br">
-              <Music className="text-muted-foreground/40 h-10 w-10" />
-            </div>
+            <FallbackCover size="md" />
           )}
 
           {/* Hover overlay gradient for button visibility */}

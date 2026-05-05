@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { Play, Music, Lock } from "lucide-react";
+import { Play, Lock } from "lucide-react";
 import { CoverImage } from "@/components/common/CoverImage";
+import { FallbackCover } from "@/components/common/FallbackCover";
 import { Badge } from "@/components/ui/badge";
 import { cn, formatFileSize } from "@/lib/utils";
 import { DownloadButton } from "./DownloadButton";
@@ -70,9 +71,7 @@ export function MusicCard({ track, className }: MusicCardProps) {
             sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
           />
         ) : (
-          <div className="from-brand/10 to-muted flex h-full items-center justify-center bg-linear-to-br">
-            <Music className="text-muted-foreground/50 h-12 w-12" />
-          </div>
+          <FallbackCover size="lg" />
         )}
 
         {/* Play overlay */}

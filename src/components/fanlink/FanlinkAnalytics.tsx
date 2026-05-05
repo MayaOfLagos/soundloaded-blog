@@ -175,7 +175,7 @@ export function FanlinkAnalytics({
             (clicksByPlatform[0]?.["platform" as keyof (typeof clicksByPlatform)[0]] as string) ??
             "—"
           }
-          sub={clicksByPlatform[0] ? `${clicksByPlatform[0]._count.id} clicks` : undefined}
+          sub={clicksByPlatform[0] ? `${clicksByPlatform[0]._count?.id ?? 0} clicks` : undefined}
         />
       </div>
 

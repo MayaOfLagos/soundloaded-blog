@@ -104,42 +104,25 @@ export function NotificationPrompt() {
     toast.custom(
       (t) => (
         <div
-          className={`bg-card ring-border/30 relative max-w-sm overflow-hidden rounded-2xl shadow-2xl ring-1 backdrop-blur-xl transition-all duration-300 ${
-            t.visible ? "translate-y-0 opacity-100" : "-translate-y-4 opacity-0"
-          }`}
+          className={`flex items-center gap-2.5 rounded-lg bg-white px-3.5 py-2.5 text-sm text-[#363636] shadow-[0_3px_10px_rgba(0,0,0,0.1),0_3px_3px_rgba(0,0,0,0.05)] transition-opacity duration-200 ${t.visible ? "opacity-100" : "opacity-0"}`}
         >
-          {/* Gradient accent bar */}
-          <div className="h-1 w-full bg-linear-to-r from-amber-500 via-orange-500 to-rose-500" />
-
-          <div className="p-4">
-            <button
-              type="button"
-              onClick={handleDismiss}
-              className="text-muted-foreground hover:text-foreground absolute top-3 right-3 rounded-full p-1.5 transition-colors"
-              aria-label="Dismiss"
-            >
-              <X className="h-4 w-4" />
-            </button>
-
-            <div className="flex items-center gap-3 pr-6">
-              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-500/10">
-                <Bell className="h-5 w-5 text-amber-500" />
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-foreground text-sm font-bold">Never miss a drop</p>
-                <p className="text-muted-foreground mt-0.5 text-[11px] leading-tight">
-                  Get notified when new music is uploaded
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={handleAllow}
-                className="shrink-0 rounded-full bg-amber-500 px-4 py-2 text-xs font-bold text-white transition-colors hover:bg-amber-600"
-              >
-                Allow
-              </button>
-            </div>
-          </div>
+          <Bell className="h-4 w-4 shrink-0 text-amber-500" />
+          <span className="font-medium">Never miss a drop</span>
+          <button
+            type="button"
+            onClick={handleAllow}
+            className="shrink-0 rounded-md bg-amber-500 px-3 py-1 text-xs font-bold text-white hover:bg-amber-600"
+          >
+            Allow
+          </button>
+          <button
+            type="button"
+            onClick={handleDismiss}
+            className="shrink-0 text-gray-400 hover:text-gray-600"
+            aria-label="Dismiss"
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
         </div>
       ),
       {

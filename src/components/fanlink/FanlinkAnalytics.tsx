@@ -7,7 +7,7 @@ type ClicksByGroup = {
   device?: string | null;
   country?: string | null;
   variant?: string | null;
-  _count: { id: number };
+  _count?: { id?: number } | null;
 }[];
 
 type Props = {
@@ -55,7 +55,7 @@ function BarGroup({
   labelKey: "platform" | "device" | "country";
   title: string;
 }) {
-  const total = items.reduce((s, i) => s + i._count.id, 0);
+  const total = items.reduce((s, i) => s + (i._count?.id ?? 0), 0);
   if (total === 0) return null;
 
   return (
@@ -64,7 +64,7 @@ function BarGroup({
       <div className="space-y-2">
         {items.slice(0, 8).map((item, i) => {
           const label = item[labelKey] ?? "Unknown";
-          const count = item._count.id;
+          const count = item._count?.id ?? 0;
           const pct = total > 0 ? Math.round((count / total) * 100) : 0;
           return (
             <div key={`${label}-${i}`} className="space-y-1">
@@ -89,7 +89,7 @@ function BarGroup({
 }
 
 function VariantComparison({ items }: { items: ClicksByGroup }) {
-  const total = items.reduce((s, i) => s + i._count.id, 0);
+  const total = items.reduce((s, i) => s + (i._count?.id ?? 0), 0);
   if (total === 0) return null;
 
   const variantA = items.find((i) => i.variant === "A")?._count.id ?? 0;

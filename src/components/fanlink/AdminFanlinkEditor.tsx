@@ -16,7 +16,7 @@ type ClicksByGroup = {
   device?: string | null;
   country?: string | null;
   variant?: string | null;
-  _count: { id: number };
+  _count?: { id?: number } | null;
 }[];
 
 type FanlinkAdmin = {

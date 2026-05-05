@@ -6,14 +6,16 @@ type ClicksByGroup = {
   platform?: string | null;
   device?: string | null;
   country?: string | null;
+  variant?: string | null;
   _count: { id: number };
 }[];
 
 type Props = {
-  fanlink: { title: string; totalClicks: number; uniqueVisitors: number };
+  fanlink: { title: string; totalClicks: number; uniqueVisitors: number; abEnabled: boolean };
   clicksByPlatform: ClicksByGroup;
   clicksByDevice: ClicksByGroup;
   clicksByCountry: ClicksByGroup;
+  clicksByVariant: ClicksByGroup;
   emailCount: number;
 };
 
@@ -86,11 +88,77 @@ function BarGroup({
   );
 }
 
+function VariantComparison({ items }: { items: ClicksByGroup }) {
+  const total = items.reduce((s, i) => s + i._count.id, 0);
+  if (total === 0) return null;
+
+  const variantA = items.find((i) => i.variant === "A")?._count.id ?? 0;
+  const variantB = items.find((i) => i.variant === "B")?._count.id ?? 0;
+  const pctA = total > 0 ? Math.round((variantA / total) * 100) : 0;
+  const pctB = total > 0 ? Math.round((variantB / total) * 100) : 0;
+
+  return (
+    <div className="bg-card/60 ring-border/40 space-y-4 rounded-2xl p-5 ring-1 backdrop-blur-sm">
+      <div className="flex items-center justify-between">
+        <h3 className="text-foreground text-sm font-bold">A/B Test Results</h3>
+        <span className="text-muted-foreground text-xs">
+          {total.toLocaleString()} tracked visits
+        </span>
+      </div>
+
+      <div className="space-y-3">
+        {/* Variant A */}
+        <div className="space-y-1">
+          <div className="flex justify-between text-xs">
+            <span className="text-foreground font-medium">Variant A (Original)</span>
+            <span className="text-muted-foreground">
+              {variantA.toLocaleString()} ({pctA}%)
+            </span>
+          </div>
+          <div className="bg-muted h-2 w-full overflow-hidden rounded-full">
+            <div
+              className="bg-brand h-full rounded-full transition-all duration-500"
+              style={{ width: `${pctA}%` }}
+            />
+          </div>
+        </div>
+
+        {/* Variant B */}
+        <div className="space-y-1">
+          <div className="flex justify-between text-xs">
+            <span className="text-foreground font-medium">Variant B (Test)</span>
+            <span className="text-muted-foreground">
+              {variantB.toLocaleString()} ({pctB}%)
+            </span>
+          </div>
+          <div className="bg-muted h-2 w-full overflow-hidden rounded-full">
+            <div
+              className="h-full rounded-full bg-emerald-500 transition-all duration-500"
+              style={{ width: `${pctB}%` }}
+            />
+          </div>
+        </div>
+      </div>
+
+      {variantA > 0 && variantB > 0 && (
+        <p className="text-muted-foreground text-xs">
+          {variantB > variantA
+            ? `Variant B is performing ${Math.round(((variantB - variantA) / variantA) * 100)}% better than A`
+            : variantA > variantB
+              ? `Variant A is performing ${Math.round(((variantA - variantB) / variantB) * 100)}% better than B`
+              : "Both variants are performing equally"}
+        </p>
+      )}
+    </div>
+  );
+}
+
 export function FanlinkAnalytics({
   fanlink,
   clicksByPlatform,
   clicksByDevice,
   clicksByCountry,
+  clicksByVariant,
   emailCount,
 }: Props) {
   return (
@@ -110,6 +178,9 @@ export function FanlinkAnalytics({
           sub={clicksByPlatform[0] ? `${clicksByPlatform[0]._count.id} clicks` : undefined}
         />
       </div>
+
+      {/* A/B Test Results */}
+      {fanlink.abEnabled && <VariantComparison items={clicksByVariant} />}
 
       {/* Charts */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">

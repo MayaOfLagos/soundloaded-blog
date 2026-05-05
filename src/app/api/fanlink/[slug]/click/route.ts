@@ -5,6 +5,7 @@ import { z } from "zod";
 const clickSchema = z.object({
   platform: z.string().optional().nullable(),
   sessionId: z.string().optional().nullable(),
+  variant: z.enum(["A", "B"]).optional().nullable(),
 });
 
 function detectDevice(ua: string): string {
@@ -42,9 +43,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
   }
 
   const parsed = clickSchema.safeParse(body);
-  const { platform, sessionId } = parsed.success
+  const { platform, sessionId, variant } = parsed.success
     ? parsed.data
-    : { platform: null, sessionId: null };
+    : { platform: null, sessionId: null, variant: null };
 
   const ip =
     req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
@@ -57,6 +58,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
     data: {
       fanlinkId: fanlink.id,
       platform: platform ?? null,
+      variant: variant ?? null,
       ip,
       device: detectDevice(ua),
       browser: extractBrowser(ua),

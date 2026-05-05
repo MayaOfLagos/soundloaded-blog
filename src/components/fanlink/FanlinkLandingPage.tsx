@@ -160,13 +160,17 @@ export function FanlinkLandingPage({ fanlink }: Props) {
         await fetch(`/api/fanlink/${fanlink.slug}/click`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ platform: platform ?? null, sessionId }),
+          body: JSON.stringify({
+            platform: platform ?? null,
+            sessionId,
+            variant: activeVariant ? "B" : "A",
+          }),
         });
       } catch {
         // fire-and-forget
       }
     },
-    [fanlink.slug, sessionId]
+    [fanlink.slug, sessionId, activeVariant]
   );
 
   useEffect(() => {

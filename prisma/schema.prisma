@@ -1407,6 +1407,7 @@ model FanlinkClick {
   fanlinkId String
   fanlink   Fanlink  @relation(fields: [fanlinkId], references: [id], onDelete: Cascade)
   platform  String?  // which button was clicked (null = page view)
+  variant   String?  // A or B (for A/B testing)
   ip        String?
   country   String?
   city      String?
@@ -1418,6 +1419,7 @@ model FanlinkClick {
 
   @@index([fanlinkId, createdAt])
   @@index([fanlinkId, platform])
+  @@index([fanlinkId, variant])
   @@index([createdAt])
 }
 

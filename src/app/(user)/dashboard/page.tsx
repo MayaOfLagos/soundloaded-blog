@@ -340,6 +340,18 @@ export default async function DashboardPage() {
           {/* ── Quick Actions ── */}
           <div className="flex flex-wrap gap-2">
             <Link
+              href="/dashboard/fanlinks/new"
+              className="bg-brand text-brand-foreground hover:bg-brand/90 rounded-xl px-4 py-2 text-sm font-semibold transition-colors"
+            >
+              + Create Fanlink
+            </Link>
+            <Link
+              href="/dashboard/fanlinks"
+              className="bg-muted text-muted-foreground hover:bg-brand/10 hover:text-brand rounded-xl px-4 py-2 text-sm font-medium transition-colors"
+            >
+              My Fanlinks
+            </Link>
+            <Link
               href="/music"
               className="bg-muted text-muted-foreground hover:bg-brand/10 hover:text-brand rounded-xl px-4 py-2 text-sm font-medium transition-colors"
             >

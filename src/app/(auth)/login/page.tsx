@@ -15,7 +15,7 @@ function getFirstParam(value: string | string[] | undefined): string | null {
 
 function getSafeCallbackUrl(callbackUrl: string | null): string {
   if (!callbackUrl?.startsWith("/")) {
-    return "/admin/dashboard";
+    return "/dashboard";
   }
 
   return callbackUrl;

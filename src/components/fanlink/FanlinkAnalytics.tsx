@@ -92,8 +92,8 @@ function VariantComparison({ items }: { items: ClicksByGroup }) {
   const total = items.reduce((s, i) => s + (i._count?.id ?? 0), 0);
   if (total === 0) return null;
 
-  const variantA = items.find((i) => i.variant === "A")?._count.id ?? 0;
-  const variantB = items.find((i) => i.variant === "B")?._count.id ?? 0;
+  const variantA = items.find((i) => i.variant === "A")?._count?.id ?? 0;
+  const variantB = items.find((i) => i.variant === "B")?._count?.id ?? 0;
   const pctA = total > 0 ? Math.round((variantA / total) * 100) : 0;
   const pctB = total > 0 ? Math.round((variantB / total) * 100) : 0;
 

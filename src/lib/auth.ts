@@ -155,13 +155,31 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.id = user.id;
 
         if (account?.provider === "google") {
-          // OAuth sign-in: fetch role and creator profiles from DB
-          const [dbUser, artistProfile, labelProfile] = await Promise.all([
-            db.user.findUnique({ where: { id: user.id as string }, select: { role: true } }),
-            db.artist.findUnique({ where: { ownerId: user.id as string }, select: { id: true } }),
-            db.label.findUnique({ where: { ownerId: user.id as string }, select: { id: true } }),
+          // Find or create a DB user for this Google account so token.id
+          // is always a real database ID, not a transient OAuth provider ID.
+          const dbUser = await db.user.upsert({
+            where: { email: user.email! },
+            update: {
+              name: user.name ?? undefined,
+              image: user.image ?? undefined,
+            },
+            create: {
+              email: user.email!,
+              name: user.name ?? null,
+              image: user.image ?? null,
+              // role defaults to READER via schema default
+            },
+            select: { id: true, role: true },
+          });
+
+          // Override the provider-generated id with the real DB row id
+          token.id = dbUser.id;
+          token.role = dbUser.role ?? "USER";
+
+          const [artistProfile, labelProfile] = await Promise.all([
+            db.artist.findUnique({ where: { ownerId: dbUser.id }, select: { id: true } }),
+            db.label.findUnique({ where: { ownerId: dbUser.id }, select: { id: true } }),
           ]);
-          token.role = dbUser?.role ?? "USER";
           token.artistProfileId = artistProfile?.id ?? null;
           token.labelProfileId = labelProfile?.id ?? null;
         } else {

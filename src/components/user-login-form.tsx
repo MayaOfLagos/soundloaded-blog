@@ -255,17 +255,26 @@ export function UserLoginForm({
             </div>
           )}
 
-          {/* Google sign-in */}
+          {/* Google sign-in — compliant with Google branding guidelines */}
           {googleEnabled && (
             <>
               <button
                 type="button"
                 onClick={handleGoogleSignIn}
                 disabled={googleLoading || isSubmitting}
-                className="border-border bg-background text-foreground hover:bg-muted flex w-full items-center justify-center gap-3 rounded-xl border px-4 py-2.5 text-sm font-medium transition-colors disabled:opacity-50"
+                className="flex h-10 w-full items-center overflow-hidden rounded-sm border border-[#747775] bg-white transition-opacity hover:opacity-90 disabled:opacity-50 dark:border-[#8E918F] dark:bg-[#131314]"
               >
-                {googleLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <GoogleIcon />}
-                Continue with Google
+                {/* G logo container — always white regardless of theme */}
+                <span className="flex h-full w-10 shrink-0 items-center justify-center bg-white">
+                  {googleLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin text-[#1F1F1F]" />
+                  ) : (
+                    <GoogleIcon />
+                  )}
+                </span>
+                <span className="flex-1 pr-10 text-center text-sm font-medium text-[#1F1F1F] dark:text-[#E3E3E3]">
+                  Sign in with Google
+                </span>
               </button>
 
               <div className="flex items-center gap-3">

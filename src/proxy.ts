@@ -122,8 +122,8 @@ function logAdminAuthFailure(
   });
 }
 
-// ── Middleware ────────────────────────────────────────────────────────────────
-export async function middleware(req: NextRequest) {
+// ── Proxy (formerly middleware) ───────────────────────────────────────────────
+export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
   const ip = getIP(req);
 
